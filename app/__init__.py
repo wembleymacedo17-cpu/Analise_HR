@@ -1,0 +1,111 @@
+import os
+from datetime import timedelta
+from flask import Flask, render_template, session, redirect, url_for, request, g
+from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+raiz_projeto = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+env_path = os.path.join(raiz_projeto, '.env')
+
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
+
+database_url = os.getenv('DATABASE_URL')
+if not database_url:
+    raise ValueError(f"DATABASE_URL não configurada em: {env_path}")
+
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(
+    database_url,
+    pool_size=int(os.getenv('DB_POOL_SIZE', 5)),
+    max_overflow=int(os.getenv('DB_MAX_OVERFLOW', 5)),
+    pool_recycle=300,
+    pool_pre_ping=True,
+)
+SessionLocal = sessionmaker(bind=engine)
+
+
+def get_db():
+    if 'db' not in g:
+        g.db = SessionLocal()
+    return g.db
+
+
+def create_app():
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    template_dir = os.path.join(base_dir, 'views', 'html')
+    static_dir = os.path.join(base_dir, 'views')
+
+    app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+    app.secret_key = os.getenv('SECRET_KEY', 'chave_secreta_analise_hr_2026')
+
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = False
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+
+    @app.teardown_appcontext
+    def fechar_sessao_db(exception=None):
+        db = g.pop('db', None)
+        if db is not None:
+            db.close()
+
+    @app.after_request
+    def adicionar_cabecalhos_no_cache(response):
+        if not request.path.startswith('/static/'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
+
+    # ==========================================================================
+    # ROTAS DE PÁGINAS (VIEWS HTML)
+    # ==========================================================================
+    @app.route('/')
+    def index():
+        if 'usuario_id' not in session:
+            return redirect(url_for('login_page'))
+        return render_template(
+            'index.html',
+            usuario=session.get('usuario_nome'),
+            cracha=session.get('cracha'),
+            perfil=session.get('usuario_perfil')
+        )
+
+    @app.route('/login')
+    def login_page():
+        return render_template('login.html')
+
+    @app.route('/primeiro-acesso')
+    def primeiro_acesso_page():
+        return render_template('primeiro_acesso.html')
+
+    @app.route('/logout')
+    def logout():
+        session.clear()
+        return redirect(url_for('login_page'))
+
+    @app.route('/convites')
+    def convites_page():
+        if session.get('usuario_perfil') != 'ROOT':
+            return redirect(url_for('index'))
+        return render_template('convites.html')
+
+    @app.route('/dashboard')
+    def dashboard_page():
+        if session.get('usuario_perfil') != 'ROOT':
+            return redirect(url_for('index'))
+        return render_template('dashboard.html')
+
+    from app.controllers.api_routes import api_bp
+    app.register_blueprint(api_bp)
+
+    return app

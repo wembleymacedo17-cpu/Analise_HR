@@ -18,6 +18,11 @@ class Unidade(Base):
 
 class CentroCusto(Base):
     __tablename__ = "centros_custo"
+    __table_args__ = (
+        Index("ix_centros_custo_unidade_id", "unidade_id"),
+        Index("ix_centros_custo_ativo_nome", "ativo", "nome"),
+    )
+
     id = Column(Integer, primary_key=True)
     codigo_cc = Column(String(30), unique=True, nullable=False, index=True)
     nome = Column(String(150), nullable=False)
@@ -36,6 +41,11 @@ class Cargo(Base):
 
 class Colaborador(Base):
     __tablename__ = "colaboradores"
+    __table_args__ = (
+        Index("ix_colaboradores_cc_ativo", "centro_custo_id", "ativo"),
+        Index("ix_colaboradores_cargo_id", "cargo_id"),
+    )
+
     id = Column(Integer, primary_key=True)
     cracha = Column(String(20), unique=True, nullable=False, index=True)
     nome = Column(String(150), nullable=False)
@@ -52,10 +62,14 @@ class Colaborador(Base):
 
 class Usuario(Base):
     __tablename__ = "usuarios"
-    __table_args__ = (CheckConstraint("role IN ('ROOT', 'GESTOR')", name="ck_role_usuario"),)
+    __table_args__ = (
+        CheckConstraint("role IN ('ROOT', 'GESTOR')", name="ck_role_usuario"),
+        Index("ix_usuarios_role_ativo", "role", "ativo"),
+    )
 
     id = Column(Integer, primary_key=True)
     colaborador_id = Column(Integer, ForeignKey("colaboradores.id", ondelete="RESTRICT"), unique=True, nullable=False)
+    senha_hash = Column(String(255), nullable=True)
     role = Column(String(20), default="GESTOR", nullable=False)
     ativo = Column(Boolean, default=True, nullable=False)
     criado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -66,6 +80,10 @@ class Usuario(Base):
 
 class UsuarioCentroCusto(Base):
     __tablename__ = "usuario_centros_custo"
+    __table_args__ = (
+        Index("ix_usuario_cc_centro_custo_id", "centro_custo_id"),
+    )
+
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), primary_key=True)
     centro_custo_id = Column(Integer, ForeignKey("centros_custo.id", ondelete="CASCADE"), primary_key=True)
     usuario = relationship("Usuario", back_populates="centros_custo")
@@ -76,13 +94,15 @@ class ConviteAcesso(Base):
     __tablename__ = "convites_acesso"
     __table_args__ = (
         CheckConstraint("status IN ('DISPONIVEL', 'UTILIZADO', 'EXPIRADO', 'CANCELADO')", name="ck_status_convite"),
+        Index("ix_convites_status_criado", "status", "criado_em"),
+        Index("ix_convites_colaborador_id", "colaborador_id"),
     )
 
     id = Column(Integer, primary_key=True)
     codigo_hash = Column(String(64), unique=True, nullable=False, index=True)
     colaborador_id = Column(Integer, ForeignKey("colaboradores.id", ondelete="RESTRICT"), nullable=False)
     email_destino = Column(String(150), nullable=False)
-    status = Column(String(20), default="DISPONIVEL", nullable=False, index=True)
+    status = Column(String(20), default="DISPONIVEL", nullable=False)
     expira_em = Column(DateTime(timezone=True), nullable=False)
     criado_por_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
     criado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -94,6 +114,10 @@ class ConviteAcesso(Base):
 
 class ConviteCentroCusto(Base):
     __tablename__ = "convite_centros_custo"
+    __table_args__ = (
+        Index("ix_convite_cc_centro_custo_id", "centro_custo_id"),
+    )
+
     convite_id = Column(Integer, ForeignKey("convites_acesso.id", ondelete="CASCADE"), primary_key=True)
     centro_custo_id = Column(Integer, ForeignKey("centros_custo.id", ondelete="CASCADE"), primary_key=True)
 
@@ -106,7 +130,8 @@ class OcorrenciaFalta(Base):
     __table_args__ = (
         UniqueConstraint("colaborador_id", "data_ocorrencia", name="uq_colaborador_data_falta"),
         CheckConstraint("status IN ('PENDENTE', 'ANALISADA')", name="ck_status_ocorrencia"),
-        Index("ix_ocorrencias_cc_status", "centro_custo_id", "status"),
+        Index("ix_ocorrencias_status_data", "status", "data_ocorrencia"),
+        Index("ix_ocorrencias_cc_status_data", "centro_custo_id", "status", "data_ocorrencia"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -128,6 +153,8 @@ class AnaliseFalta(Base):
             "NOT (autorizado_hora_extra = FALSE AND conseguiu_he_cobertura = TRUE)",
             name="ck_consistencia_hora_extra_cobertura",
         ),
+        Index("ix_analises_avaliador_id", "avaliador_id"),
+        Index("ix_analises_respondido_em", "respondido_em"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -146,7 +173,10 @@ class AnaliseFalta(Base):
 
 class LogEnvioEmail(Base):
     __tablename__ = "logs_envio_email"
-    __table_args__ = (CheckConstraint("status_envio IN ('ENVIADO', 'ERRO')", name="ck_status_log_email"),)
+    __table_args__ = (
+        CheckConstraint("status_envio IN ('ENVIADO', 'ERRO')", name="ck_status_log_email"),
+        Index("ix_logs_email_convite_id", "convite_id"),
+    )
 
     id = Column(Integer, primary_key=True)
     convite_id = Column(Integer, ForeignKey("convites_acesso.id", ondelete="CASCADE"), nullable=False)

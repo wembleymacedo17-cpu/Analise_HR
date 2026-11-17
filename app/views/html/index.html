@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Análise de Faltas | FUNFARME</title>
+    <style>
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-surface: #ffffff;
+            --bg-subtle: #f8fafc;
+            --border-color: #e2e8f0;
+            --primary: #1e3a8a;
+            --primary-accent: #0284c7;
+            --primary-soft: rgba(2, 132, 199, 0.10);
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --text-main: #0f172a;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --sidebar-width: 276px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background-color: var(--bg-body);
+            background-image:
+                radial-gradient(circle at 8% 12%, rgba(2, 132, 199, 0.08), transparent 36%),
+                radial-gradient(circle at 92% 88%, rgba(30, 58, 138, 0.07), transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* =====================================================================
+           SIDEBAR ESQUERDA (LIGHT FROSTED GLASSMORPHISM)
+           ===================================================================== */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 60;
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-right: 1px solid rgba(203, 213, 225, 0.75);
+            box-shadow: 4px 0 24px rgba(15, 23, 42, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 16px;
+            transition: transform 0.25s ease;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .brand-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 4px 8px 16px 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .brand-box img {
+            height: 36px;
+            width: fit-content;
+            object-fit: contain;
+        }
+        .brand-title { font-size: 1rem; font-weight: 800; color: var(--primary); letter-spacing: -0.2px; }
+        .brand-sub { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+
+        .nav-section-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.9px;
+            color: #94a3b8;
+            padding: 0 10px;
+            margin-bottom: 8px;
+        }
+
+        .glass-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* BOTÕES GLASS CLARO DO MENU LATERAL */
+        .glass-nav-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 13px;
+            border-radius: 12px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+        }
+
+        .glass-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: rgba(2, 132, 199, 0.35);
+            color: var(--primary);
+            transform: translateX(3px);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+        }
+
+        .glass-nav-btn.active {
+            background: linear-gradient(135deg, rgba(224, 242, 254, 0.92), rgba(239, 246, 255, 0.96));
+            border-color: rgba(2, 132, 199, 0.45);
+            color: var(--primary);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        .glass-nav-btn.active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 20%;
+            height: 60%;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: var(--primary-accent);
+        }
+
+        .nav-icon-wrap {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .glass-nav-btn:hover .nav-icon-wrap {
+            background: #e0f2fe;
+            color: var(--primary-accent);
+            border-color: #bae6fd;
+        }
+
+        .glass-nav-btn.active .nav-icon-wrap {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25);
+        }
+
+        .nav-btn-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.25;
+        }
+        .nav-btn-sub {
+            font-size: 0.71rem;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+        .glass-nav-btn.active .nav-btn-sub {
+            color: #0369a1;
+        }
+
+        /* RODAPÉ DO USUÁRIO NA SIDEBAR */
+        .sidebar-footer {
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .user-glass-card {
+            background: rgba(248, 250, 252, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .user-name { font-size: 0.84rem; font-weight: 700; color: var(--text-main); }
+        .user-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .user-cracha { font-size: 0.74rem; color: var(--text-muted); font-weight: 500; }
+        .badge-role {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+        .badge-root { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .badge-gestor { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+
+        .btn-logout {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 9px 14px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .btn-logout:hover { background: #dc2626; color: #ffffff; border-color: #dc2626; }
+
+        /* =====================================================================
+           ÁREA DE CONTEÚDO PRINCIPAL
+           ===================================================================== */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-topbar {
+            display: none;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 18px;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 45;
+        }
+        .btn-menu-mobile {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: var(--text-main);
+            padding: 7px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            z-index: 55;
+        }
+
+        .container { max-width: 1320px; width: 100%; margin: 26px auto; padding: 0 26px; flex: 1; }
+
+        @media (max-width: 920px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.open { display: block; }
+            .main-wrapper { margin-left: 0; }
+            .mobile-topbar { display: flex; }
+            .container { padding: 0 16px; margin: 18px auto; }
+        }
+
+        /* CARDS DE KPI */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+        .kpi-label { font-size: 0.76rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+        .kpi-value { font-size: 2rem; font-weight: 800; color: var(--text-main); }
+        .kpi-pendente { color: #d97706; }
+        .kpi-analisada { color: #059669; }
+        .kpi-info { color: #0284c7; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* PAINÉIS E TABELAS */
+        .panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .panel-title { font-size: 1.05rem; font-weight: 700; color: var(--text-main); }
+
+        .filters-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .input-control, .select-control {
+            background: var(--bg-surface);
+            border: 1px solid #cbd5e1;
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-control:focus, .select-control:focus {
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+
+        .btn {
+            padding: 9px 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: #1e40af; }
+        .btn-secondary { background: #e2e8f0; color: var(--text-secondary); }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #047857; }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-warning:hover { background: #b45309; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th {
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            background: var(--bg-subtle);
+            letter-spacing: 0.3px;
+        }
+        tr:hover td { background: #f8fafc; }
+
+        .status-pill {
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .pill-pendente { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .pill-analisada, .pill-disponivel, .pill-ativo { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .pill-utilizado { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .pill-inativo, .pill-expirado { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        /* FORMULÁRIO DE CONVITE (ROOT) */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-group label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+
+        .cc-checklist {
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-subtle);
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px;
+        }
+        .cc-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px 8px;
+            border-radius: 6px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+        .cc-item:hover { border-color: var(--primary-accent); background: #f0f9ff; }
+
+        .codigo-gerado-box {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: #ecfdf5;
+            border: 1px solid #6ee7b7;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .codigo-destaque {
+            font-family: monospace;
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #065f46;
+            background: #ffffff;
+            border: 1px solid #a7f3d0;
+            padding: 6px 14px;
+            border-radius: 6px;
+        }
+
+        /* CARDS DE ETL */
+        .etl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+        .etl-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        .etl-card h4 { font-size: 1rem; color: var(--text-main); }
+        .etl-card p { font-size: 0.83rem; color: var(--text-muted); line-height: 1.45; }
+
+        /* MODAL DE ANÁLISE DE FALTA */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+        }
+        .modal-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            max-width: 540px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+        }
+        .modal-header { margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .modal-header h3 { font-size: 1.1rem; color: var(--primary); }
+        .modal-info { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+
+        .question-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 12px;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            gap: 12px;
+        }
+        .question-row.disabled-row { opacity: 0.45; pointer-events: none; }
+        .question-text { font-size: 0.85rem; color: var(--text-main); font-weight: 500; }
+        .radio-group { display: flex; gap: 12px; flex-shrink: 0; }
+        .radio-group label { display: flex; align-items: center; gap: 5px; font-size: 0.84rem; cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            background: var(--primary);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+            display: none;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebarMobile()"></div>
+
+    <!-- ======================================================================= -->
+    <!-- MENU LATERAL ESQUERDO (LIGHT GLASSMORPHISM + ÍCONES SVG VETORIZADOS)    -->
+    <!-- ======================================================================= -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-box">
+                <img src="{{ url_for('static', filename='img/Logo_funfarme.png') }}" alt="FUNFARME">
+                <div>
+                    <div class="brand-title">Análise de Faltas</div>
+                    <div class="brand-sub">Gestão Operacional • RH</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="nav-section-label">Navegação</div>
+                <nav class="glass-menu">
+                    <!-- ITEM 1: VISÃO GLOBAL / ANÁLISE DE FALTAS (ROOT E GESTOR) -->
+                    <button type="button" class="glass-nav-btn active" onclick="trocarAba('aba-faltas', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                                <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                                <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                                <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                            </svg>
+                        </span>
+                        <span class="nav-btn-text">
+                            <span>{{ 'Visão Global & Faltas' if perfil == 'ROOT' else 'Minhas Ocorrências' }}</span>
+                            <span class="nav-btn-sub">Fila de análise operacional</span>
+                        </span>
+                    </button>
+
+                    {% if perfil == 'ROOT' %}
+                    <!-- ITEM 2: CONVITES DE PRIMEIRO ACESSO -->
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-convites', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                            </svg>
+                        </span>
+                        <span class="nav-btn-text">
+                            <span>Convites de Acesso</span>
+                            <span class="nav-btn-sub">Gerar hash e vincular setor</span>
+                        </span>
+                    </button>
+
+                    <!-- ITEM 3: GESTÃO DE PERFIS -->
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-gestores', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </span>
+                        <span class="nav-btn-text">
+                            <span>Gestão de Perfis</span>
+                            <span class="nav-btn-sub">Ativar ou bloquear gestores</span>
+                        </span>
+                    </button>
+
+                    <!-- ITEM 4: INTEGRAÇÃO SENIOR (ETL) -->
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-etl', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                            </svg>
+                        </span>
+                        <span class="nav-btn-text">
+                            <span>Integração Senior</span>
+                            <span class="nav-btn-sub">Sincronização ETL Vetorh</span>
+                        </span>
+                    </button>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+
+        <!-- PERFIL LOGADO E SAIR -->
+        <div class="sidebar-footer">
+            <div class="user-glass-card">
+                <div class="user-name">{{ usuario }}</div>
+                <div class="user-meta">
+                    <span class="user-cracha">Crachá: {{ cracha }}</span>
+                    <span class="badge-role {{ 'badge-root' if perfil == 'ROOT' else 'badge-gestor' }}">
+                        {{ 'ADMIN / RH' if perfil == 'ROOT' else 'GESTOR' }}
+                    </span>
+                </div>
+            </div>
+
+            <a href="/logout" class="btn-logout">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Sair do Sistema
+            </a>
+        </div>
+    </aside>
+
+    <!-- ======================================================================= -->
+    <!-- CONTEÚDO PRINCIPAL                                                      -->
+    <!-- ======================================================================= -->
+    <div class="main-wrapper">
+        <!-- BARRA MOBILE -->
+        <div class="mobile-topbar">
+            <button type="button" class="btn-menu-mobile" onclick="toggleSidebarMobile()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <span style="font-weight:700; font-size:0.95rem; color: var(--primary);">Análise de Faltas</span>
+            <span class="badge-role {{ 'badge-root' if perfil == 'ROOT' else 'badge-gestor' }}">{{ perfil }}</span>
+        </div>
+
+        <main class="container">
+
+            <!-- KPIs -->
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-label">Faltas Pendentes</span>
+                    <span class="kpi-value kpi-pendente" id="kpi-pendentes">--</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Faltas Analisadas</span>
+                    <span class="kpi-value kpi-analisada" id="kpi-analisadas">--</span>
+                </div>
+                {% if perfil == 'ROOT' %}
+                <div class="kpi-card">
+                    <span class="kpi-label">Gestores Ativos</span>
+                    <span class="kpi-value kpi-info" id="kpi-gestores">--</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Convites Disponíveis</span>
+                    <span class="kpi-value" id="kpi-convites">--</span>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- ABA 1: VISÃO GLOBAL / FILA DE ANÁLISE DE FALTAS                 -->
+            <!-- =============================================================== -->
+            <section id="aba-faltas" class="tab-content active">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Ocorrências de Faltas Injustificadas</h2>
+                        <div class="filters-row">
+                            <input type="text" id="filtro-busca" class="input-control" placeholder="Filtrar por nome, crachá ou setor..." oninput="filtrarTabelaFaltas()">
+                            <select id="filtro-status" class="select-control" onchange="carregarFaltas()">
+                                <option value="PENDENTE" selected>Status: Pendentes</option>
+                                <option value="ANALISADA">Status: Analisadas</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data da Falta</th>
+                                    <th>Crachá</th>
+                                    <th>Colaborador</th>
+                                    <th>Cargo</th>
+                                    <th>Centro de Custo</th>
+                                    <th>Status</th>
+                                    <th>Ação / Auditoria</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-faltas">
+                                <tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando ocorrências...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            {% if perfil == 'ROOT' %}
+            <!-- =============================================================== -->
+            <!-- ABA 2: CONVITES DE PRIMEIRO ACESSO                              -->
+            <!-- =============================================================== -->
+            <section id="aba-convites" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Gerar Novo Convite para Gestor</h2>
+                    </div>
+
+                    <form id="form-novo-convite">
+                        <div class="form-grid">
+                            <div class="field-group">
+                                <label for="conv-cracha">Crachá do Gestor *</label>
+                                <input type="text" id="conv-cracha" class="input-control" required placeholder="Ex: 12345">
+                            </div>
+                            <div class="field-group">
+                                <label for="conv-email">E-mail de Destino (Opcional)</label>
+                                <input type="email" id="conv-email" class="input-control" placeholder="gestor@funfarme.com.br">
+                            </div>
+                            <div class="field-group">
+                                <label for="conv-validade">Validade do Convite (Dias)</label>
+                                <select id="conv-validade" class="select-control">
+                                    <option value="3">3 dias</option>
+                                    <option value="7" selected>7 dias</option>
+                                    <option value="15">15 dias</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="field-group" style="margin-bottom: 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <label>Selecione os Centros de Custo sob responsabilidade do gestor *</label>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <input type="text" id="busca-cc" class="input-control" style="padding: 5px 10px; font-size:0.78rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesCC()">
+                                    <button type="button" class="btn btn-secondary" style="padding: 5px 10px; font-size:0.76rem;" onclick="alternarTodosCCs(false)">Limpar</button>
+                                </div>
+                            </div>
+                            <div id="lista-ccs-checkbox" class="cc-checklist">
+                                <span style="color:#64748b; font-size:0.8rem;">Carregando centros de custo...</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="btn-gerar-convite">Gerar Hash de Acesso</button>
+                    </form>
+
+                    <div id="box-codigo-gerado" class="codigo-gerado-box">
+                        <div>
+                            <div style="font-size:0.84rem; color:#065f46;">Convite gerado para <strong id="lbl-nome-convidado"></strong>! Envie este código ao gestor para ativação em <code>/primeiro-acesso</code>:</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="codigo-destaque" id="lbl-codigo-hash">--------</span>
+                            <button type="button" class="btn btn-success" onclick="copiarCodigo()">Copiar Código</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Histórico de Convites Emitidos</h2>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Crachá</th>
+                                    <th>Gestor Convidado</th>
+                                    <th>Centros de Custo Vinculados</th>
+                                    <th>Status</th>
+                                    <th>Expira em</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-convites"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- ABA 3: GESTÃO DE PERFIS                                         -->
+            <!-- =============================================================== -->
+            <section id="aba-gestores" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Gestores Cadastrados no Sistema</h2>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Crachá</th>
+                                    <th>Nome do Gestor</th>
+                                    <th>Centros de Custo</th>
+                                    <th>Status do Acesso</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-gestores"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- ABA 4: SINCRONIZAÇÃO SENIOR VETORH (ETL)                        -->
+            <!-- =============================================================== -->
+            <section id="aba-etl" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Execução Manual da Integração Senior Vetorh</h2>
+                    </div>
+                    <div class="etl-grid">
+                        <div class="etl-card">
+                            <div>
+                                <h4>Carga Diária de Faltas (Regra D-1)</h4>
+                                <p style="margin-top:6px;">Extrai ocorrências de falta injustificada (<code>R066SIT</code>) dos últimos 15 dias até ontem, ignorando o dia atual para evitar falsos positivos antes do fechamento do ponto.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="dispararETL('faltas', this)">Executar Carga de Faltas</button>
+                        </div>
+
+                        <div class="etl-card">
+                            <div>
+                                <h4>Carga Semanal de Estrutura e Colaboradores</h4>
+                                <p style="margin-top:6px;">Atualiza Unidades, Centros de Custo, Cargos e Colaboradores ativos (<code>R034FUN</code>), mantendo o usuário ROOT e o histórico intactos.</p>
+                            </div>
+                            <button class="btn btn-warning" onclick="dispararETL('estrutura', this)">Executar Carga de Estrutura</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+        </main>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- MODAL DO FORMULÁRIO DE ANÁLISE (5 PERGUNTAS SIM/NÃO)                    -->
+    <!-- ======================================================================= -->
+    <div id="modal-analise" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Análise Operacional da Falta</h3>
+                <div class="modal-info" id="modal-subtitulo">Colaborador • Data</div>
+            </div>
+
+            <form id="form-analise-falta">
+                <input type="hidden" id="analise-ocorrencia-id">
+
+                <div class="question-row">
+                    <span class="question-text">1. A falta foi comunicada com 2h de antecedência?</span>
+                    <div class="radio-group">
+                        <label><input type="radio" name="q_comunicada" value="1" required> Sim</label>
+                        <label><input type="radio" name="q_comunicada" value="0"> Não</label>
+                    </div>
+                </div>
+
+                <div class="question-row">
+                    <span class="question-text">2. Foi troca de folga?</span>
+                    <div class="radio-group">
+                        <label><input type="radio" name="q_troca" value="1" required> Sim</label>
+                        <label><input type="radio" name="q_troca" value="0"> Não</label>
+                    </div>
+                </div>
+
+                <div class="question-row">
+                    <span class="question-text">3. Foi autorizado hora extra para cobertura?</span>
+                    <div class="radio-group">
+                        <label><input type="radio" name="q_aut_he" value="1" required onchange="validarRegraHE()"> Sim</label>
+                        <label><input type="radio" name="q_aut_he" value="0" onchange="validarRegraHE()"> Não</label>
+                    </div>
+                </div>
+
+                <div class="question-row" id="row-conseguiu-he">
+                    <span class="question-text">4. Conseguiu horas extras para cobertura?</span>
+                    <div class="radio-group">
+                        <label><input type="radio" name="q_cons_he" value="1" required> Sim</label>
+                        <label><input type="radio" name="q_cons_he" value="0"> Não</label>
+                    </div>
+                </div>
+
+                <div class="question-row">
+                    <span class="question-text">5. Foi necessário redividir a equipe?</span>
+                    <div class="radio-group">
+                        <label><input type="radio" name="q_redividiu" value="1" required> Sim</label>
+                        <label><input type="radio" name="q_redividiu" value="0"> Não</label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btn-salvar-analise">Salvar Análise</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-msg" class="toast"></div>
+
+    <script>
+        const PERFIL_LOGADO = "{{ perfil }}";
+        let listaFaltasCache = [];
+
+        function toggleSidebarMobile() {
+            document.getElementById("sidebar").classList.toggle("open");
+            document.getElementById("sidebar-overlay").classList.toggle("open");
+        }
+
+        function mostrarToast(msg, erro = false) {
+            const t = document.getElementById("toast-msg");
+            t.innerText = msg;
+            t.style.background = erro ? "#dc2626" : "#059669";
+            t.style.display = "block";
+            setTimeout(() => { t.style.display = "none"; }, 4000);
+        }
+
+        function trocarAba(idAba, btn) {
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll(".glass-nav-btn").forEach(el => el.classList.remove("active"));
+            document.getElementById(idAba).classList.add("active");
+            btn.classList.add("active");
+
+            if (window.innerWidth <= 920) {
+                document.getElementById("sidebar").classList.remove("open");
+                document.getElementById("sidebar-overlay").classList.remove("open");
+            }
+
+            if (idAba === "aba-convites") {
+                carregarCentrosCusto();
+                carregarConvites();
+            } else if (idAba === "aba-gestores") {
+                carregarGestores();
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // CARREGAMENTO DE KPIs E FALTAS
+        // ---------------------------------------------------------------------
+        async function carregarMetricasRoot() {
+            if (PERFIL_LOGADO !== "ROOT") return;
+            try {
+                const res = await fetch("/api/dashboard/metricas");
+                const data = await res.json();
+                if (data.sucesso) {
+                    document.getElementById("kpi-pendentes").innerText = data.kpis.pendentes;
+                    document.getElementById("kpi-analisadas").innerText = data.kpis.analisadas;
+                    document.getElementById("kpi-gestores").innerText = data.kpis.gestores_ativos;
+                    document.getElementById("kpi-convites").innerText = data.kpis.convites_disponiveis;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function carregarFaltas() {
+            const status = document.getElementById("filtro-status").value;
+            const tbody = document.getElementById("tbody-faltas");
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Buscando registros...</td></tr>';
+
+            try {
+                const res = await fetch(`/api/faltas?status=${status}`);
+                const data = await res.json();
+                if (!data.sucesso) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#dc2626;">${data.mensagem}</td></tr>`;
+                    return;
+                }
+                listaFaltasCache = data.faltas;
+                if (PERFIL_LOGADO !== "ROOT") {
+                    if (status === "PENDENTE") document.getElementById("kpi-pendentes").innerText = data.faltas.length;
+                    if (status === "ANALISADA") document.getElementById("kpi-analisadas").innerText = data.faltas.length;
+                }
+                renderizarTabelaFaltas(listaFaltasCache);
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc2626;">Erro ao conectar ao servidor.</td></tr>';
+            }
+        }
+
+        function filtrarTabelaFaltas() {
+            const termo = document.getElementById("filtro-busca").value.toLowerCase().trim();
+            if (!termo) {
+                renderizarTabelaFaltas(listaFaltasCache);
+                return;
+            }
+            const filtrados = listaFaltasCache.filter(f =>
+                f.colaborador_nome.toLowerCase().includes(termo) ||
+                f.cracha.toLowerCase().includes(termo) ||
+                f.centro_custo.toLowerCase().includes(termo) ||
+                f.codigo_cc.toLowerCase().includes(termo)
+            );
+            renderizarTabelaFaltas(filtrados);
+        }
+
+        function renderizarTabelaFaltas(lista) {
+            const tbody = document.getElementById("tbody-faltas");
+            if (!lista.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Nenhuma ocorrência encontrada para este filtro.</td></tr>';
+                return;
+            }
+
+            const html = lista.map(f => {
+                const pill = f.status === "PENDENTE"
+                    ? '<span class="status-pill pill-pendente">PENDENTE</span>'
+                    : '<span class="status-pill pill-analisada">ANALISADA</span>';
+
+                let acaoHtml = "";
+                if (f.status === "PENDENTE") {
+                    acaoHtml = `<button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem;" onclick="abrirModalAnalise(${f.id})">Analisar Falta</button>`;
+                } else if (f.analise) {
+                    acaoHtml = `<span style="font-size:0.78rem; color:#475569;">Por <strong>${f.analise.avaliador}</strong> em ${f.analise.respondido_em}</span>`;
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${f.data_ocorrencia}</strong></td>
+                        <td>${f.cracha}</td>
+                        <td>${f.colaborador_nome}</td>
+                        <td>${f.cargo}</td>
+                        <td>${f.codigo_cc} - ${f.centro_custo}</td>
+                        <td>${pill}</td>
+                        <td>${acaoHtml}</td>
+                    </tr>
+                `;
+            }).join("");
+
+            tbody.innerHTML = html;
+        }
+
+        // ---------------------------------------------------------------------
+        // MODAL DE ANÁLISE (5 PERGUNTAS + TRAVA DE HORA EXTRA)
+        // ---------------------------------------------------------------------
+        function abrirModalAnalise(idOcorrencia) {
+            const falta = listaFaltasCache.find(item => item.id === idOcorrencia);
+            if (!falta) return;
+
+            document.getElementById("form-analise-falta").reset();
+            document.getElementById("row-conseguiu-he").classList.remove("disabled-row");
+            document.getElementById("analise-ocorrencia-id").value = falta.id;
+            document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (Crachá ${falta.cracha}) • Falta em ${falta.data_ocorrencia}`;
+            document.getElementById("modal-analise").style.display = "flex";
+        }
+
+        function fecharModalAnalise() {
+            document.getElementById("modal-analise").style.display = "none";
+        }
+
+        function validarRegraHE() {
+            const autHe = document.querySelector('input[name="q_aut_he"]:checked')?.value;
+            const rowConsHe = document.getElementById("row-conseguiu-he");
+            const radioNao = document.querySelector('input[name="q_cons_he"][value="0"]');
+
+            if (autHe === "0") {
+                radioNao.checked = true;
+                rowConsHe.classList.add("disabled-row");
+            } else {
+                rowConsHe.classList.remove("disabled-row");
+            }
+        }
+
+        document.getElementById("form-analise-falta").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById("btn-salvar-analise");
+            btn.disabled = true;
+
+            const payload = {
+                ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value),
+                comunicada_2h_antecedencia: document.querySelector('input[name="q_comunicada"]:checked').value === "1",
+                foi_troca_folga: document.querySelector('input[name="q_troca"]:checked').value === "1",
+                autorizado_hora_extra: document.querySelector('input[name="q_aut_he"]:checked').value === "1",
+                conseguiu_he_cobertura: document.querySelector('input[name="q_cons_he"]:checked').value === "1",
+                redividiu_equipe: document.querySelector('input[name="q_redividiu"]:checked').value === "1"
+            };
+
+            try {
+                const res = await fetch("/api/analisar-falta", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.sucesso) {
+                    mostrarToast(data.mensagem);
+                    fecharModalAnalise();
+                    carregarFaltas();
+                    carregarMetricasRoot();
+                } else {
+                    mostrarToast(data.mensagem || "Erro ao salvar análise.", true);
+                }
+            } catch (err) {
+                mostrarToast("Erro de comunicação com o servidor.", true);
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // ---------------------------------------------------------------------
+        // FUNÇÕES ADMINISTRATIVAS (ROOT)
+        // ---------------------------------------------------------------------
+        async function carregarCentrosCusto() {
+            const box = document.getElementById("lista-ccs-checkbox");
+            if (!box || box.dataset.carregado === "1") return;
+
+            const res = await fetch("/api/centros-custo");
+            const data = await res.json();
+            if (data.sucesso) {
+                box.dataset.carregado = "1";
+                box.innerHTML = data.centros_custo.map(cc => `
+                    <label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}">
+                        <input type="checkbox" name="ccs_selecionados" value="${cc.id}">
+                        <span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span>
+                    </label>
+                `).join("");
+            }
+        }
+
+        function filtrarCheckboxesCC() {
+            const termo = document.getElementById("busca-cc").value.toLowerCase().trim();
+            document.querySelectorAll("#lista-ccs-checkbox .cc-item").forEach(el => {
+                el.style.display = el.dataset.texto.includes(termo) ? "flex" : "none";
+            });
+        }
+
+        function alternarTodosCCs(marcar) {
+            document.querySelectorAll('input[name="ccs_selecionados"]').forEach(cb => cb.checked = marcar);
+        }
+
+        const formConvite = document.getElementById("form-novo-convite");
+        if (formConvite) {
+            formConvite.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const ccs = Array.from(document.querySelectorAll('input[name="ccs_selecionados"]:checked')).map(el => parseInt(el.value));
+                if (!ccs.length) {
+                    mostrarToast("Selecione ao menos um Centro de Custo.", true);
+                    return;
+                }
+
+                const btn = document.getElementById("btn-gerar-convite");
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch("/api/convites", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            cracha: document.getElementById("conv-cracha").value.trim(),
+                            email_destino: document.getElementById("conv-email").value.trim(),
+                            dias_validade: parseInt(document.getElementById("conv-validade").value),
+                            centros_custo_ids: ccs
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.sucesso) {
+                        document.getElementById("lbl-nome-convidado").innerText = data.colaborador;
+                        document.getElementById("lbl-codigo-hash").innerText = data.codigo_ativacao;
+                        document.getElementById("box-codigo-gerado").style.display = "flex";
+                        formConvite.reset();
+                        carregarConvites();
+                        carregarMetricasRoot();
+                        mostrarToast(data.mensagem);
+                    } else {
+                        mostrarToast(data.mensagem || "Erro ao gerar convite.", true);
+                    }
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        function copiarCodigo() {
+            const cod = document.getElementById("lbl-codigo-hash").innerText;
+            navigator.clipboard.writeText(cod);
+            mostrarToast("Código copiado para a área de transferência!");
+        }
+
+        async function carregarConvites() {
+            const tbody = document.getElementById("tbody-convites");
+            if (!tbody) return;
+            const res = await fetch("/api/convites");
+            const data = await res.json();
+            if (data.sucesso) {
+                tbody.innerHTML = data.convites.map(c => {
+                    const pillClass = c.status === "DISPONIVEL" ? "pill-disponivel" : (c.status === "UTILIZADO" ? "pill-utilizado" : "pill-expirado");
+                    return `
+                        <tr>
+                            <td>${c.cracha}</td>
+                            <td>${c.colaborador}</td>
+                            <td>${c.centros_custo.join(", ")}</td>
+                            <td><span class="status-pill ${pillClass}">${c.status}</span></td>
+                            <td>${c.expira_em}</td>
+                        </tr>
+                    `;
+                }).join("");
+            }
+        }
+
+        async function carregarGestores() {
+            const tbody = document.getElementById("tbody-gestores");
+            if (!tbody) return;
+            const res = await fetch("/api/gestores");
+            const data = await res.json();
+            if (data.sucesso) {
+                tbody.innerHTML = data.gestores.map(g => `
+                    <tr>
+                        <td>${g.cracha}</td>
+                        <td>${g.nome}</td>
+                        <td>${g.centros_custo.join(", ") || "Nenhum"}</td>
+                        <td><span class="status-pill ${g.ativo ? 'pill-ativo' : 'pill-inativo'}">${g.ativo ? 'ATIVO' : 'BLOQUEADO'}</span></td>
+                        <td>
+                            <button class="btn ${g.ativo ? 'btn-danger' : 'btn-success'}" style="padding:5px 10px; font-size:0.76rem;" onclick="alternarGestor(${g.id})">
+                                ${g.ativo ? 'Bloquear' : 'Ativar'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join("");
+            }
+        }
+
+        async function alternarGestor(id) {
+            const res = await fetch(`/api/gestores/${id}/alternar-status`, { method: "PUT" });
+            const data = await res.json();
+            if (data.sucesso) {
+                mostrarToast(data.mensagem);
+                carregarGestores();
+                carregarMetricasRoot();
+            }
+        }
+
+        async function dispararETL(tipo, btn) {
+            const textoOriginal = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "Executando carga no Senior...";
+            try {
+                const res = await fetch("/api/etl/executar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ tipo })
+                });
+                const data = await res.json();
+                mostrarToast(data.mensagem, !data.sucesso);
+                if (data.sucesso) {
+                    carregarFaltas();
+                    carregarMetricasRoot();
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerText = textoOriginal;
+            }
+        }
+
+        // Inicialização
+        carregarMetricasRoot();
+        carregarFaltas();
+    </script>
+</body>
+</html>

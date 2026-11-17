@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Análise de Faltas | FUNFARME</title>
+    <script>
+        // Se a página de login cair dentro de iframe, redireciona a janela inteira limpa
+        if (window.top !== window.self) {
+            window.top.location.href = window.location.href;
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        
+        /* Container Principal (Logo + Card Centralizados) */
+        .login-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .logo-funfarme-external {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            object-fit: contain;
+            margin-bottom: 20px;
+            filter: brightness(0) invert(1);
+            display: block;
+            transition: transform 0.2s ease;
+        }
+
+        @media (max-width: 480px) {
+            .logo-funfarme-external {
+                max-width: 210px;
+                margin-bottom: 16px;
+            }
+
+            .login-wrapper {
+                padding: 0 10px;
+            }
+        }
+        .logo-funfarme-external:hover {
+            transform: scale(1.02);
+        }
+
+        .login-card { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 32px 24px; width: 100%; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); }
+        .login-header { text-align: center; margin-bottom: 24px; }
+        .login-icon-box { background: #0284c7; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; }
+        .login-header h2 { font-size: 1.3rem; color: #ffffff; margin-bottom: 4px; }
+        .login-header p { font-size: 0.85rem; color: #94a3b8; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; }
+        .form-group input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #ffffff; font-size: 0.9rem; outline: none; }
+        .form-group input:focus { border-color: #0284c7; }
+        .btn-login { width: 100%; padding: 12px; background: #0284c7; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: background 0.2s, opacity 0.2s; margin-top: 8px; }
+        .btn-login:hover { background: #0369a1; }
+        .btn-login:disabled { background: #0369a1; opacity: 0.75; cursor: not-allowed; }
+        .alert { padding: 10px; border-radius: 6px; font-size: 0.82rem; text-align: center; margin-top: 14px; display: none; }
+        .alert-danger { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
+        .first-access-box { text-align: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.82rem; color: #94a3b8; }
+        .first-access-box a { color: #38bdf8; text-decoration: none; font-weight: 600; }
+        .first-access-box a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <!-- LOGO DA FUNFARME POSICIONADA FORA DO CARD -->
+        <img src="{{ url_for('static', filename='img/Logo_funfarme.png') }}" alt="Logo FUNFARME" class="logo-funfarme-external">
+
+        <!-- CARTÃO DE LOGIN -->
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-icon-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <h2>Análise de Faltas</h2>
+                <p>Informe seu crachá e senha para acessar</p>
+            </div>
+
+            <form id="form-login">
+                <div class="form-group">
+                    <label for="cracha">Crachá</label>
+                    <input type="text" id="cracha" inputmode="numeric" required placeholder="Digite seu número de crachá" autocomplete="username" />
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha</label>
+                    <input type="password" id="senha" required placeholder="••••••••" autocomplete="current-password" />
+                </div>
+
+                <button type="submit" class="btn-login">Entrar no Sistema</button>
+            </form>
+
+            <div id="alert-error" class="alert alert-danger"></div>
+
+            <div class="first-access-box">
+                Recebeu um convite do RH? <a href="/primeiro-acesso">Ativar primeiro acesso</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("form-login").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const btnSubmit = e.target.querySelector(".btn-login");
+            if (btnSubmit.disabled) return;
+
+            const cracha = document.getElementById("cracha").value.trim();
+            const senha = document.getElementById("senha").value;
+            const alertBox = document.getElementById("alert-error");
+
+            alertBox.style.display = "none";
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = "Autenticando...";
+
+            try {
+                const res = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ cracha, senha })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.sucesso) {
+                    window.top.location.href = "/";
+                } else {
+                    alertBox.innerText = data.mensagem || "Erro ao efetuar login.";
+                    alertBox.style.display = "block";
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerText = "Entrar no Sistema";
+                }
+            } catch (err) {
+                alertBox.innerText = "Erro na conexão com o servidor.";
+                alertBox.style.display = "block";
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "Entrar no Sistema";
+            }
+        });
+    </script>
+</body>
+</html>
