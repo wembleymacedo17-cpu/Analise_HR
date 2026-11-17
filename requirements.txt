@@ -1,0 +1,10 @@
+pandas
+openpyxl
+alembic
+psycopg2-binary
+psycopg[binary]
+gunicorn
+Flask
+Flask-SQLAlchemy
+python-dotenv
+gunicorn
