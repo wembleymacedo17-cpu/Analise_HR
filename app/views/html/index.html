@@ -15,6 +15,7 @@
             --funfarme-blue-mid: #1d4ed8;
             --primary-accent: #0284c7;
             --success: #059669;
+            --success-bright: #10b981;
             --warning: #d97706;
             --danger: #dc2626;
             --text-main: #0f172a;
@@ -336,6 +337,11 @@
             box-shadow: 0 4px 12px rgba(30, 58, 138, 0.24);
         }
         .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 18px rgba(30, 58, 138, 0.34); }
+        .btn-info {
+            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
+        }
         .btn-outline {
             background: #f8fafc;
             color: var(--funfarme-blue);
@@ -365,7 +371,7 @@
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(220, 38, 38, 0.22);
         }
-        .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 8px; gap: 5px; }
+        .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 8px; gap: 5px; white-space: nowrap; }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .table-wrapper { overflow-x: auto; }
@@ -390,11 +396,14 @@
         }
         .pill-pendente { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
         .pill-analisada, .pill-disponivel, .pill-ativo { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-        .pill-utilizado { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .pill-utilizado, .pill-root-badge { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .pill-gestor-badge { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
         .pill-inativo, .pill-expirado { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 
+        .acoes-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
         /* =====================================================================
-           STEPPER (WIZARD DE 4 ETAPAS)
+           STEPPER (WIZARD DE 4 ETAPAS DOS CONVITES)
            ===================================================================== */
         .stepper-bar {
             display: flex;
@@ -439,7 +448,7 @@
         }
 
         .step-pane { display: none; }
-        .step-pane.active { display: block; animation: fadeIn 0.2s ease; }
+        .step-pane.active { display: block; animation: fadeIn 0.22s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
         .step-actions {
@@ -450,6 +459,124 @@
             padding-top: 16px;
             border-top: 1px solid var(--border-color);
             gap: 10px;
+        }
+
+        /* =====================================================================
+           BARRA DE PORCENTAGEM VERDE (MODAL DE ANÁLISE OPERACIONAL)
+           ===================================================================== */
+        .progress-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-step-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+        .progress-pct-badge {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #059669;
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            padding: 2px 10px;
+            border-radius: 999px;
+        }
+        .progress-track {
+            width: 100%;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 20%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            border-radius: 999px;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* CARTÃO DE PERGUNTA ÚNICA POR STEP */
+        .single-question-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px 18px;
+        }
+        .single-question-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+        .choice-cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .choice-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px 16px;
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+        .choice-card:hover {
+            border-color: var(--funfarme-blue);
+            background: #eff6ff;
+        }
+        .choice-card input[type="radio"] {
+            accent-color: var(--funfarme-blue);
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+        }
+        .choice-card:has(input:checked) {
+            border-color: var(--funfarme-blue);
+            background: #eff6ff;
+            color: var(--funfarme-blue);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.12);
+        }
+
+        /* CAMPOS CONDICIONAIS DA REDIVISÃO DE EQUIPE (PERGUNTA 5) */
+        .redivisao-detalhes-box {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1.5px solid #93c5fd;
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .redivisao-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 520px) {
+            .redivisao-grid { grid-template-columns: 1fr; }
         }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
@@ -541,9 +668,7 @@
             border-radius: 999px;
         }
 
-        /* =====================================================================
-           ETAPA 4: CARTÃO DE CONFIRMAÇÃO DE ENVIO DA HASH
-           ===================================================================== */
+        /* ETAPA 4: CONFIRMAÇÃO */
         .step4-status-card {
             border-radius: 14px;
             padding: 26px 24px;
@@ -553,46 +678,15 @@
             align-items: center;
             gap: 12px;
         }
-        .step4-status-card.status-ok {
-            background: #ecfdf5;
-            border: 1.5px solid #6ee7b7;
-        }
-        .step4-status-card.status-warn {
-            background: #fffbeb;
-            border: 1.5px solid #fcd34d;
-        }
-        .step4-icon {
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .status-ok .step4-icon {
-            background: #d1fae5;
-            color: #059669;
-            border: 1px solid #a7f3d0;
-        }
-        .status-warn .step4-icon {
-            background: #fef3c7;
-            color: #d97706;
-            border: 1px solid #fde68a;
-        }
-        .step4-title {
-            font-size: 1.15rem;
-            font-weight: 800;
-        }
+        .step4-status-card.status-ok { background: #ecfdf5; border: 1.5px solid #6ee7b7; }
+        .step4-status-card.status-warn { background: #fffbeb; border: 1.5px solid #fcd34d; }
+        .step4-icon { width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+        .status-ok .step4-icon { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
+        .status-warn .step4-icon { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .step4-title { font-size: 1.15rem; font-weight: 800; }
         .status-ok .step4-title { color: #065f46; }
         .status-warn .step4-title { color: #92400e; }
-
-        .step4-desc {
-            font-size: 0.88rem;
-            color: #334155;
-            max-width: 520px;
-            line-height: 1.45;
-        }
-
+        .step4-desc { font-size: 0.88rem; color: #334155; max-width: 520px; line-height: 1.45; }
         .step4-erro-detalhe {
             background: #fef2f2;
             border: 1px solid #fecaca;
@@ -603,7 +697,6 @@
             max-width: 560px;
             word-break: break-word;
         }
-
         .step4-hash-box {
             display: inline-flex;
             align-items: center;
@@ -654,15 +747,38 @@
             background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: 16px;
-            max-width: 540px;
+            max-width: 560px;
             width: 100%;
             padding: 24px;
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
-            max-height: 90vh;
+            max-height: 92vh;
             display: flex;
             flex-direction: column;
         }
         .modal-card.modal-lg { max-width: 1060px; }
+        .modal-card.modal-md { max-width: 760px; }
+
+        /* CARDS DE SELEÇÃO DE PRIVILÉGIO */
+        .role-option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+        .role-option-card {
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .role-option-card:hover { border-color: var(--funfarme-blue); background: #eff6ff; }
+        .role-option-card.selected {
+            border-color: var(--funfarme-blue);
+            background: #eff6ff;
+            box-shadow: 0 4px 14px rgba(30, 58, 138, 0.14);
+        }
+        .role-option-title { font-size: 0.95rem; font-weight: 800; color: var(--funfarme-blue); display: flex; align-items: center; justify-content: space-between; }
+        .role-option-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
 
         /* MODAL DE CONFIRMAÇÃO PERSONALIZADO */
         .confirm-card {
@@ -683,23 +799,9 @@
             justify-content: center;
             margin: 0 auto 14px auto;
         }
-        .confirm-title {
-            font-size: 1.08rem;
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 6px;
-        }
-        .confirm-desc {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.45;
-            margin-bottom: 22px;
-        }
-        .confirm-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
+        .confirm-title { font-size: 1.08rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px; }
+        .confirm-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 22px; }
+        .confirm-actions { display: flex; gap: 10px; justify-content: center; }
         .confirm-actions .btn { flex: 1; padding: 10px 14px; }
 
         .modal-header {
@@ -718,23 +820,67 @@
 
         .acoes-convite-cell { display: flex; gap: 6px; flex-wrap: nowrap; }
 
-        .question-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 11px 12px;
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            gap: 12px;
+        /* BUSCA DE ORIGEM DA COBERTURA */
+        .cobertura-box {
+            background: #ffffff;
+            border: 1.5px solid #93c5fd;
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 16px;
+            display: none;
+            animation: fadeIn 0.2s ease;
         }
-        .question-row.disabled-row { opacity: 0.45; pointer-events: none; }
-        .question-text { font-size: 0.85rem; color: var(--text-main); font-weight: 500; }
-        .radio-group { display: flex; gap: 12px; flex-shrink: 0; }
-        .radio-group label { display: flex; align-items: center; gap: 5px; font-size: 0.84rem; cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+        .cobertura-label {
+            display: block;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--funfarme-blue);
+            margin-bottom: 8px;
+        }
+        .autocomplete-wrap { position: relative; }
+        .autocomplete-results {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+            max-height: 210px;
+            overflow-y: auto;
+            z-index: 120;
+            display: none;
+        }
+        .autocomplete-item {
+            padding: 9px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover { background: #eff6ff; }
+        .autocomplete-item strong { font-size: 0.84rem; color: var(--text-main); }
+        .autocomplete-item span { font-size: 0.75rem; color: var(--text-muted); }
 
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+        .cobridor-selecionado-card {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .cobridor-selecionado-info { display: flex; flex-direction: column; gap: 2px; }
+        .cobridor-selecionado-info strong { font-size: 0.84rem; color: var(--funfarme-blue); }
+        .cobridor-selecionado-info span { font-size: 0.76rem; color: #334155; font-weight: 600; }
+
+        .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); }
 
         .toast {
             position: fixed;
@@ -884,7 +1030,7 @@
             </section>
 
             <!-- =============================================================== -->
-            <!-- ABA 1: OCORRÊNCIAS                                              -->
+            <!-- ABA 1: VISÃO GLOBAL / OCORRÊNCIAS                               -->
             <!-- =============================================================== -->
             <section id="aba-faltas" class="tab-content active">
                 <div class="panel">
@@ -910,7 +1056,7 @@
                                     <th>Cargo</th>
                                     <th>Centro de Custo</th>
                                     <th>Status</th>
-                                    <th>Ação</th>
+                                    <th>Ação / Auditoria</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-faltas">
@@ -938,7 +1084,6 @@
                         </button>
                     </div>
 
-                    <!-- STEPPER 4 ETAPAS -->
                     <div class="stepper-bar">
                         <div class="step-item active" id="step-ind-1">
                             <div class="step-circle">1</div>
@@ -961,7 +1106,6 @@
                         </div>
                     </div>
 
-                    <!-- STEP 1: CRACHÁ + E-MAIL OBRIGATÓRIO + VALIDADE -->
                     <div id="step-pane-1" class="step-pane active">
                         <div class="form-grid">
                             <div class="field-group">
@@ -999,7 +1143,6 @@
                         </div>
                     </div>
 
-                    <!-- STEP 2: SELEÇÃO DE CENTROS DE CUSTO -->
                     <div id="step-pane-2" class="step-pane">
                         <div class="gestor-pill-banner" id="banner-gestor-validado">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1038,7 +1181,6 @@
                         </div>
                     </div>
 
-                    <!-- STEP 3: CONFERÊNCIA DOS DADOS -->
                     <div id="step-pane-3" class="step-pane">
                         <div class="review-card">
                             <div class="review-row">
@@ -1076,7 +1218,6 @@
                         </div>
                     </div>
 
-                    <!-- STEP 4: CONFIRMAÇÃO DE ENVIO DA HASH -->
                     <div id="step-pane-4" class="step-pane">
                         <div id="step4-card" class="step4-status-card status-ok">
                             <div class="step4-icon" id="step4-icon">
@@ -1109,20 +1250,27 @@
             <section id="aba-gestores" class="tab-content">
                 <div class="panel">
                     <div class="panel-header">
-                        <h2 class="panel-title">Gestores Cadastrados</h2>
+                        <h2 class="panel-title">Gestão de Perfis</h2>
+                        <div class="filters-row">
+                            <input type="text" id="filtro-perfis" class="input-control" placeholder="Buscar crachá, nome ou perfil..." oninput="filtrarTabelaPerfis()">
+                            <button type="button" class="btn btn-primary" onclick="carregarGestores()">Atualizar</button>
+                        </div>
                     </div>
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Crachá</th>
-                                    <th>Gestor</th>
+                                    <th>Usuário</th>
+                                    <th>Perfil</th>
                                     <th>Centros de Custo</th>
                                     <th>Status</th>
-                                    <th>Ação</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="tbody-gestores"></tbody>
+                            <tbody id="tbody-gestores">
+                                <tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando perfis...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -1161,9 +1309,107 @@
     </div>
 
     <!-- ======================================================================= -->
-    <!-- MODAL DO HISTÓRICO DE CONVITES (COM REENVIAR E REMOVER HASH)            -->
+    <!-- MODAIS DE GESTÃO DE PERFIS (ROOT)                                       -->
     <!-- ======================================================================= -->
     {% if perfil == 'ROOT' %}
+    <div id="modal-editar-cc" class="modal-backdrop">
+        <div class="modal-card modal-md">
+            <div class="modal-header">
+                <div>
+                    <h3>Editar Centros de Custo</h3>
+                    <div class="modal-info" id="edit-cc-subtitulo">--</div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalEditarCC()">Fechar</button>
+            </div>
+
+            <input type="hidden" id="edit-cc-usuario-id">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                <span style="font-size:0.82rem; font-weight:700; color:var(--text-secondary);">
+                    Vinculados: <strong id="edit-cc-contador" style="color:var(--funfarme-blue);">0</strong>
+                </span>
+                <div style="display:flex; gap:6px;">
+                    <input type="text" id="edit-cc-busca" class="input-control" style="padding:6px 10px; font-size:0.8rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesEditarCC()">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="limparCheckboxesEditarCC()">Limpar</button>
+                </div>
+            </div>
+
+            <div id="edit-cc-checklist" class="cc-checklist modal-body-scroll">
+                <span style="color:#64748b; font-size:0.8rem;">Carregando...</span>
+            </div>
+
+            <div class="modal-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEditarCC()">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-salvar-edit-cc" onclick="salvarEditarCC()">Salvar Setores</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-editar-privilegios" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3>Editar Privilégios</h3>
+                    <div class="modal-info" id="edit-priv-subtitulo">--</div>
+                </div>
+            </div>
+
+            <input type="hidden" id="edit-priv-usuario-id">
+            <input type="hidden" id="edit-priv-role-selecionado">
+
+            <div class="role-option-grid">
+                <div class="role-option-card" id="card-role-GESTOR" onclick="selecionarRoleCard('GESTOR')">
+                    <div class="role-option-title">
+                        <span>GESTOR</span>
+                        <span class="status-pill pill-gestor-badge">Operacional</span>
+                    </div>
+                    <p class="role-option-desc">Visualiza e analisa apenas as ocorrências dos Centros de Custo vinculados.</p>
+                </div>
+
+                <div class="role-option-card" id="card-role-ROOT" onclick="selecionarRoleCard('ROOT')">
+                    <div class="role-option-title">
+                        <span>ROOT</span>
+                        <span class="status-pill pill-utilizado">Admin Total</span>
+                    </div>
+                    <p class="role-option-desc">Acesso global a todos os setores, convites, gestão de perfis e cargas ETL. Não possui vínculo com CCs.</p>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEditarPrivilegios()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-edit-priv" onclick="salvarEditarPrivilegios()">Salvar Privilégio</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-editar-senha" class="modal-backdrop">
+        <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header">
+                <div>
+                    <h3>Alterar Senha</h3>
+                    <div class="modal-info" id="edit-senha-subtitulo">--</div>
+                </div>
+            </div>
+
+            <form id="form-editar-senha">
+                <input type="hidden" id="edit-senha-usuario-id">
+                <div class="field-group" style="margin-bottom: 14px;">
+                    <label for="edit-nova-senha">Nova Senha (mínimo 6 caracteres) *</label>
+                    <input type="password" id="edit-nova-senha" class="input-control" required minlength="6" placeholder="••••••••">
+                </div>
+                <div class="field-group">
+                    <label for="edit-confirma-senha">Confirmar Nova Senha *</label>
+                    <input type="password" id="edit-confirma-senha" class="input-control" required minlength="6" placeholder="••••••••">
+                </div>
+
+                <div class="modal-actions" style="justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalEditarSenha()">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btn-salvar-edit-senha">Salvar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="modal-historico-convites" class="modal-backdrop">
         <div class="modal-card modal-lg">
             <div class="modal-header">
@@ -1197,7 +1443,7 @@
     {% endif %}
 
     <!-- ======================================================================= -->
-    <!-- MODAL DE ANÁLISE                                                        -->
+    <!-- MODAL DE ANÁLISE OPERACIONAL (1 PERGUNTA POR STEP + BARRA % VERDE)      -->
     <!-- ======================================================================= -->
     <div id="modal-analise" class="modal-backdrop">
         <div class="modal-card">
@@ -1206,54 +1452,216 @@
                     <h3>Análise Operacional</h3>
                     <div class="modal-info" id="modal-subtitulo">Colaborador • Data</div>
                 </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalAnalise()">Fechar</button>
+            </div>
+
+            <!-- BARRA DE PORCENTAGEM CONCLUÍDA EM VERDE -->
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span class="progress-step-label" id="lbl-progresso-etapa">Pergunta 1 de 5</span>
+                    <span class="progress-pct-badge" id="lbl-progresso-pct">20% concluído</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="barra-progresso-fill" style="width: 20%;"></div>
+                </div>
             </div>
 
             <form id="form-analise-falta">
                 <input type="hidden" id="analise-ocorrencia-id">
+                <input type="hidden" id="analise-faltante-id">
+                <input type="hidden" id="cobridor-colaborador-id">
 
-                <div class="question-row">
-                    <span class="question-text">1. Comunicada com 2h de antecedência?</span>
-                    <div class="radio-group">
-                        <label><input type="radio" name="q_comunicada" value="1" required> Sim</label>
-                        <label><input type="radio" name="q_comunicada" value="0"> Não</label>
+                <!-- STEP 1: PERGUNTA 1 -->
+                <div id="an-step-pane-1" class="step-pane active">
+                    <div class="single-question-card">
+                        <div class="single-question-title">1. A falta foi comunicada com 2h de antecedência?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card">
+                                <input type="radio" name="q_comunicada" value="1">
+                                <span>Sim</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_comunicada" value="0">
+                                <span>Não</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions" style="justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(2)">
+                            Próximo
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <div class="question-row">
-                    <span class="question-text">2. Foi troca de folga?</span>
-                    <div class="radio-group">
-                        <label><input type="radio" name="q_troca" value="1" required> Sim</label>
-                        <label><input type="radio" name="q_troca" value="0"> Não</label>
+                <!-- STEP 2: PERGUNTA 2 -->
+                <div id="an-step-pane-2" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">2. Foi troca de folga?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card">
+                                <input type="radio" name="q_troca" value="1">
+                                <span>Sim</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_troca" value="0">
+                                <span>Não</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="irStepAnalise(1)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Voltar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(3)">
+                            Próximo
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <div class="question-row">
-                    <span class="question-text">3. Autorizado hora extra para cobertura?</span>
-                    <div class="radio-group">
-                        <label><input type="radio" name="q_aut_he" value="1" required onchange="validarRegraHE()"> Sim</label>
-                        <label><input type="radio" name="q_aut_he" value="0" onchange="validarRegraHE()"> Não</label>
+                <!-- STEP 3: PERGUNTA 3 -->
+                <div id="an-step-pane-3" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">3. Foi autorizado hora extra para cobertura?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card">
+                                <input type="radio" name="q_aut_he" value="1">
+                                <span>Sim</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_aut_he" value="0">
+                                <span>Não</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="irStepAnalise(2)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Voltar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(4)">
+                            Próximo
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <div class="question-row" id="row-conseguiu-he">
-                    <span class="question-text">4. Conseguiu horas extras para cobertura?</span>
-                    <div class="radio-group">
-                        <label><input type="radio" name="q_cons_he" value="1" required> Sim</label>
-                        <label><input type="radio" name="q_cons_he" value="0"> Não</label>
+                <!-- STEP 4: PERGUNTA 4 + ORIGEM DA COBERTURA -->
+                <div id="an-step-pane-4" class="step-pane">
+                    <div class="single-question-card">
+                        <div id="bloco-pergunta-4">
+                            <div class="single-question-title">4. Conseguiu horas extras para cobertura?</div>
+                            <div class="choice-cards-grid">
+                                <label class="choice-card">
+                                    <input type="radio" name="q_cons_he" value="1" onchange="atualizarVisibilidadeCobridor()">
+                                    <span>Sim</span>
+                                </label>
+                                <label class="choice-card">
+                                    <input type="radio" name="q_cons_he" value="0" onchange="atualizarVisibilidadeCobridor()">
+                                    <span>Não</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- ORIGEM DA COBERTURA (QUEM COBRIU A FALTA) -->
+                        <div class="cobertura-box" id="box-origem-cobertura">
+                            <label class="cobertura-label" for="input-busca-cobridor">
+                                Origem da Cobertura (Quem cobriu a falta?) *
+                            </label>
+                            <div class="autocomplete-wrap">
+                                <input
+                                    type="text"
+                                    id="input-busca-cobridor"
+                                    class="input-control"
+                                    style="width: 100%;"
+                                    placeholder="Digite o crachá ou nome do colaborador substituto..."
+                                    autocomplete="off"
+                                    oninput="buscarCobridorDebounced()"
+                                >
+                                <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
+                            </div>
+
+                            <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
+                                <div class="cobridor-selecionado-info">
+                                    <strong id="lbl-cobridor-nome">--</strong>
+                                    <span id="lbl-cobridor-cc">--</span>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="irStepAnalise(3)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Voltar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(5)">
+                            Próximo
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <div class="question-row">
-                    <span class="question-text">5. Foi necessário redividir a equipe?</span>
-                    <div class="radio-group">
-                        <label><input type="radio" name="q_redividiu" value="1" required> Sim</label>
-                        <label><input type="radio" name="q_redividiu" value="0"> Não</label>
-                    </div>
-                </div>
+                <!-- STEP 5: PERGUNTA 5 + CAMPOS CONDICIONAIS DE REDIVISÃO -->
+                <div id="an-step-pane-5" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">5. Foi necessário redividir a equipe?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card">
+                                <input type="radio" name="q_redividiu" value="1" onchange="atualizarVisibilidadeRedivisao()">
+                                <span>Sim</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_redividiu" value="0" onchange="atualizarVisibilidadeRedivisao()">
+                                <span>Não</span>
+                            </label>
+                        </div>
 
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
-                    <button type="submit" class="btn btn-success" id="btn-salvar-analise">Salvar</button>
+                        <!-- CAMPOS CONDICIONAIS SE SIM -->
+                        <div id="box-redivisao-detalhes" class="redivisao-detalhes-box">
+                            <div class="redivisao-grid">
+                                <div class="field-group">
+                                    <label for="input-qtd-pacientes">Número de Pacientes *</label>
+                                    <input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1" placeholder="Ex: 12">
+                                </div>
+                                <div class="field-group">
+                                    <label for="input-qtd-colaboradores">Qtd. de Colaboradores *</label>
+                                    <input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1" placeholder="Ex: 4">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="voltarDoStep5()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Voltar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btn-salvar-analise">Salvar Análise</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1288,7 +1696,13 @@
         const PERFIL_LOGADO = "{{ perfil }}";
         let listaFaltasCache = [];
         let listaConvitesCache = [];
+        let listaPerfisCache = [];
+        let listaCCsGlobal = [];
+        let usuarioLogadoId = null;
         let gestorValidadoAtual = null;
+        let cobridorSelecionadoObj = null;
+        let timerBuscaCobridor = null;
+        let pulouStep4Cobertura = false;
 
         function toggleSidebarMobile() {
             document.getElementById("sidebar").classList.toggle("open");
@@ -1316,7 +1730,7 @@
 
             const kpiGrid = document.getElementById("kpi-grid");
             if (kpiGrid) {
-                kpiGrid.style.display = (idAba === "aba-convites") ? "none" : "grid";
+                kpiGrid.style.display = (idAba === "aba-faltas") ? "grid" : "none";
             }
 
             if (window.innerWidth <= 920) {
@@ -1345,7 +1759,7 @@
 
             btnConfirmar.onclick = async () => {
                 btnConfirmar.disabled = true;
-                btnConfirmar.innerText = "Removendo...";
+                btnConfirmar.innerText = "Processando...";
                 await onConfirm();
                 fecharModalConfirmacao();
             };
@@ -1449,7 +1863,6 @@
                 if (idx < numeroStep) {
                     ind.classList.add("completed");
                 } else if (idx === numeroStep) {
-                    // Se chegou na Etapa 4 (final), marca como concluída
                     ind.classList.add(numeroStep === 4 ? "completed" : "active");
                 }
             });
@@ -1552,7 +1965,7 @@
         }
 
         // ---------------------------------------------------------------------
-        // MODAL DE HISTÓRICO DE CONVITES (REENVIAR E REMOVER HASH)
+        // MODAL DE HISTÓRICO DE CONVITES
         // ---------------------------------------------------------------------
         function abrirModalHistoricoConvites(filtroInicial = "") {
             const inputFiltro = document.getElementById("filtro-hist-convites");
@@ -1605,15 +2018,15 @@
                 let acoesHtml = '<span style="color:#94a3b8; font-size:0.78rem;">—</span>';
                 if (c.status === "DISPONIVEL") {
                     acoesHtml = `
-                        <div class="acoes-convite-cell">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="reenviarConvite(${c.id}, this)" title="Gera nova hash e reenvia e-mail">
+                        <div class="acoes-row">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="reenviarConvite(${c.id}, this)">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="23 4 23 10 17 10"></polyline>
                                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                                 </svg>
                                 Reenviar
                             </button>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="removerConvite(${c.id}, '${c.cracha}', this)" title="Cancela e remove esta hash">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removerConvite(${c.id}, '${c.cracha}', this)">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
@@ -1689,6 +2102,306 @@
         }
 
         // ---------------------------------------------------------------------
+        // GESTÃO DE PERFIS (ROOT)
+        // ---------------------------------------------------------------------
+        async function garantirCCsCarregados() {
+            if (listaCCsGlobal.length > 0) return listaCCsGlobal;
+            const res = await fetch("/api/centros-custo");
+            const data = await res.json();
+            if (data.sucesso) {
+                listaCCsGlobal = data.centros_custo;
+            }
+            return listaCCsGlobal;
+        }
+
+        async function carregarGestores() {
+            const tbody = document.getElementById("tbody-gestores");
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando perfis...</td></tr>';
+
+            try {
+                const res = await fetch("/api/gestores");
+                const data = await res.json();
+                if (data.sucesso) {
+                    listaPerfisCache = data.gestores;
+                    usuarioLogadoId = data.usuario_logado_id;
+                    filtrarTabelaPerfis();
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc2626;">Erro ao carregar perfis.</td></tr>';
+            }
+        }
+
+        function filtrarTabelaPerfis() {
+            const input = document.getElementById("filtro-perfis");
+            const termo = input ? input.value.toLowerCase().trim() : "";
+            const filtrados = listaPerfisCache.filter(g =>
+                g.cracha.toLowerCase().includes(termo) ||
+                g.nome.toLowerCase().includes(termo) ||
+                g.role.toLowerCase().includes(termo) ||
+                g.centros_custo.join(" ").toLowerCase().includes(termo)
+            );
+            renderizarTabelaPerfis(filtrados);
+        }
+
+        function renderizarTabelaPerfis(lista) {
+            const tbody = document.getElementById("tbody-gestores");
+            if (!lista.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Nenhum perfil encontrado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = lista.map(g => {
+                const isRoot = g.role === "ROOT";
+                const rolePill = isRoot
+                    ? '<span class="status-pill pill-utilizado">ROOT</span>'
+                    : '<span class="status-pill pill-gestor-badge">GESTOR</span>';
+
+                const statusPill = g.ativo
+                    ? '<span class="status-pill pill-ativo">ATIVO</span>'
+                    : '<span class="status-pill pill-inativo">BLOQUEADO</span>';
+
+                const ccsTexto = isRoot
+                    ? '<span style="color:#64748b; font-style:italic;">Não aplicável (Acesso Global)</span>'
+                    : (g.centros_custo.join(", ") || "Nenhum");
+
+                const isProprioUsuario = (g.id === usuarioLogadoId);
+
+                const btnEditarCC = isRoot ? "" : `
+                    <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalEditarCC(${g.id})" title="Vincular ou remover Centros de Custo">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        Editar CC
+                    </button>
+                `;
+
+                return `
+                    <tr>
+                        <td><strong>${g.cracha}</strong></td>
+                        <td>${g.nome}</td>
+                        <td>${rolePill}</td>
+                        <td>${ccsTexto}</td>
+                        <td>${statusPill}</td>
+                        <td>
+                            <div class="acoes-row">
+                                ${btnEditarCC}
+
+                                <button type="button" class="btn btn-info btn-sm" onclick="abrirModalEditarPrivilegios(${g.id})" title="Alterar nível entre GESTOR e ROOT" ${isProprioUsuario ? 'disabled' : ''}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                    Editar Privilégios
+                                </button>
+
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalEditarSenha(${g.id})" title="Redefinir senha do usuário">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                    Editar Senha
+                                </button>
+
+                                <button type="button" class="btn ${g.ativo ? 'btn-danger' : 'btn-success'} btn-sm" onclick="alternarGestor(${g.id})" ${isProprioUsuario ? 'disabled' : ''}>
+                                    ${g.ativo ? 'Bloquear' : 'Ativar'}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function abrirModalEditarCC(usuarioId) {
+            const user = listaPerfisCache.find(u => u.id === usuarioId);
+            if (!user || user.role === "ROOT") return;
+
+            document.getElementById("edit-cc-usuario-id").value = user.id;
+            document.getElementById("edit-cc-subtitulo").innerText = `${user.cracha} — ${user.nome}`;
+            document.getElementById("edit-cc-busca").value = "";
+            document.getElementById("modal-editar-cc").style.display = "flex";
+
+            const box = document.getElementById("edit-cc-checklist");
+            box.innerHTML = '<span style="color:#64748b; font-size:0.8rem;">Carregando centros de custo...</span>';
+
+            const ccs = await garantirCCsCarregados();
+            const vinculadosSet = new Set(user.centros_custo_ids || []);
+
+            box.innerHTML = ccs.map(cc => `
+                <label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}">
+                    <input type="checkbox" name="edit_ccs_checks" value="${cc.id}" ${vinculadosSet.has(cc.id) ? "checked" : ""} onchange="atualizarContadorEditarCC()">
+                    <span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span>
+                </label>
+            `).join("");
+
+            atualizarContadorEditarCC();
+        }
+
+        function fecharModalEditarCC() {
+            document.getElementById("modal-editar-cc").style.display = "none";
+        }
+
+        function filtrarCheckboxesEditarCC() {
+            const termo = document.getElementById("edit-cc-busca").value.toLowerCase().trim();
+            document.querySelectorAll("#edit-cc-checklist .cc-item").forEach(el => {
+                el.style.display = el.dataset.texto.includes(termo) ? "flex" : "none";
+            });
+        }
+
+        function limparCheckboxesEditarCC() {
+            document.querySelectorAll('input[name="edit_ccs_checks"]').forEach(cb => cb.checked = false);
+            atualizarContadorEditarCC();
+        }
+
+        function atualizarContadorEditarCC() {
+            const qtd = document.querySelectorAll('input[name="edit_ccs_checks"]:checked').length;
+            document.getElementById("edit-cc-contador").innerText = qtd;
+        }
+
+        async function salvarEditarCC() {
+            const usuarioId = document.getElementById("edit-cc-usuario-id").value;
+            const ccsIds = Array.from(document.querySelectorAll('input[name="edit_ccs_checks"]:checked')).map(cb => parseInt(cb.value));
+
+            const btn = document.getElementById("btn-salvar-edit-cc");
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            try {
+                const res = await fetch(`/api/gestores/${usuarioId}/centros-custo`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ centros_custo_ids: ccsIds })
+                });
+                const data = await res.json();
+                mostrarToast(data.mensagem, !data.sucesso);
+                if (data.sucesso) {
+                    fecharModalEditarCC();
+                    carregarGestores();
+                }
+            } catch (err) {
+                mostrarToast("Erro ao atualizar Centros de Custo.", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Salvar Setores";
+            }
+        }
+
+        function abrirModalEditarPrivilegios(usuarioId) {
+            const user = listaPerfisCache.find(u => u.id === usuarioId);
+            if (!user) return;
+
+            document.getElementById("edit-priv-usuario-id").value = user.id;
+            document.getElementById("edit-priv-subtitulo").innerText = `${user.cracha} — ${user.nome}`;
+            selecionarRoleCard(user.role);
+            document.getElementById("modal-editar-privilegios").style.display = "flex";
+        }
+
+        function fecharModalEditarPrivilegios() {
+            document.getElementById("modal-editar-privilegios").style.display = "none";
+        }
+
+        function selecionarRoleCard(role) {
+            document.getElementById("edit-priv-role-selecionado").value = role;
+            document.getElementById("card-role-GESTOR").classList.toggle("selected", role === "GESTOR");
+            document.getElementById("card-role-ROOT").classList.toggle("selected", role === "ROOT");
+        }
+
+        async function salvarEditarPrivilegios() {
+            const usuarioId = document.getElementById("edit-priv-usuario-id").value;
+            const role = document.getElementById("edit-priv-role-selecionado").value;
+
+            const btn = document.getElementById("btn-salvar-edit-priv");
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            try {
+                const res = await fetch(`/api/gestores/${usuarioId}/privilegios`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ role })
+                });
+                const data = await res.json();
+                mostrarToast(data.mensagem, !data.sucesso);
+                if (data.sucesso) {
+                    fecharModalEditarPrivilegios();
+                    carregarGestores();
+                    carregarMetricasRoot();
+                }
+            } catch (err) {
+                mostrarToast("Erro ao atualizar privilégio.", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Salvar Privilégio";
+            }
+        }
+
+        function abrirModalEditarSenha(usuarioId) {
+            const user = listaPerfisCache.find(u => u.id === usuarioId);
+            if (!user) return;
+
+            document.getElementById("form-editar-senha").reset();
+            document.getElementById("edit-senha-usuario-id").value = user.id;
+            document.getElementById("edit-senha-subtitulo").innerText = `${user.cracha} — ${user.nome}`;
+            document.getElementById("modal-editar-senha").style.display = "flex";
+        }
+
+        function fecharModalEditarSenha() {
+            document.getElementById("modal-editar-senha").style.display = "none";
+        }
+
+        const formEditarSenha = document.getElementById("form-editar-senha");
+        if (formEditarSenha) {
+            formEditarSenha.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const usuarioId = document.getElementById("edit-senha-usuario-id").value;
+                const nova_senha = document.getElementById("edit-nova-senha").value;
+                const confirma = document.getElementById("edit-confirma-senha").value;
+
+                if (nova_senha.length < 6) {
+                    mostrarToast("A senha deve ter no mínimo 6 caracteres.", true);
+                    return;
+                }
+                if (nova_senha !== confirma) {
+                    mostrarToast("As senhas digitadas não conferem.", true);
+                    return;
+                }
+
+                const btn = document.getElementById("btn-salvar-edit-senha");
+                btn.disabled = true;
+                btn.innerText = "Salvando...";
+
+                try {
+                    const res = await fetch(`/api/gestores/${usuarioId}/senha`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nova_senha })
+                    });
+                    const data = await res.json();
+                    mostrarToast(data.mensagem, !data.sucesso);
+                    if (data.sucesso) {
+                        fecharModalEditarSenha();
+                    }
+                } catch (err) {
+                    mostrarToast("Erro ao alterar senha.", true);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = "Salvar Senha";
+                }
+            });
+        }
+
+        async function alternarGestor(id) {
+            const res = await fetch(`/api/gestores/${id}/alternar-status`, { method: "PUT" });
+            const data = await res.json();
+            mostrarToast(data.mensagem, !data.sucesso);
+            if (data.sucesso) {
+                carregarGestores();
+                carregarMetricasRoot();
+            }
+        }
+
+        // ---------------------------------------------------------------------
         // KPIs E OCORRÊNCIAS
         // ---------------------------------------------------------------------
         async function carregarMetricasRoot() {
@@ -1718,10 +2431,12 @@
                     return;
                 }
                 listaFaltasCache = data.faltas;
-                if (PERFIL_LOGADO !== "ROOT") {
-                    if (status === "PENDENTE") document.getElementById("kpi-pendentes").innerText = data.faltas.length;
-                    if (status === "ANALISADA") document.getElementById("kpi-analisadas").innerText = data.faltas.length;
+
+                if (PERFIL_LOGADO !== "ROOT" && data.kpis_gestor) {
+                    document.getElementById("kpi-pendentes").innerText = data.kpis_gestor.pendentes;
+                    document.getElementById("kpi-analisadas").innerText = data.kpis_gestor.analisadas;
                 }
+
                 renderizarTabelaFaltas(listaFaltasCache);
             } catch (err) {
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc2626;">Erro ao conectar.</td></tr>';
@@ -1759,7 +2474,17 @@
                 if (f.status === "PENDENTE") {
                     acaoHtml = `<button class="btn btn-primary btn-sm" onclick="abrirModalAnalise(${f.id})">Analisar</button>`;
                 } else if (f.analise) {
-                    acaoHtml = `<span style="font-size:0.78rem; color:#475569;"><strong>${f.analise.avaliador}</strong> • ${f.analise.respondido_em}</span>`;
+                    const infoCobridor = f.analise.cobridor
+                        ? `<div style="font-size:0.74rem; color:var(--funfarme-blue); margin-top:2px;">Coberto por: <strong>${f.analise.cobridor}</strong></div>`
+                        : "";
+                    const infoRedivisao = f.analise.redividiu_equipe && f.analise.qtd_pacientes
+                        ? `<div style="font-size:0.73rem; color:#64748b;">Redivisão: ${f.analise.qtd_pacientes} pac. / ${f.analise.qtd_colaboradores} colab.</div>`
+                        : "";
+                    acaoHtml = `
+                        <span style="font-size:0.78rem; color:#475569;"><strong>${f.analise.avaliador}</strong> • ${f.analise.respondido_em}</span>
+                        ${infoCobridor}
+                        ${infoRedivisao}
+                    `;
                 }
 
                 return `
@@ -1777,16 +2502,25 @@
         }
 
         // ---------------------------------------------------------------------
-        // MODAL DE ANÁLISE
+        // MODAL DE ANÁLISE OPERACIONAL (1 PERGUNTA POR STEP + BARRA % VERDE)
         // ---------------------------------------------------------------------
         function abrirModalAnalise(idOcorrencia) {
             const falta = listaFaltasCache.find(item => item.id === idOcorrencia);
             if (!falta) return;
 
             document.getElementById("form-analise-falta").reset();
-            document.getElementById("row-conseguiu-he").classList.remove("disabled-row");
             document.getElementById("analise-ocorrencia-id").value = falta.id;
+            document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
             document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
+
+            pulouStep4Cobertura = false;
+            limparCobridorSelecionado();
+            document.getElementById("box-origem-cobertura").style.display = "none";
+            document.getElementById("box-redivisao-detalhes").style.display = "none";
+            document.getElementById("input-qtd-pacientes").value = "";
+            document.getElementById("input-qtd-colaboradores").value = "";
+
+            irStepAnalise(1);
             document.getElementById("modal-analise").style.display = "flex";
         }
 
@@ -1794,23 +2528,215 @@
             document.getElementById("modal-analise").style.display = "none";
         }
 
-        function validarRegraHE() {
-            const autHe = document.querySelector('input[name="q_aut_he"]:checked')?.value;
-            const rowConsHe = document.getElementById("row-conseguiu-he");
-            const radioNao = document.querySelector('input[name="q_cons_he"][value="0"]');
+        function atualizarBarraProgressoAnalise(numStep) {
+            const mapaPct = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 };
+            const pct = mapaPct[numStep] || 20;
 
-            if (autHe === "0") {
-                radioNao.checked = true;
-                rowConsHe.classList.add("disabled-row");
-            } else {
-                rowConsHe.classList.remove("disabled-row");
+            document.getElementById("lbl-progresso-etapa").innerText = `Pergunta ${numStep} de 5`;
+            document.getElementById("lbl-progresso-pct").innerText = `${pct}% concluído`;
+            document.getElementById("barra-progresso-fill").style.width = `${pct}%`;
+        }
+
+        function irStepAnalise(numStep) {
+            [1, 2, 3, 4, 5].forEach(idx => {
+                const pane = document.getElementById(`an-step-pane-${idx}`);
+                if (pane) pane.classList.toggle("active", idx === numStep);
+            });
+            atualizarBarraProgressoAnalise(numStep);
+        }
+
+        function avancarStepAnalise(proximoStep) {
+            if (proximoStep === 2) {
+                if (!document.querySelector('input[name="q_comunicada"]:checked')) {
+                    mostrarToast("Selecione Sim ou Não para a pergunta 1.", true);
+                    return;
+                }
+                irStepAnalise(2);
+            } else if (proximoStep === 3) {
+                if (!document.querySelector('input[name="q_troca"]:checked')) {
+                    mostrarToast("Selecione Sim ou Não para a pergunta 2.", true);
+                    return;
+                }
+                irStepAnalise(3);
+            } else if (proximoStep === 4) {
+                const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+                if (!q3) {
+                    mostrarToast("Selecione Sim ou Não para a pergunta 3.", true);
+                    return;
+                }
+
+                const autHe = q3.value === "1";
+                const isTroca = document.querySelector('input[name="q_troca"]:checked')?.value === "1";
+
+                if (!autHe) {
+                    // Sem autorização de HE, pergunta 4 fica automaticamente "Não"
+                    document.querySelector('input[name="q_cons_he"][value="0"]').checked = true;
+
+                    if (!isTroca) {
+                        // Nem HE autorizada nem Troca de folga -> pula direto para a Pergunta 5
+                        pulouStep4Cobertura = true;
+                        limparCobridorSelecionado();
+                        irStepAnalise(5);
+                        return;
+                    }
+
+                    // Foi troca de folga (sem HE autorizada): oculta pergunta 4 e mostra só Origem da Cobertura
+                    pulouStep4Cobertura = false;
+                    document.getElementById("bloco-pergunta-4").style.display = "none";
+                    document.getElementById("box-origem-cobertura").style.display = "block";
+                    irStepAnalise(4);
+                    return;
+                }
+
+                // HE autorizada: exibe pergunta 4 normalmente
+                pulouStep4Cobertura = false;
+                document.getElementById("bloco-pergunta-4").style.display = "block";
+                atualizarVisibilidadeCobridor();
+                irStepAnalise(4);
+            } else if (proximoStep === 5) {
+                const q4 = document.querySelector('input[name="q_cons_he"]:checked');
+                if (!q4) {
+                    mostrarToast("Selecione Sim ou Não para a pergunta 4.", true);
+                    return;
+                }
+
+                const isTroca = document.querySelector('input[name="q_troca"]:checked')?.value === "1";
+                const conseguiuHe = q4.value === "1";
+
+                if ((conseguiuHe || isTroca) && !cobridorSelecionadoObj) {
+                    mostrarToast("Selecione qual colaborador realizou a cobertura.", true);
+                    document.getElementById("input-busca-cobridor").focus();
+                    return;
+                }
+                irStepAnalise(5);
             }
+        }
+
+        function voltarDoStep5() {
+            if (pulouStep4Cobertura) {
+                irStepAnalise(3);
+            } else {
+                irStepAnalise(4);
+            }
+        }
+
+        function atualizarVisibilidadeCobridor() {
+            const isTroca = document.querySelector('input[name="q_troca"]:checked')?.value === "1";
+            const conseguiuHe = document.querySelector('input[name="q_cons_he"]:checked')?.value === "1";
+            const boxCobertura = document.getElementById("box-origem-cobertura");
+
+            if (isTroca || conseguiuHe) {
+                boxCobertura.style.display = "block";
+            } else {
+                limparCobridorSelecionado();
+                boxCobertura.style.display = "none";
+            }
+        }
+
+        function atualizarVisibilidadeRedivisao() {
+            const redividiu = document.querySelector('input[name="q_redividiu"]:checked')?.value === "1";
+            const box = document.getElementById("box-redivisao-detalhes");
+            if (redividiu) {
+                box.style.display = "block";
+                document.getElementById("input-qtd-pacientes").focus();
+            } else {
+                box.style.display = "none";
+                document.getElementById("input-qtd-pacientes").value = "";
+                document.getElementById("input-qtd-colaboradores").value = "";
+            }
+        }
+
+        function buscarCobridorDebounced() {
+            clearTimeout(timerBuscaCobridor);
+            const termo = document.getElementById("input-busca-cobridor").value.trim();
+            const listaBox = document.getElementById("lista-resultados-cobridor");
+
+            if (termo.length < 2) {
+                listaBox.style.display = "none";
+                return;
+            }
+
+            timerBuscaCobridor = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/colaboradores/buscar?q=${encodeURIComponent(termo)}`);
+                    const data = await res.json();
+                    const faltanteId = parseInt(document.getElementById("analise-faltante-id").value || "0");
+
+                    if (data.sucesso) {
+                        const filtrados = data.colaboradores.filter(c => c.id !== faltanteId);
+                        if (!filtrados.length) {
+                            listaBox.innerHTML = '<div class="autocomplete-item"><span>Nenhum colaborador encontrado.</span></div>';
+                        } else {
+                            listaBox.innerHTML = filtrados.map(c => `
+                                <div class="autocomplete-item" onclick='selecionarCobridor(${JSON.stringify(c)})'>
+                                    <strong>${c.cracha} - ${c.nome}</strong>
+                                    <span>Setor de origem: ${c.codigo_cc} - ${c.centro_custo}</span>
+                                </div>
+                            `).join("");
+                        }
+                        listaBox.style.display = "block";
+                    }
+                } catch (e) {
+                    listaBox.style.display = "none";
+                }
+            }, 250);
+        }
+
+        function selecionarCobridor(colab) {
+            cobridorSelecionadoObj = colab;
+            document.getElementById("cobridor-colaborador-id").value = colab.id;
+            document.getElementById("lbl-cobridor-nome").innerText = `${colab.cracha} — ${colab.nome}`;
+            document.getElementById("lbl-cobridor-cc").innerText = `Centro de Custo de Origem: ${colab.codigo_cc} - ${colab.centro_custo}`;
+
+            document.getElementById("input-busca-cobridor").value = "";
+            document.getElementById("input-busca-cobridor").style.display = "none";
+            document.getElementById("lista-resultados-cobridor").style.display = "none";
+            document.getElementById("card-cobridor-selecionado").style.display = "flex";
+        }
+
+        function limparCobridorSelecionado() {
+            cobridorSelecionadoObj = null;
+            document.getElementById("cobridor-colaborador-id").value = "";
+            const inputBusca = document.getElementById("input-busca-cobridor");
+            inputBusca.value = "";
+            inputBusca.style.display = "block";
+            document.getElementById("lista-resultados-cobridor").style.display = "none";
+            document.getElementById("card-cobridor-selecionado").style.display = "none";
         }
 
         document.getElementById("form-analise-falta").addEventListener("submit", async (e) => {
             e.preventDefault();
+            const q5 = document.querySelector('input[name="q_redividiu"]:checked');
+            if (!q5) {
+                mostrarToast("Selecione Sim ou Não para a pergunta 5.", true);
+                return;
+            }
+
+            const redividiu = q5.value === "1";
+            let qtdPacientes = null;
+            let qtdColaboradores = null;
+
+            if (redividiu) {
+                qtdPacientes = parseInt(document.getElementById("input-qtd-pacientes").value, 10);
+                qtdColaboradores = parseInt(document.getElementById("input-qtd-colaboradores").value, 10);
+
+                if (!qtdPacientes || qtdPacientes < 1) {
+                    mostrarToast("Informe o número de pacientes (mínimo 1).", true);
+                    document.getElementById("input-qtd-pacientes").focus();
+                    return;
+                }
+                if (!qtdColaboradores || qtdColaboradores < 1) {
+                    mostrarToast("Informe a quantidade de colaboradores (mínimo 1).", true);
+                    document.getElementById("input-qtd-colaboradores").focus();
+                    return;
+                }
+            }
+
             const btn = document.getElementById("btn-salvar-analise");
             btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            const cobridorIdVal = document.getElementById("cobridor-colaborador-id").value;
 
             const payload = {
                 ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value),
@@ -1818,7 +2744,10 @@
                 foi_troca_folga: document.querySelector('input[name="q_troca"]:checked').value === "1",
                 autorizado_hora_extra: document.querySelector('input[name="q_aut_he"]:checked').value === "1",
                 conseguiu_he_cobertura: document.querySelector('input[name="q_cons_he"]:checked').value === "1",
-                redividiu_equipe: document.querySelector('input[name="q_redividiu"]:checked').value === "1"
+                cobridor_colaborador_id: cobridorIdVal ? parseInt(cobridorIdVal) : null,
+                redividiu_equipe: redividiu,
+                qtd_pacientes: qtdPacientes,
+                qtd_colaboradores: qtdColaboradores
             };
 
             try {
@@ -1831,8 +2760,8 @@
                 if (res.ok && data.sucesso) {
                     mostrarToast(data.mensagem);
                     fecharModalAnalise();
-                    carregarFaltas();
-                    carregarMetricasRoot();
+                    await carregarFaltas();
+                    await carregarMetricasRoot();
                 } else {
                     mostrarToast(data.mensagem || "Erro ao salvar.", true);
                 }
@@ -1840,6 +2769,7 @@
                 mostrarToast("Erro de comunicação.", true);
             } finally {
                 btn.disabled = false;
+                btn.innerText = "Salvar Análise";
             }
         });
 
@@ -1850,11 +2780,10 @@
             const box = document.getElementById("lista-ccs-checkbox");
             if (!box || box.dataset.carregado === "1") return;
 
-            const res = await fetch("/api/centros-custo");
-            const data = await res.json();
-            if (data.sucesso) {
+            const ccs = await garantirCCsCarregados();
+            if (ccs.length) {
                 box.dataset.carregado = "1";
-                box.innerHTML = data.centros_custo.map(cc => `
+                box.innerHTML = ccs.map(cc => `
                     <label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}">
                         <input type="checkbox" name="ccs_selecionados" value="${cc.id}" onchange="atualizarContadorCCs()">
                         <span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span>
@@ -1879,38 +2808,6 @@
             const cod = document.getElementById("lbl-codigo-hash").innerText;
             navigator.clipboard.writeText(cod);
             mostrarToast("Hash copiada!");
-        }
-
-        async function carregarGestores() {
-            const tbody = document.getElementById("tbody-gestores");
-            if (!tbody) return;
-            const res = await fetch("/api/gestores");
-            const data = await res.json();
-            if (data.sucesso) {
-                tbody.innerHTML = data.gestores.map(g => `
-                    <tr>
-                        <td>${g.cracha}</td>
-                        <td>${g.nome}</td>
-                        <td>${g.centros_custo.join(", ") || "Nenhum"}</td>
-                        <td><span class="status-pill ${g.ativo ? 'pill-ativo' : 'pill-inativo'}">${g.ativo ? 'ATIVO' : 'BLOQUEADO'}</span></td>
-                        <td>
-                            <button class="btn ${g.ativo ? 'btn-danger' : 'btn-success'} btn-sm" onclick="alternarGestor(${g.id})">
-                                ${g.ativo ? 'Bloquear' : 'Ativar'}
-                            </button>
-                        </td>
-                    </tr>
-                `).join("");
-            }
-        }
-
-        async function alternarGestor(id) {
-            const res = await fetch(`/api/gestores/${id}/alternar-status`, { method: "PUT" });
-            const data = await res.json();
-            if (data.sucesso) {
-                mostrarToast(data.mensagem);
-                carregarGestores();
-                carregarMetricasRoot();
-            }
         }
 
         async function dispararETL(tipo, btn) {

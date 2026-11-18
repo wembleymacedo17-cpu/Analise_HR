@@ -2,8 +2,8 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, session
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload, selectinload, load_only
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload, selectinload, aliased
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import get_db
@@ -118,7 +118,6 @@ def primeiro_acesso_api():
         codigo_hash = hashlib.sha256(codigo_raw.encode('utf-8')).hexdigest()
         agora = datetime.now(timezone.utc)
 
-        # Consulta direta pelo índice único codigo_hash sem outer join no FOR UPDATE
         convite = (
             db.query(ConviteAcesso)
             .filter(ConviteAcesso.codigo_hash == codigo_hash)
@@ -130,7 +129,6 @@ def primeiro_acesso_api():
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Código de convite inválido, já utilizado ou expirado.'}), 400
 
-        # Valida CPF diretamente via PK de colaboradores
         colab_cpf = (
             db.query(Colaborador.cpf)
             .filter(Colaborador.id == convite.colaborador_id)
@@ -154,7 +152,6 @@ def primeiro_acesso_api():
             usuario.senha_hash = generate_password_hash(nova_senha)
             usuario.ativo = True
 
-        # Busca CCs do convite e do usuário em projeções leves (sem carregar ORM completo)
         ccs_convite = [
             r[0] for r in db.query(ConviteCentroCusto.centro_custo_id)
             .filter(ConviteCentroCusto.convite_id == convite.id)
@@ -183,6 +180,58 @@ def primeiro_acesso_api():
 
 
 # ==============================================================================
+# BUSCA DE COLABORADOR PARA COBERTURA (GESTOR & ROOT)
+# ==============================================================================
+@api_bp.route('/colaboradores/buscar', methods=['GET'])
+def buscar_colaboradores_cobertura():
+    """Busca rápida por crachá ou nome para o campo Origem da Cobertura."""
+    if not session.get('usuario_id'):
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    termo = str(request.args.get('q', '')).strip()
+    if len(termo) < 2:
+        return jsonify({'sucesso': True, 'colaboradores': []}), 200
+
+    db = get_db()
+    filtro = (
+        Colaborador.cracha.ilike(f'{termo}%')
+        if termo.isdigit()
+        else or_(Colaborador.nome.ilike(f'%{termo}%'), Colaborador.cracha.ilike(f'%{termo}%'))
+    )
+
+    rows = (
+        db.query(
+            Colaborador.id,
+            Colaborador.cracha,
+            Colaborador.nome,
+            CentroCusto.id.label('centro_custo_id'),
+            CentroCusto.codigo_cc,
+            CentroCusto.nome.label('centro_custo_nome')
+        )
+        .join(CentroCusto, Colaborador.centro_custo_id == CentroCusto.id)
+        .filter(Colaborador.ativo.is_(True), filtro)
+        .order_by(Colaborador.nome.asc())
+        .limit(15)
+        .all()
+    )
+
+    return jsonify({
+        'sucesso': True,
+        'colaboradores': [
+            {
+                'id': r.id,
+                'cracha': r.cracha,
+                'nome': r.nome,
+                'centro_custo_id': r.centro_custo_id,
+                'codigo_cc': r.codigo_cc,
+                'centro_custo': r.centro_custo_nome
+            }
+            for r in rows
+        ]
+    }), 200
+
+
+# ==============================================================================
 # OPERACIONAL DE OCORRÊNCIAS (GESTOR & ROOT)
 # ==============================================================================
 @api_bp.route('/faltas', methods=['GET'])
@@ -195,9 +244,25 @@ def listar_faltas():
     db = get_db()
     status_filtro = request.args.get('status', 'PENDENTE').upper()
 
+    cc_ids = None
+    if perfil != 'ROOT':
+        cc_ids = _obter_ccs_usuario(db, id_user)
+        if not cc_ids:
+            return jsonify({
+                'sucesso': True,
+                'faltas': [],
+                'kpis_gestor': {'pendentes': 0, 'analisadas': 0}
+            }), 200
+
+    kpi_q = db.query(OcorrenciaFalta.status, func.count(OcorrenciaFalta.id))
+    if cc_ids is not None:
+        kpi_q = kpi_q.filter(OcorrenciaFalta.centro_custo_id.in_(cc_ids))
+    kpi_map = dict(kpi_q.group_by(OcorrenciaFalta.status).all())
+
     query = (
         db.query(
             OcorrenciaFalta.id,
+            OcorrenciaFalta.colaborador_id,
             OcorrenciaFalta.data_ocorrencia,
             OcorrenciaFalta.status,
             Colaborador.cracha,
@@ -212,11 +277,7 @@ def listar_faltas():
         .filter(OcorrenciaFalta.status == status_filtro)
     )
 
-    if perfil != 'ROOT':
-        cc_ids = _obter_ccs_usuario(db, id_user)
-        if not cc_ids:
-            return jsonify({'sucesso': True, 'faltas': []}), 200
-        # Aproveita o índice composto ix_ocorrencias_cc_status_data (centro_custo_id, status, data_ocorrencia)
+    if cc_ids is not None:
         query = query.filter(OcorrenciaFalta.centro_custo_id.in_(cc_ids))
 
     rows = query.order_by(OcorrenciaFalta.data_ocorrencia.desc()).limit(300).all()
@@ -224,6 +285,10 @@ def listar_faltas():
     analises_map = {}
     if status_filtro == 'ANALISADA' and rows:
         ocorr_ids = [r.id for r in rows]
+        AvaliadorColab = aliased(Colaborador)
+        CobridorColab = aliased(Colaborador)
+        CobridorCC = aliased(CentroCusto)
+
         analises_rows = (
             db.query(
                 AnaliseFalta.ocorrencia_id,
@@ -232,11 +297,19 @@ def listar_faltas():
                 AnaliseFalta.autorizado_hora_extra,
                 AnaliseFalta.conseguiu_he_cobertura,
                 AnaliseFalta.redividiu_equipe,
+                AnaliseFalta.qtd_pacientes,
+                AnaliseFalta.qtd_colaboradores,
                 AnaliseFalta.respondido_em,
-                Colaborador.nome.label('avaliador_nome')
+                AvaliadorColab.nome.label('avaliador_nome'),
+                CobridorColab.cracha.label('cobridor_cracha'),
+                CobridorColab.nome.label('cobridor_nome'),
+                CobridorCC.codigo_cc.label('cobridor_codigo_cc'),
+                CobridorCC.nome.label('cobridor_cc_nome')
             )
             .join(Usuario, AnaliseFalta.avaliador_id == Usuario.id)
-            .join(Colaborador, Usuario.colaborador_id == Colaborador.id)
+            .join(AvaliadorColab, Usuario.colaborador_id == AvaliadorColab.id)
+            .outerjoin(CobridorColab, AnaliseFalta.cobridor_colaborador_id == CobridorColab.id)
+            .outerjoin(CobridorCC, AnaliseFalta.cobridor_centro_custo_id == CobridorCC.id)
             .filter(AnaliseFalta.ocorrencia_id.in_(ocorr_ids))
             .all()
         )
@@ -248,6 +321,12 @@ def listar_faltas():
                 'autorizado_hora_extra': a.autorizado_hora_extra,
                 'conseguiu_he_cobertura': a.conseguiu_he_cobertura,
                 'redividiu_equipe': a.redividiu_equipe,
+                'qtd_pacientes': a.qtd_pacientes,
+                'qtd_colaboradores': a.qtd_colaboradores,
+                'cobridor': (
+                    f"{a.cobridor_cracha} - {a.cobridor_nome} ({a.cobridor_codigo_cc} - {a.cobridor_cc_nome})"
+                    if a.cobridor_nome else None
+                ),
                 'avaliador': a.avaliador_nome,
                 'respondido_em': dt_resp
             }
@@ -255,6 +334,7 @@ def listar_faltas():
     lista = [
         {
             'id': r.id,
+            'colaborador_id': r.colaborador_id,
             'cracha': r.cracha,
             'colaborador_nome': r.colaborador_nome,
             'cargo': r.cargo_titulo or '---',
@@ -267,7 +347,14 @@ def listar_faltas():
         for r in rows
     ]
 
-    return jsonify({'sucesso': True, 'faltas': lista}), 200
+    return jsonify({
+        'sucesso': True,
+        'faltas': lista,
+        'kpis_gestor': {
+            'pendentes': kpi_map.get('PENDENTE', 0),
+            'analisadas': kpi_map.get('ANALISADA', 0)
+        }
+    }), 200
 
 
 @api_bp.route('/analisar-falta', methods=['POST'])
@@ -287,12 +374,31 @@ def analisar_falta():
     autorizado_he = bool(data.get('autorizado_hora_extra'))
     conseguiu_he = bool(data.get('conseguiu_he_cobertura'))
     redividiu = bool(data.get('redividiu_equipe'))
+    cobridor_id_raw = data.get('cobridor_colaborador_id')
 
     if not autorizado_he and conseguiu_he:
         return jsonify({
             'sucesso': False,
             'mensagem': 'Não é possível marcar cobertura por Hora Extra sem autorização de HE.'
         }), 400
+
+    qtd_pacientes = None
+    qtd_colaboradores = None
+    if redividiu:
+        try:
+            qtd_pacientes = int(data.get('qtd_pacientes'))
+            qtd_colaboradores = int(data.get('qtd_colaboradores'))
+        except (TypeError, ValueError):
+            return jsonify({
+                'sucesso': False,
+                'mensagem': 'Informe valores numéricos válidos para pacientes e colaboradores.'
+            }), 400
+
+        if qtd_pacientes <= 0 or qtd_colaboradores <= 0:
+            return jsonify({
+                'sucesso': False,
+                'mensagem': 'O número de pacientes e a quantidade de colaboradores devem ser maiores que zero.'
+            }), 400
 
     db = get_db()
     ocorrencia = (
@@ -322,6 +428,30 @@ def analisar_falta():
         db.rollback()
         return jsonify({'sucesso': False, 'mensagem': 'Esta ocorrência já foi analisada.'}), 409
 
+    cobridor_id = None
+    cobridor_cc_id = None
+
+    if cobridor_id_raw:
+        cobridor_row = (
+            db.query(Colaborador.id, Colaborador.centro_custo_id)
+            .filter(Colaborador.id == int(cobridor_id_raw), Colaborador.ativo.is_(True))
+            .first()
+        )
+        if not cobridor_row:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Colaborador selecionado para cobertura não encontrado.'}), 400
+        if cobridor_row.id == ocorrencia.colaborador_id:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'O colaborador faltante não pode cobrir a própria falta.'}), 400
+        cobridor_id = cobridor_row.id
+        cobridor_cc_id = cobridor_row.centro_custo_id
+    elif conseguiu_he or foi_troca:
+        db.rollback()
+        return jsonify({
+            'sucesso': False,
+            'mensagem': 'Informe qual colaborador realizou a cobertura em Origem da Cobertura.'
+        }), 400
+
     nova_analise = AnaliseFalta(
         ocorrencia_id=ocorrencia.id,
         avaliador_id=id_user,
@@ -329,7 +459,11 @@ def analisar_falta():
         foi_troca_folga=foi_troca,
         autorizado_hora_extra=autorizado_he,
         conseguiu_he_cobertura=conseguiu_he,
-        redividiu_equipe=redividiu
+        cobridor_colaborador_id=cobridor_id,
+        cobridor_centro_custo_id=cobridor_cc_id,
+        redividiu_equipe=redividiu,
+        qtd_pacientes=qtd_pacientes,
+        qtd_colaboradores=qtd_colaboradores
     )
     ocorrencia.status = 'ANALISADA'
     db.add(nova_analise)
@@ -408,7 +542,6 @@ def listar_centros_custo():
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     db = get_db()
-    # Aproveita o índice composto ix_centros_custo_ativo_nome (ativo, nome)
     ccs = (
         db.query(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
         .filter(CentroCusto.ativo.is_(True))
@@ -656,36 +789,133 @@ def remover_convite_api(convite_id):
     return jsonify({'sucesso': True, 'mensagem': 'Hash removida com sucesso! O crachá está liberado.'}), 200
 
 
+# ==============================================================================
+# GESTÃO DE PERFIS (GESTORES E ROOT)
+# ==============================================================================
 @api_bp.route('/gestores', methods=['GET'])
 def listar_gestores():
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     db = get_db()
-    gestores = (
+    usuarios = (
         db.query(Usuario)
         .options(
             joinedload(Usuario.colaborador).load_only(Colaborador.cracha, Colaborador.nome),
             selectinload(Usuario.centros_custo)
             .joinedload(UsuarioCentroCusto.centro_custo)
-            .load_only(CentroCusto.nome)
+            .load_only(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
         )
-        .filter(Usuario.role == 'GESTOR')
+        .order_by(Usuario.role.desc(), Usuario.id.asc())
         .all()
     )
 
     return jsonify({
         'sucesso': True,
+        'usuario_logado_id': session.get('usuario_id'),
         'gestores': [
             {
-                'id': g.id,
-                'cracha': g.colaborador.cracha,
-                'nome': g.colaborador.nome,
-                'ativo': g.ativo,
-                'centros_custo': [uc.centro_custo.nome for uc in g.centros_custo]
-            } for g in gestores
+                'id': u.id,
+                'cracha': u.colaborador.cracha,
+                'nome': u.colaborador.nome,
+                'role': (u.role or 'GESTOR').upper(),
+                'ativo': u.ativo,
+                'centros_custo': [f"{uc.centro_custo.codigo_cc} - {uc.centro_custo.nome}" for uc in u.centros_custo],
+                'centros_custo_ids': [uc.centro_custo_id for uc in u.centros_custo]
+            } for u in usuarios
         ]
     }), 200
+
+
+@api_bp.route('/gestores/<int:usuario_id>/centros-custo', methods=['PUT'])
+def atualizar_ccs_gestor(usuario_id):
+    """Atualiza os centros de custo vinculados a um usuário GESTOR."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    data = request.json or {}
+    novos_ids = {int(cc_id) for cc_id in data.get('centros_custo_ids', [])}
+
+    db = get_db()
+    user = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not user:
+        return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+    if (user.role or '').upper() == 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Usuários ROOT não possuem vínculo com Centros de Custo.'}), 400
+
+    if not novos_ids:
+        return jsonify({'sucesso': False, 'mensagem': 'Selecione ao menos 1 Centro de Custo para o Gestor.'}), 400
+
+    db.query(UsuarioCentroCusto).filter(UsuarioCentroCusto.usuario_id == usuario_id).delete(synchronize_session=False)
+    db.bulk_save_objects([
+        UsuarioCentroCusto(usuario_id=usuario_id, centro_custo_id=cc_id)
+        for cc_id in novos_ids
+    ])
+
+    db.commit()
+    return jsonify({'sucesso': True, 'mensagem': 'Centros de Custo atualizados com sucesso!'}), 200
+
+
+@api_bp.route('/gestores/<int:usuario_id>/privilegios', methods=['PUT'])
+def atualizar_privilegios_gestor(usuario_id):
+    """Altera o privilégio entre GESTOR e ROOT (limpando CCs ao promover para ROOT)."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    data = request.json or {}
+    novo_role = str(data.get('role', '')).strip().upper()
+    if novo_role not in ('ROOT', 'GESTOR'):
+        return jsonify({'sucesso': False, 'mensagem': 'Perfil inválido. Escolha GESTOR ou ROOT.'}), 400
+
+    if usuario_id == session.get('usuario_id') and novo_role != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Você não pode remover seu próprio privilégio ROOT.'}), 400
+
+    db = get_db()
+    user = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not user:
+        return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+    if user.role == 'ROOT' and novo_role == 'GESTOR':
+        total_roots = (
+            db.query(func.count(Usuario.id))
+            .filter(Usuario.role == 'ROOT', Usuario.ativo.is_(True))
+            .scalar() or 0
+        )
+        if total_roots <= 1:
+            return jsonify({'sucesso': False, 'mensagem': 'O sistema deve manter ao menos 1 administrador ROOT ativo.'}), 400
+
+    user.role = novo_role
+
+    if novo_role == 'ROOT':
+        db.query(UsuarioCentroCusto).filter(UsuarioCentroCusto.usuario_id == usuario_id).delete(synchronize_session=False)
+
+    db.commit()
+    return jsonify({
+        'sucesso': True,
+        'mensagem': f'Privilégio atualizado para {novo_role} com sucesso!'
+    }), 200
+
+
+@api_bp.route('/gestores/<int:usuario_id>/senha', methods=['PUT'])
+def atualizar_senha_gestor(usuario_id):
+    """Redefine a senha de um usuário diretamente pelo painel ROOT."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    data = request.json or {}
+    nova_senha = str(data.get('nova_senha', '')).strip()
+    if len(nova_senha) < 6:
+        return jsonify({'sucesso': False, 'mensagem': 'A nova senha deve ter no mínimo 6 caracteres.'}), 400
+
+    db = get_db()
+    user = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not user:
+        return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+    user.senha_hash = generate_password_hash(nova_senha)
+    db.commit()
+    return jsonify({'sucesso': True, 'mensagem': 'Senha redefinida com sucesso!'}), 200
 
 
 @api_bp.route('/gestores/<int:usuario_id>/alternar-status', methods=['PUT'])
@@ -693,10 +923,22 @@ def alternar_status_gestor(usuario_id):
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
+    if usuario_id == session.get('usuario_id'):
+        return jsonify({'sucesso': False, 'mensagem': 'Você não pode bloquear sua própria conta.'}), 400
+
     db = get_db()
-    user = db.query(Usuario).filter(Usuario.id == usuario_id, Usuario.role == 'GESTOR').first()
+    user = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not user:
-        return jsonify({'sucesso': False, 'mensagem': 'Gestor não encontrado.'}), 404
+        return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+    if user.role == 'ROOT' and user.ativo:
+        total_roots = (
+            db.query(func.count(Usuario.id))
+            .filter(Usuario.role == 'ROOT', Usuario.ativo.is_(True))
+            .scalar() or 0
+        )
+        if total_roots <= 1:
+            return jsonify({'sucesso': False, 'mensagem': 'Não é possível bloquear o único ROOT ativo.'}), 400
 
     user.ativo = not user.ativo
     db.commit()
@@ -732,7 +974,6 @@ def dashboard_metricas():
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     db = get_db()
-    # GROUP BY usa diretamente o índice ix_ocorrencias_status_data
     stats_rows = (
         db.query(OcorrenciaFalta.status, func.count(OcorrenciaFalta.id))
         .group_by(OcorrenciaFalta.status)

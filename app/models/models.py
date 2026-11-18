@@ -44,6 +44,7 @@ class Colaborador(Base):
     __table_args__ = (
         Index("ix_colaboradores_cc_ativo", "centro_custo_id", "ativo"),
         Index("ix_colaboradores_cargo_id", "cargo_id"),
+        Index("ix_colaboradores_nome", "nome"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -155,6 +156,7 @@ class AnaliseFalta(Base):
         ),
         Index("ix_analises_avaliador_id", "avaliador_id"),
         Index("ix_analises_respondido_em", "respondido_em"),
+        Index("ix_analises_cobridor_id", "cobridor_colaborador_id"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -164,11 +166,17 @@ class AnaliseFalta(Base):
     foi_troca_folga = Column(Boolean, nullable=False)
     autorizado_hora_extra = Column(Boolean, nullable=False)
     conseguiu_he_cobertura = Column(Boolean, nullable=False)
+    cobridor_colaborador_id = Column(Integer, ForeignKey("colaboradores.id", ondelete="RESTRICT"), nullable=True)
+    cobridor_centro_custo_id = Column(Integer, ForeignKey("centros_custo.id", ondelete="RESTRICT"), nullable=True)
     redividiu_equipe = Column(Boolean, nullable=False)
+    qtd_pacientes = Column(Integer, nullable=True)
+    qtd_colaboradores = Column(Integer, nullable=True)
     respondido_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     ocorrencia = relationship("OcorrenciaFalta", back_populates="analise")
     avaliador = relationship("Usuario")
+    cobridor = relationship("Colaborador", foreign_keys=[cobridor_colaborador_id])
+    cobridor_centro_custo = relationship("CentroCusto", foreign_keys=[cobridor_centro_custo_id])
 
 
 class LogEnvioEmail(Base):
