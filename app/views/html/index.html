@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Análise de Faltas | FUNFARME</title>
+    <title>Análise de Hora Extra | FUNFARME</title>
     <style>
         :root {
             --bg-body: #f1f5f9;
@@ -20,7 +20,7 @@
             --text-main: #0f172a;
             --text-secondary: #334155;
             --text-muted: #64748b;
-            --sidebar-width: 278px;
+            --sidebar-width: 268px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -54,11 +54,7 @@
             transition: transform 0.25s ease;
         }
 
-        .sidebar-top {
-            display: flex;
-            flex-direction: column;
-            gap: 22px;
-        }
+        .sidebar-top { display: flex; flex-direction: column; gap: 22px; }
 
         .brand-box {
             display: flex;
@@ -74,7 +70,6 @@
             filter: brightness(0) invert(1);
         }
         .brand-title { font-size: 1rem; font-weight: 800; color: #ffffff; letter-spacing: -0.2px; }
-        .brand-sub { font-size: 0.75rem; color: #bfdbfe; font-weight: 500; }
 
         .nav-section-label {
             font-size: 0.68rem;
@@ -86,13 +81,8 @@
             margin-bottom: 8px;
         }
 
-        .glass-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+        .glass-menu { display: flex; flex-direction: column; gap: 8px; }
 
-        /* BOTÕES GLASS SOBRE O AZUL FUNFARME */
         .glass-nav-btn {
             width: 100%;
             display: flex;
@@ -105,7 +95,7 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             color: #e2e8f0;
-            font-size: 0.85rem;
+            font-size: 0.86rem;
             font-weight: 600;
             text-align: left;
             cursor: pointer;
@@ -165,20 +155,6 @@
             box-shadow: 0 2px 8px rgba(30, 58, 138, 0.28);
         }
 
-        .nav-btn-text {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.25;
-        }
-        .nav-btn-sub {
-            font-size: 0.71rem;
-            font-weight: 400;
-            color: #bfdbfe;
-        }
-        .glass-nav-btn.active .nav-btn-sub {
-            color: #475569;
-        }
-
         /* RODAPÉ DO USUÁRIO NA SIDEBAR */
         .sidebar-footer {
             padding-top: 14px;
@@ -232,7 +208,7 @@
         .btn-logout:hover { background: #dc2626; color: #ffffff; border-color: #dc2626; }
 
         /* =====================================================================
-           ÁREA DE CONTEÚDO PRINCIPAL (CLARA E CONFORTÁVEL)
+           ÁREA DE CONTEÚDO PRINCIPAL
            ===================================================================== */
         .main-wrapper {
             margin-left: var(--sidebar-width);
@@ -307,10 +283,10 @@
         .panel {
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 22px;
+            border-radius: 16px;
+            padding: 24px;
             margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
         }
         .panel-header {
             display: flex;
@@ -318,48 +294,91 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 12px;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
-        .panel-title { font-size: 1.05rem; font-weight: 700; color: var(--funfarme-blue); }
+        .panel-title { font-size: 1.1rem; font-weight: 800; color: var(--funfarme-blue); letter-spacing: -0.2px; }
 
         .filters-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .input-control, .select-control {
             background: var(--bg-surface);
             border: 1px solid #cbd5e1;
             color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
+            padding: 10px 13px;
+            border-radius: 10px;
+            font-size: 0.86rem;
             outline: none;
-            transition: border-color 0.2s;
+            transition: all 0.2s ease;
         }
         .input-control:focus, .select-control:focus {
             border-color: var(--funfarme-blue);
             box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
         }
 
+        /* BOTÕES MODERNOS */
         .btn {
-            padding: 9px 16px;
-            border-radius: 8px;
+            padding: 10px 18px;
+            border-radius: 10px;
             border: none;
             font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 8px;
+            letter-spacing: 0.1px;
         }
-        .btn-primary { background: var(--funfarme-blue); color: #fff; }
-        .btn-primary:hover { background: #1e40af; }
-        .btn-secondary { background: #e2e8f0; color: var(--text-secondary); }
-        .btn-secondary:hover { background: #cbd5e1; }
-        .btn-success { background: var(--success); color: #fff; }
-        .btn-success:hover { background: #047857; }
-        .btn-warning { background: var(--warning); color: #fff; }
-        .btn-warning:hover { background: #b45309; }
-        .btn-danger { background: var(--danger); color: #fff; }
-        .btn-danger:hover { background: #b91c1c; }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.24);
+        }
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 6px 18px rgba(30, 58, 138, 0.34);
+        }
+        .btn-outline {
+            background: #f8fafc;
+            color: var(--funfarme-blue);
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .btn-outline:hover:not(:disabled) {
+            background: #eff6ff;
+            border-color: var(--funfarme-blue);
+            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.08);
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text-secondary);
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #cbd5e1;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.24);
+        }
+        .btn-success:hover:not(:disabled) {
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.34);
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.24);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.22);
+        }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .table-wrapper { overflow-x: auto; }
@@ -387,18 +406,103 @@
         .pill-utilizado { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
         .pill-inativo, .pill-expirado { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 
-        /* FORMULÁRIO DE CONVITE (ROOT) */
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
+        /* =====================================================================
+           STEPPER (WIZARD DE 3 ETAPAS ENXUTO)
+           ===================================================================== */
+        .stepper-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 22px;
+            margin-bottom: 22px;
+            gap: 12px;
+        }
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: var(--text-muted);
+            font-weight: 800;
+            font-size: 0.84rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.25s ease;
+        }
+        .step-item.active .step-circle {
+            background: var(--funfarme-blue);
+            color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.14);
+        }
+        .step-item.completed .step-circle {
+            background: var(--success);
+            color: #ffffff;
+        }
+        .step-title { font-size: 0.86rem; font-weight: 700; color: var(--text-muted); }
+        .step-item.active .step-title { color: var(--funfarme-blue); }
+        .step-item.completed .step-title { color: var(--success); }
+
+        .step-divider {
+            height: 2px;
+            flex: 0.35;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        @media (max-width: 720px) {
+            .stepper-bar { flex-direction: column; align-items: flex-start; }
+            .step-divider { display: none; }
+        }
+
+        .step-pane { display: none; }
+        .step-pane.active { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .step-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            gap: 10px;
+        }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
         .field-group { display: flex; flex-direction: column; gap: 6px; }
-        .field-group label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; }
+        .field-group label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 700; }
+
+        .gestor-pill-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: var(--funfarme-blue);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
 
         .cc-checklist {
-            max-height: 200px;
+            max-height: 270px;
             overflow-y: auto;
             background: var(--bg-subtle);
             border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 12px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 8px;
@@ -410,35 +514,65 @@
             font-size: 0.82rem;
             color: var(--text-secondary);
             cursor: pointer;
-            padding: 5px 8px;
-            border-radius: 6px;
+            padding: 7px 10px;
+            border-radius: 8px;
             background: #ffffff;
             border: 1px solid #e2e8f0;
+            transition: 0.15s;
         }
         .cc-item:hover { border-color: var(--funfarme-blue); background: #eff6ff; }
 
+        .review-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .review-row {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #cbd5e1;
+            font-size: 0.86rem;
+        }
+        .review-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .review-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .review-chip {
+            background: #dbeafe;
+            color: var(--funfarme-blue);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
         .codigo-gerado-box {
-            margin-top: 16px;
-            padding: 14px 16px;
-            border-radius: 10px;
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 12px;
             background: #ecfdf5;
             border: 1px solid #6ee7b7;
             display: none;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
         .codigo-destaque {
             font-family: monospace;
-            font-size: 1.3rem;
+            font-size: 1.35rem;
             font-weight: 800;
-            letter-spacing: 2px;
+            letter-spacing: 2.5px;
             color: #065f46;
             background: #ffffff;
             border: 1px solid #a7f3d0;
-            padding: 6px 14px;
-            border-radius: 6px;
+            padding: 7px 16px;
+            border-radius: 8px;
         }
 
         /* CARDS DE ETL */
@@ -456,7 +590,7 @@
         .etl-card h4 { font-size: 1rem; color: var(--text-main); }
         .etl-card p { font-size: 0.83rem; color: var(--text-muted); line-height: 1.45; }
 
-        /* MODAL DE ANÁLISE DE FALTA */
+        /* MODAIS */
         .modal-backdrop {
             position: fixed;
             inset: 0;
@@ -476,10 +610,24 @@
             width: 100%;
             padding: 24px;
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
         }
-        .modal-header { margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .modal-card.modal-lg { max-width: 920px; }
+        .modal-header {
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
         .modal-header h3 { font-size: 1.1rem; color: var(--funfarme-blue); }
         .modal-info { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+        .modal-body-scroll { overflow-y: auto; flex: 1; }
 
         .question-row {
             display: flex;
@@ -526,16 +674,12 @@
         <div class="sidebar-top">
             <div class="brand-box">
                 <img src="{{ url_for('static', filename='img/Logo_funfarme.png') }}" alt="FUNFARME">
-                <div>
-                    <div class="brand-title">Análise de Faltas</div>
-                    <div class="brand-sub">Gestão Operacional • RH</div>
-                </div>
+                <div class="brand-title">Análise de Hora Extra</div>
             </div>
 
             <div>
-                <div class="nav-section-label">Navegação</div>
+                <div class="nav-section-label">Menu</div>
                 <nav class="glass-menu">
-                    <!-- ITEM 1: VISÃO GLOBAL / ANÁLISE DE FALTAS (ROOT E GESTOR) -->
                     <button type="button" class="glass-nav-btn active" onclick="trocarAba('aba-faltas', this)">
                         <span class="nav-icon-wrap">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -545,27 +689,19 @@
                                 <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
                             </svg>
                         </span>
-                        <span class="nav-btn-text">
-                            <span>{{ 'Visão Global & Faltas' if perfil == 'ROOT' else 'Minhas Ocorrências' }}</span>
-                            <span class="nav-btn-sub">Fila de análise operacional</span>
-                        </span>
+                        <span>{{ 'Visão Global' if perfil == 'ROOT' else 'Ocorrências' }}</span>
                     </button>
 
                     {% if perfil == 'ROOT' %}
-                    <!-- ITEM 2: CONVITES DE PRIMEIRO ACESSO -->
                     <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-convites', this)">
                         <span class="nav-icon-wrap">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
                             </svg>
                         </span>
-                        <span class="nav-btn-text">
-                            <span>Convites de Acesso</span>
-                            <span class="nav-btn-sub">Gerar hash e vincular setor</span>
-                        </span>
+                        <span>Convites de Acesso</span>
                     </button>
 
-                    <!-- ITEM 3: GESTÃO DE PERFIS -->
                     <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-gestores', this)">
                         <span class="nav-icon-wrap">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -575,13 +711,9 @@
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                             </svg>
                         </span>
-                        <span class="nav-btn-text">
-                            <span>Gestão de Perfis</span>
-                            <span class="nav-btn-sub">Ativar ou bloquear gestores</span>
-                        </span>
+                        <span>Gestão de Perfis</span>
                     </button>
 
-                    <!-- ITEM 4: INTEGRAÇÃO SENIOR (ETL) -->
                     <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-etl', this)">
                         <span class="nav-icon-wrap">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -590,10 +722,7 @@
                                 <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
                             </svg>
                         </span>
-                        <span class="nav-btn-text">
-                            <span>Integração Senior</span>
-                            <span class="nav-btn-sub">Sincronização ETL Vetorh</span>
-                        </span>
+                        <span>Integração Senior</span>
                     </button>
                     {% endif %}
                 </nav>
@@ -607,7 +736,7 @@
                 <div class="user-meta">
                     <span class="user-cracha">Crachá: {{ cracha }}</span>
                     <span class="badge-role {{ 'badge-root' if perfil == 'ROOT' else 'badge-gestor' }}">
-                        {{ 'ADMIN / RH' if perfil == 'ROOT' else 'GESTOR' }}
+                        {{ 'ADMIN' if perfil == 'ROOT' else 'GESTOR' }}
                     </span>
                 </div>
             </div>
@@ -618,7 +747,7 @@
                     <polyline points="16 17 21 12 16 7"></polyline>
                     <line x1="21" y1="12" x2="9" y2="12"></line>
                 </svg>
-                Sair do Sistema
+                Sair
             </a>
         </div>
     </aside>
@@ -627,7 +756,6 @@
     <!-- CONTEÚDO PRINCIPAL                                                      -->
     <!-- ======================================================================= -->
     <div class="main-wrapper">
-        <!-- BARRA MOBILE -->
         <div class="mobile-topbar">
             <button type="button" class="btn-menu-mobile" onclick="toggleSidebarMobile()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -636,20 +764,20 @@
                     <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
             </button>
-            <span style="font-weight:700; font-size:0.95rem;">Análise de Faltas</span>
+            <span style="font-weight:700; font-size:0.95rem;">Análise de Hora Extra</span>
             <span class="badge-role {{ 'badge-root' if perfil == 'ROOT' else 'badge-gestor' }}">{{ perfil }}</span>
         </div>
 
         <main class="container">
 
             <!-- KPIs -->
-            <section class="kpi-grid">
+            <section id="kpi-grid" class="kpi-grid">
                 <div class="kpi-card">
-                    <span class="kpi-label">Faltas Pendentes</span>
+                    <span class="kpi-label">Pendentes</span>
                     <span class="kpi-value kpi-pendente" id="kpi-pendentes">--</span>
                 </div>
                 <div class="kpi-card">
-                    <span class="kpi-label">Faltas Analisadas</span>
+                    <span class="kpi-label">Analisadas</span>
                     <span class="kpi-value kpi-analisada" id="kpi-analisadas">--</span>
                 </div>
                 {% if perfil == 'ROOT' %}
@@ -658,24 +786,24 @@
                     <span class="kpi-value kpi-info" id="kpi-gestores">--</span>
                 </div>
                 <div class="kpi-card">
-                    <span class="kpi-label">Convites Disponíveis</span>
+                    <span class="kpi-label">Convites Ativos</span>
                     <span class="kpi-value" id="kpi-convites">--</span>
                 </div>
                 {% endif %}
             </section>
 
             <!-- =============================================================== -->
-            <!-- ABA 1: VISÃO GLOBAL / FILA DE ANÁLISE DE FALTAS                 -->
+            <!-- ABA 1: OCORRÊNCIAS                                              -->
             <!-- =============================================================== -->
             <section id="aba-faltas" class="tab-content active">
                 <div class="panel">
                     <div class="panel-header">
-                        <h2 class="panel-title">Ocorrências de Faltas Injustificadas</h2>
+                        <h2 class="panel-title">Ocorrências</h2>
                         <div class="filters-row">
-                            <input type="text" id="filtro-busca" class="input-control" placeholder="Filtrar por nome, crachá ou setor..." oninput="filtrarTabelaFaltas()">
+                            <input type="text" id="filtro-busca" class="input-control" placeholder="Buscar nome, crachá ou setor..." oninput="filtrarTabelaFaltas()">
                             <select id="filtro-status" class="select-control" onchange="carregarFaltas()">
-                                <option value="PENDENTE" selected>Status: Pendentes</option>
-                                <option value="ANALISADA">Status: Analisadas</option>
+                                <option value="PENDENTE" selected>Pendentes</option>
+                                <option value="ANALISADA">Analisadas</option>
                             </select>
                             <button class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
                         </div>
@@ -685,17 +813,17 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Data da Falta</th>
+                                    <th>Data</th>
                                     <th>Crachá</th>
                                     <th>Colaborador</th>
                                     <th>Cargo</th>
                                     <th>Centro de Custo</th>
                                     <th>Status</th>
-                                    <th>Ação / Auditoria</th>
+                                    <th>Ação</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-faltas">
-                                <tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando ocorrências...</td></tr>
+                                <tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -704,26 +832,52 @@
 
             {% if perfil == 'ROOT' %}
             <!-- =============================================================== -->
-            <!-- ABA 2: CONVITES DE PRIMEIRO ACESSO                              -->
+            <!-- ABA 2: CONVITES DE ACESSO (STEPPER ENXUTO + E-MAIL OBRIGATÓRIO) -->
             <!-- =============================================================== -->
             <section id="aba-convites" class="tab-content">
                 <div class="panel">
                     <div class="panel-header">
-                        <h2 class="panel-title">Gerar Novo Convite para Gestor</h2>
+                        <h2 class="panel-title">Novo Convite</h2>
+                        <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoConvites()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Histórico
+                        </button>
                     </div>
 
-                    <form id="form-novo-convite">
+                    <!-- STEPPER -->
+                    <div class="stepper-bar">
+                        <div class="step-item active" id="step-ind-1">
+                            <div class="step-circle">1</div>
+                            <span class="step-title">Identificação</span>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div class="step-item" id="step-ind-2">
+                            <div class="step-circle">2</div>
+                            <span class="step-title">Centros de Custo</span>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div class="step-item" id="step-ind-3">
+                            <div class="step-circle">3</div>
+                            <span class="step-title">Gerar Hash</span>
+                        </div>
+                    </div>
+
+                    <!-- STEP 1: CRACHÁ + E-MAIL OBRIGATÓRIO + VALIDADE -->
+                    <div id="step-pane-1" class="step-pane active">
                         <div class="form-grid">
                             <div class="field-group">
-                                <label for="conv-cracha">Crachá do Gestor *</label>
-                                <input type="text" id="conv-cracha" class="input-control" required placeholder="Ex: 12345">
+                                <label for="conv-cracha">Crachá *</label>
+                                <input type="text" id="conv-cracha" class="input-control" placeholder="Ex: 12345">
                             </div>
                             <div class="field-group">
-                                <label for="conv-email">E-mail de Destino (Opcional)</label>
-                                <input type="email" id="conv-email" class="input-control" placeholder="gestor@funfarme.com.br">
+                                <label for="conv-email">E-mail de Envio *</label>
+                                <input type="email" id="conv-email" class="input-control" required placeholder="gestor@funfarme.com.br">
                             </div>
                             <div class="field-group">
-                                <label for="conv-validade">Validade do Convite (Dias)</label>
+                                <label for="conv-validade">Validade</label>
                                 <select id="conv-validade" class="select-control">
                                     <option value="3">3 dias</option>
                                     <option value="7" selected>7 dias</option>
@@ -732,50 +886,104 @@
                             </div>
                         </div>
 
-                        <div class="field-group" style="margin-bottom: 14px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                                <label>Selecione os Centros de Custo sob responsabilidade do gestor *</label>
+                        <div class="step-actions" style="justify-content: flex-end;">
+                            <button type="button" class="btn btn-primary" id="btn-step1-next" onclick="validarEAvancarStep2()">
+                                Próximo: Selecionar Setores
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: SELEÇÃO DE CENTROS DE CUSTO -->
+                    <div id="step-pane-2" class="step-pane">
+                        <div class="gestor-pill-banner" id="banner-gestor-validado">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span id="lbl-gestor-validado">--</span>
+                        </div>
+
+                        <div class="field-group">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 6px;">
+                                <label>Selecionados: <span id="lbl-qtd-ccs" style="color:var(--funfarme-blue); font-weight:800;">0</span></label>
                                 <div style="display:flex; gap:6px; align-items:center;">
-                                    <input type="text" id="busca-cc" class="input-control" style="padding: 5px 10px; font-size:0.78rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesCC()">
-                                    <button type="button" class="btn btn-secondary" style="padding: 5px 10px; font-size:0.76rem;" onclick="alternarTodosCCs(false)">Limpar</button>
+                                    <input type="text" id="busca-cc" class="input-control" style="padding: 7px 11px; font-size:0.8rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesCC()">
+                                    <button type="button" class="btn btn-secondary" style="padding: 7px 12px; font-size:0.78rem;" onclick="alternarTodosCCs(false)">Limpar</button>
                                 </div>
                             </div>
                             <div id="lista-ccs-checkbox" class="cc-checklist">
-                                <span style="color:#64748b; font-size:0.8rem;">Carregando centros de custo...</span>
+                                <span style="color:#64748b; font-size:0.8rem;">Carregando setores...</span>
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary" id="btn-gerar-convite">Gerar Hash de Acesso</button>
-                    </form>
-
-                    <div id="box-codigo-gerado" class="codigo-gerado-box">
-                        <div>
-                            <div style="font-size:0.84rem; color:#065f46;">Convite gerado para <strong id="lbl-nome-convidado"></strong>! Envie este código ao gestor para ativação em <code>/primeiro-acesso</code>:</div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span class="codigo-destaque" id="lbl-codigo-hash">--------</span>
-                            <button type="button" class="btn btn-success" onclick="copiarCodigo()">Copiar Código</button>
+                        <div class="step-actions">
+                            <button type="button" class="btn btn-secondary" onclick="irParaStep(1)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                                Voltar
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="irParaStep(3)">
+                                Próximo: Conferir
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">Histórico de Convites Emitidos</h2>
-                    </div>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Crachá</th>
-                                    <th>Gestor Convidado</th>
-                                    <th>Centros de Custo Vinculados</th>
-                                    <th>Status</th>
-                                    <th>Expira em</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-convites"></tbody>
-                        </table>
+                    <!-- STEP 3: CONFERÊNCIA E GERAÇÃO DA HASH -->
+                    <div id="step-pane-3" class="step-pane">
+                        <div class="review-card">
+                            <div class="review-row">
+                                <span style="color:var(--text-muted);">Gestor:</span>
+                                <strong id="rev-gestor" style="color:var(--funfarme-blue);">--</strong>
+                            </div>
+                            <div class="review-row">
+                                <span style="color:var(--text-muted);">E-mail:</span>
+                                <strong id="rev-email">--</strong>
+                            </div>
+                            <div class="review-row">
+                                <span style="color:var(--text-muted);">Validade:</span>
+                                <strong id="rev-validade">--</strong>
+                            </div>
+                            <div class="review-row" style="flex-direction: column;">
+                                <span style="color:var(--text-muted);">Setores:</span>
+                                <div id="rev-ccs-lista" class="review-chips"></div>
+                            </div>
+                        </div>
+
+                        <div id="box-codigo-gerado" class="codigo-gerado-box">
+                            <div style="font-size:0.85rem; color:#065f46;" id="lbl-status-envio">
+                                Convite emitido para <strong id="lbl-nome-convidado"></strong>.
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span class="codigo-destaque" id="lbl-codigo-hash">--------</span>
+                                <button type="button" class="btn btn-success" onclick="copiarCodigo()">Copiar</button>
+                            </div>
+                        </div>
+
+                        <div class="step-actions">
+                            <button type="button" class="btn btn-secondary" id="btn-voltar-step3" onclick="irParaStep(2)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                                Voltar
+                            </button>
+                            <div style="display:flex; gap:10px;">
+                                <button type="button" class="btn btn-outline" id="btn-novo-reset" style="display:none;" onclick="resetarStepperConvite()">Novo Convite</button>
+                                <button type="button" class="btn btn-success" id="btn-gerar-convite" onclick="submeterConviteStepper()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 2L11 13"></path>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                    Gerar Hash & Enviar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -786,16 +994,16 @@
             <section id="aba-gestores" class="tab-content">
                 <div class="panel">
                     <div class="panel-header">
-                        <h2 class="panel-title">Gestores Cadastrados no Sistema</h2>
+                        <h2 class="panel-title">Gestores Cadastrados</h2>
                     </div>
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Crachá</th>
-                                    <th>Nome do Gestor</th>
+                                    <th>Gestor</th>
                                     <th>Centros de Custo</th>
-                                    <th>Status do Acesso</th>
+                                    <th>Status</th>
                                     <th>Ação</th>
                                 </tr>
                             </thead>
@@ -806,28 +1014,28 @@
             </section>
 
             <!-- =============================================================== -->
-            <!-- ABA 4: SINCRONIZAÇÃO SENIOR VETORH (ETL)                        -->
+            <!-- ABA 4: INTEGRAÇÃO SENIOR (ETL)                                  -->
             <!-- =============================================================== -->
             <section id="aba-etl" class="tab-content">
                 <div class="panel">
                     <div class="panel-header">
-                        <h2 class="panel-title">Execução Manual da Integração Senior Vetorh</h2>
+                        <h2 class="panel-title">Sincronização Senior Vetorh</h2>
                     </div>
                     <div class="etl-grid">
                         <div class="etl-card">
                             <div>
-                                <h4>Carga Diária de Faltas (Regra D-1)</h4>
-                                <p style="margin-top:6px;">Extrai ocorrências de falta injustificada (<code>R066SIT</code>) dos últimos 15 dias até ontem, ignorando o dia atual para evitar falsos positivos antes do fechamento do ponto.</p>
+                                <h4>Carga Diária (D-1)</h4>
+                                <p style="margin-top:6px;">Importa ocorrências dos últimos 15 dias até ontem.</p>
                             </div>
-                            <button class="btn btn-primary" onclick="dispararETL('faltas', this)">Executar Carga de Faltas</button>
+                            <button class="btn btn-primary" onclick="dispararETL('faltas', this)">Executar Carga Diária</button>
                         </div>
 
                         <div class="etl-card">
                             <div>
-                                <h4>Carga Semanal de Estrutura e Colaboradores</h4>
-                                <p style="margin-top:6px;">Atualiza Unidades, Centros de Custo, Cargos e Colaboradores ativos (<code>R034FUN</code>), mantendo o usuário ROOT e o histórico intactos.</p>
+                                <h4>Carga Semanal de Estrutura</h4>
+                                <p style="margin-top:6px;">Atualiza unidades, centros de custo, cargos e colaboradores.</p>
                             </div>
-                            <button class="btn btn-warning" onclick="dispararETL('estrutura', this)">Executar Carga de Estrutura</button>
+                            <button class="btn btn-warning" onclick="dispararETL('estrutura', this)">Executar Carga Semanal</button>
                         </div>
                     </div>
                 </div>
@@ -838,20 +1046,57 @@
     </div>
 
     <!-- ======================================================================= -->
-    <!-- MODAL DO FORMULÁRIO DE ANÁLISE (5 PERGUNTAS SIM/NÃO)                    -->
+    <!-- MODAL DO HISTÓRICO DE CONVITES                                          -->
+    <!-- ======================================================================= -->
+    {% if perfil == 'ROOT' %}
+    <div id="modal-historico-convites" class="modal-backdrop">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3>Histórico de Convites</h3>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="filtro-hist-convites" class="input-control" style="padding:7px 11px; font-size:0.8rem;" placeholder="Buscar..." oninput="filtrarHistoricoConvites()">
+                    <button type="button" class="btn btn-secondary" style="padding:7px 12px;" onclick="fecharModalHistoricoConvites()">Fechar</button>
+                </div>
+            </div>
+
+            <div class="modal-body-scroll table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Crachá</th>
+                            <th>Gestor</th>
+                            <th>E-mail</th>
+                            <th>Setores</th>
+                            <th>Status</th>
+                            <th>Expira em</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-convites">
+                        <tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ======================================================================= -->
+    <!-- MODAL DE ANÁLISE                                                        -->
     <!-- ======================================================================= -->
     <div id="modal-analise" class="modal-backdrop">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>Análise Operacional da Falta</h3>
-                <div class="modal-info" id="modal-subtitulo">Colaborador • Data</div>
+                <div>
+                    <h3>Análise Operacional</h3>
+                    <div class="modal-info" id="modal-subtitulo">Colaborador • Data</div>
+                </div>
             </div>
 
             <form id="form-analise-falta">
                 <input type="hidden" id="analise-ocorrencia-id">
 
                 <div class="question-row">
-                    <span class="question-text">1. A falta foi comunicada com 2h de antecedência?</span>
+                    <span class="question-text">1. Comunicada com 2h de antecedência?</span>
                     <div class="radio-group">
                         <label><input type="radio" name="q_comunicada" value="1" required> Sim</label>
                         <label><input type="radio" name="q_comunicada" value="0"> Não</label>
@@ -867,7 +1112,7 @@
                 </div>
 
                 <div class="question-row">
-                    <span class="question-text">3. Foi autorizado hora extra para cobertura?</span>
+                    <span class="question-text">3. Autorizado hora extra para cobertura?</span>
                     <div class="radio-group">
                         <label><input type="radio" name="q_aut_he" value="1" required onchange="validarRegraHE()"> Sim</label>
                         <label><input type="radio" name="q_aut_he" value="0" onchange="validarRegraHE()"> Não</label>
@@ -892,7 +1137,7 @@
 
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
-                    <button type="submit" class="btn btn-success" id="btn-salvar-analise">Salvar Análise</button>
+                    <button type="submit" class="btn btn-success" id="btn-salvar-analise">Salvar</button>
                 </div>
             </form>
         </div>
@@ -903,6 +1148,8 @@
     <script>
         const PERFIL_LOGADO = "{{ perfil }}";
         let listaFaltasCache = [];
+        let listaConvitesCache = [];
+        let gestorValidadoAtual = null;
 
         function toggleSidebarMobile() {
             document.getElementById("sidebar").classList.toggle("open");
@@ -923,6 +1170,11 @@
             document.getElementById(idAba).classList.add("active");
             btn.classList.add("active");
 
+            const kpiGrid = document.getElementById("kpi-grid");
+            if (kpiGrid) {
+                kpiGrid.style.display = (idAba === "aba-convites") ? "none" : "grid";
+            }
+
             if (window.innerWidth <= 920) {
                 document.getElementById("sidebar").classList.remove("open");
                 document.getElementById("sidebar-overlay").classList.remove("open");
@@ -930,14 +1182,235 @@
 
             if (idAba === "aba-convites") {
                 carregarCentrosCusto();
-                carregarConvites();
             } else if (idAba === "aba-gestores") {
                 carregarGestores();
             }
         }
 
         // ---------------------------------------------------------------------
-        // CARREGAMENTO DE KPIs E FALTAS
+        // STEPPER DE CONVITES + VALIDAÇÃO DE CRACHÁ + E-MAIL OBRIGATÓRIO
+        // ---------------------------------------------------------------------
+        async function validarEAvancarStep2() {
+            const crachaInput = document.getElementById("conv-cracha");
+            const emailInput = document.getElementById("conv-email");
+            const cracha = crachaInput.value.trim();
+            const email = emailInput.value.trim();
+
+            if (!cracha) {
+                mostrarToast("Informe o crachá do gestor.", true);
+                crachaInput.focus();
+                return;
+            }
+
+            const btnNext = document.getElementById("btn-step1-next");
+            const htmlOriginal = btnNext.innerHTML;
+            btnNext.disabled = true;
+            btnNext.innerText = "Validando crachá...";
+
+            try {
+                const res = await fetch(`/api/colaboradores/${encodeURIComponent(cracha)}`);
+                const data = await res.json();
+
+                if (!res.ok || !data.sucesso) {
+                    gestorValidadoAtual = null;
+                    mostrarToast(data.mensagem || "Crachá não encontrado na base.", true);
+                    crachaInput.focus();
+                    return;
+                }
+
+                gestorValidadoAtual = data.colaborador;
+
+                // Se o administrador ainda não digitou e-mail, preenche com o do Senior (se existir)
+                if (!email && gestorValidadoAtual.email) {
+                    emailInput.value = gestorValidadoAtual.email;
+                }
+
+                const emailFinal = emailInput.value.trim();
+                if (!emailFinal || !emailFinal.includes("@")) {
+                    mostrarToast("Informe um e-mail válido para envio do convite.", true);
+                    emailInput.focus();
+                    return;
+                }
+
+                document.getElementById("lbl-gestor-validado").innerText = `${gestorValidadoAtual.cracha} — ${gestorValidadoAtual.nome}`;
+                irParaStep(2);
+            } catch (err) {
+                mostrarToast("Erro ao validar crachá no servidor.", true);
+            } finally {
+                btnNext.disabled = false;
+                btnNext.innerHTML = htmlOriginal;
+            }
+        }
+
+        function irParaStep(numeroStep) {
+            if (numeroStep === 3) {
+                const selecionados = Array.from(document.querySelectorAll('input[name="ccs_selecionados"]:checked'));
+                if (!selecionados.length) {
+                    mostrarToast("Selecione ao menos um Centro de Custo.", true);
+                    return;
+                }
+
+                const nomeExibicao = gestorValidadoAtual
+                    ? `${gestorValidadoAtual.cracha} — ${gestorValidadoAtual.nome}`
+                    : document.getElementById("conv-cracha").value.trim();
+
+                document.getElementById("rev-gestor").innerText = nomeExibicao;
+                document.getElementById("rev-email").innerText = document.getElementById("conv-email").value.trim();
+                document.getElementById("rev-validade").innerText = `${document.getElementById("conv-validade").value} dias`;
+
+                const chipsHtml = selecionados.map(cb => {
+                    const labelTexto = cb.parentElement.querySelector("span").innerText;
+                    return `<span class="review-chip">${labelTexto}</span>`;
+                }).join("");
+                document.getElementById("rev-ccs-lista").innerHTML = chipsHtml;
+            }
+
+            [1, 2, 3].forEach(idx => {
+                const pane = document.getElementById(`step-pane-${idx}`);
+                const ind = document.getElementById(`step-ind-${idx}`);
+                pane.classList.toggle("active", idx === numeroStep);
+
+                ind.classList.remove("active", "completed");
+                if (idx < numeroStep) {
+                    ind.classList.add("completed");
+                } else if (idx === numeroStep) {
+                    ind.classList.add("active");
+                }
+            });
+        }
+
+        function resetarStepperConvite() {
+            gestorValidadoAtual = null;
+            document.getElementById("conv-cracha").value = "";
+            document.getElementById("conv-email").value = "";
+            document.getElementById("conv-validade").value = "7";
+            alternarTodosCCs(false);
+            document.getElementById("box-codigo-gerado").style.display = "none";
+            document.getElementById("btn-gerar-convite").style.display = "inline-flex";
+            document.getElementById("btn-voltar-step3").style.display = "inline-flex";
+            document.getElementById("btn-novo-reset").style.display = "none";
+            irParaStep(1);
+        }
+
+        async function submeterConviteStepper() {
+            const cracha = document.getElementById("conv-cracha").value.trim();
+            const email_destino = document.getElementById("conv-email").value.trim();
+            const dias_validade = parseInt(document.getElementById("conv-validade").value);
+            const ccs = Array.from(document.querySelectorAll('input[name="ccs_selecionados"]:checked')).map(el => parseInt(el.value));
+
+            if (!cracha || !email_destino || !ccs.length) {
+                mostrarToast("Verifique o crachá, e-mail e setores selecionados.", true);
+                return;
+            }
+
+            const btn = document.getElementById("btn-gerar-convite");
+            const htmlOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerText = "Gerando e enviando...";
+
+            try {
+                const res = await fetch("/api/convites", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        cracha,
+                        email_destino,
+                        dias_validade,
+                        centros_custo_ids: ccs
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.sucesso) {
+                    document.getElementById("lbl-codigo-hash").innerText = data.codigo_ativacao;
+                    document.getElementById("lbl-status-envio").innerHTML = data.email_enviado
+                        ? `E-mail enviado para <strong>${email_destino}</strong> (${data.colaborador}).`
+                        : `Hash gerada para <strong>${data.colaborador}</strong> (falha no envio SMTP).`;
+                    document.getElementById("box-codigo-gerado").style.display = "flex";
+                    btn.style.display = "none";
+                    document.getElementById("btn-voltar-step3").style.display = "none";
+                    document.getElementById("btn-novo-reset").style.display = "inline-flex";
+                    carregarMetricasRoot();
+                    mostrarToast(data.mensagem, !data.email_enviado);
+                } else {
+                    mostrarToast(data.mensagem || "Erro ao gerar convite.", true);
+                }
+            } catch (err) {
+                mostrarToast("Erro de comunicação com o servidor.", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = htmlOriginal;
+            }
+        }
+
+        function atualizarContadorCCs() {
+            const qtd = document.querySelectorAll('input[name="ccs_selecionados"]:checked').length;
+            const lbl = document.getElementById("lbl-qtd-ccs");
+            if (lbl) lbl.innerText = qtd;
+        }
+
+        // ---------------------------------------------------------------------
+        // MODAL DE HISTÓRICO DE CONVITES
+        // ---------------------------------------------------------------------
+        function abrirModalHistoricoConvites() {
+            document.getElementById("modal-historico-convites").style.display = "flex";
+            carregarConvites();
+        }
+
+        function fecharModalHistoricoConvites() {
+            document.getElementById("modal-historico-convites").style.display = "none";
+        }
+
+        async function carregarConvites() {
+            const tbody = document.getElementById("tbody-convites");
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando...</td></tr>';
+
+            try {
+                const res = await fetch("/api/convites");
+                const data = await res.json();
+                if (data.sucesso) {
+                    listaConvitesCache = data.convites;
+                    renderizarHistoricoConvites(listaConvitesCache);
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc2626;">Erro ao carregar histórico.</td></tr>';
+            }
+        }
+
+        function filtrarHistoricoConvites() {
+            const termo = document.getElementById("filtro-hist-convites").value.toLowerCase().trim();
+            const filtrados = listaConvitesCache.filter(c =>
+                c.cracha.toLowerCase().includes(termo) ||
+                c.colaborador.toLowerCase().includes(termo) ||
+                c.email_destino.toLowerCase().includes(termo) ||
+                c.status.toLowerCase().includes(termo)
+            );
+            renderizarHistoricoConvites(filtrados);
+        }
+
+        function renderizarHistoricoConvites(lista) {
+            const tbody = document.getElementById("tbody-convites");
+            if (!lista.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Nenhum convite emitido.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = lista.map(c => {
+                const pillClass = c.status === "DISPONIVEL" ? "pill-disponivel" : (c.status === "UTILIZADO" ? "pill-utilizado" : "pill-expirado");
+                return `
+                    <tr>
+                        <td><strong>${c.cracha}</strong></td>
+                        <td>${c.colaborador}</td>
+                        <td>${c.email_destino}</td>
+                        <td>${c.centros_custo.join(", ")}</td>
+                        <td><span class="status-pill ${pillClass}">${c.status}</span></td>
+                        <td>${c.expira_em}</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        // ---------------------------------------------------------------------
+        // KPIs E OCORRÊNCIAS
         // ---------------------------------------------------------------------
         async function carregarMetricasRoot() {
             if (PERFIL_LOGADO !== "ROOT") return;
@@ -956,7 +1429,7 @@
         async function carregarFaltas() {
             const status = document.getElementById("filtro-status").value;
             const tbody = document.getElementById("tbody-faltas");
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Buscando registros...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Buscando...</td></tr>';
 
             try {
                 const res = await fetch(`/api/faltas?status=${status}`);
@@ -972,7 +1445,7 @@
                 }
                 renderizarTabelaFaltas(listaFaltasCache);
             } catch (err) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc2626;">Erro ao conectar ao servidor.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc2626;">Erro ao conectar.</td></tr>';
             }
         }
 
@@ -994,20 +1467,20 @@
         function renderizarTabelaFaltas(lista) {
             const tbody = document.getElementById("tbody-faltas");
             if (!lista.length) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Nenhuma ocorrência encontrada para este filtro.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Nenhum registro encontrado.</td></tr>';
                 return;
             }
 
-            const html = lista.map(f => {
+            tbody.innerHTML = lista.map(f => {
                 const pill = f.status === "PENDENTE"
                     ? '<span class="status-pill pill-pendente">PENDENTE</span>'
                     : '<span class="status-pill pill-analisada">ANALISADA</span>';
 
                 let acaoHtml = "";
                 if (f.status === "PENDENTE") {
-                    acaoHtml = `<button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem;" onclick="abrirModalAnalise(${f.id})">Analisar Falta</button>`;
+                    acaoHtml = `<button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem;" onclick="abrirModalAnalise(${f.id})">Analisar</button>`;
                 } else if (f.analise) {
-                    acaoHtml = `<span style="font-size:0.78rem; color:#475569;">Por <strong>${f.analise.avaliador}</strong> em ${f.analise.respondido_em}</span>`;
+                    acaoHtml = `<span style="font-size:0.78rem; color:#475569;"><strong>${f.analise.avaliador}</strong> • ${f.analise.respondido_em}</span>`;
                 }
 
                 return `
@@ -1022,12 +1495,10 @@
                     </tr>
                 `;
             }).join("");
-
-            tbody.innerHTML = html;
         }
 
         // ---------------------------------------------------------------------
-        // MODAL DE ANÁLISE (5 PERGUNTAS + TRAVA DE HORA EXTRA)
+        // MODAL DE ANÁLISE
         // ---------------------------------------------------------------------
         function abrirModalAnalise(idOcorrencia) {
             const falta = listaFaltasCache.find(item => item.id === idOcorrencia);
@@ -1036,7 +1507,7 @@
             document.getElementById("form-analise-falta").reset();
             document.getElementById("row-conseguiu-he").classList.remove("disabled-row");
             document.getElementById("analise-ocorrencia-id").value = falta.id;
-            document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (Crachá ${falta.cracha}) • Falta em ${falta.data_ocorrencia}`;
+            document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
             document.getElementById("modal-analise").style.display = "flex";
         }
 
@@ -1084,17 +1555,17 @@
                     carregarFaltas();
                     carregarMetricasRoot();
                 } else {
-                    mostrarToast(data.mensagem || "Erro ao salvar análise.", true);
+                    mostrarToast(data.mensagem || "Erro ao salvar.", true);
                 }
             } catch (err) {
-                mostrarToast("Erro de comunicação com o servidor.", true);
+                mostrarToast("Erro de comunicação.", true);
             } finally {
                 btn.disabled = false;
             }
         });
 
         // ---------------------------------------------------------------------
-        // FUNÇÕES ADMINISTRATIVAS (ROOT)
+        // FUNÇÕES AUXILIARES ROOT
         // ---------------------------------------------------------------------
         async function carregarCentrosCusto() {
             const box = document.getElementById("lista-ccs-checkbox");
@@ -1106,7 +1577,7 @@
                 box.dataset.carregado = "1";
                 box.innerHTML = data.centros_custo.map(cc => `
                     <label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}">
-                        <input type="checkbox" name="ccs_selecionados" value="${cc.id}">
+                        <input type="checkbox" name="ccs_selecionados" value="${cc.id}" onchange="atualizarContadorCCs()">
                         <span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span>
                     </label>
                 `).join("");
@@ -1122,75 +1593,13 @@
 
         function alternarTodosCCs(marcar) {
             document.querySelectorAll('input[name="ccs_selecionados"]').forEach(cb => cb.checked = marcar);
-        }
-
-        const formConvite = document.getElementById("form-novo-convite");
-        if (formConvite) {
-            formConvite.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const ccs = Array.from(document.querySelectorAll('input[name="ccs_selecionados"]:checked')).map(el => parseInt(el.value));
-                if (!ccs.length) {
-                    mostrarToast("Selecione ao menos um Centro de Custo.", true);
-                    return;
-                }
-
-                const btn = document.getElementById("btn-gerar-convite");
-                btn.disabled = true;
-
-                try {
-                    const res = await fetch("/api/convites", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            cracha: document.getElementById("conv-cracha").value.trim(),
-                            email_destino: document.getElementById("conv-email").value.trim(),
-                            dias_validade: parseInt(document.getElementById("conv-validade").value),
-                            centros_custo_ids: ccs
-                        })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.sucesso) {
-                        document.getElementById("lbl-nome-convidado").innerText = data.colaborador;
-                        document.getElementById("lbl-codigo-hash").innerText = data.codigo_ativacao;
-                        document.getElementById("box-codigo-gerado").style.display = "flex";
-                        formConvite.reset();
-                        carregarConvites();
-                        carregarMetricasRoot();
-                        mostrarToast(data.mensagem);
-                    } else {
-                        mostrarToast(data.mensagem || "Erro ao gerar convite.", true);
-                    }
-                } finally {
-                    btn.disabled = false;
-                }
-            });
+            atualizarContadorCCs();
         }
 
         function copiarCodigo() {
             const cod = document.getElementById("lbl-codigo-hash").innerText;
             navigator.clipboard.writeText(cod);
-            mostrarToast("Código copiado para a área de transferência!");
-        }
-
-        async function carregarConvites() {
-            const tbody = document.getElementById("tbody-convites");
-            if (!tbody) return;
-            const res = await fetch("/api/convites");
-            const data = await res.json();
-            if (data.sucesso) {
-                tbody.innerHTML = data.convites.map(c => {
-                    const pillClass = c.status === "DISPONIVEL" ? "pill-disponivel" : (c.status === "UTILIZADO" ? "pill-utilizado" : "pill-expirado");
-                    return `
-                        <tr>
-                            <td>${c.cracha}</td>
-                            <td>${c.colaborador}</td>
-                            <td>${c.centros_custo.join(", ")}</td>
-                            <td><span class="status-pill ${pillClass}">${c.status}</span></td>
-                            <td>${c.expira_em}</td>
-                        </tr>
-                    `;
-                }).join("");
-            }
+            mostrarToast("Hash copiada!");
         }
 
         async function carregarGestores() {
@@ -1206,7 +1615,7 @@
                         <td>${g.centros_custo.join(", ") || "Nenhum"}</td>
                         <td><span class="status-pill ${g.ativo ? 'pill-ativo' : 'pill-inativo'}">${g.ativo ? 'ATIVO' : 'BLOQUEADO'}</span></td>
                         <td>
-                            <button class="btn ${g.ativo ? 'btn-danger' : 'btn-success'}" style="padding:5px 10px; font-size:0.76rem;" onclick="alternarGestor(${g.id})">
+                            <button class="btn ${g.ativo ? 'btn-danger' : 'btn-success'}" style="padding:6px 12px; font-size:0.76rem;" onclick="alternarGestor(${g.id})">
                                 ${g.ativo ? 'Bloquear' : 'Ativar'}
                             </button>
                         </td>
@@ -1228,7 +1637,7 @@
         async function dispararETL(tipo, btn) {
             const textoOriginal = btn.innerText;
             btn.disabled = true;
-            btn.innerText = "Executando carga no Senior...";
+            btn.innerText = "Executando...";
             try {
                 const res = await fetch("/api/etl/executar", {
                     method: "POST",

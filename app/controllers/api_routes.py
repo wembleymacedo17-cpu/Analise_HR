@@ -9,16 +9,18 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import get_db
 from app.models.models import (
     Colaborador, CentroCusto, Cargo, Usuario, UsuarioCentroCusto,
-    ConviteAcesso, ConviteCentroCusto, OcorrenciaFalta, AnaliseFalta
+    ConviteAcesso, ConviteCentroCusto, OcorrenciaFalta, AnaliseFalta,
+    LogEnvioEmail
 )
 from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
+from app.services.notificador_email import NotificadorEmail
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
 def _obter_ccs_usuario(db, usuario_id: int) -> list[int]:
-    """Busca apenas os IDs dos centros de custo diretamente pela PK composta (sem carregar objetos ORM)."""
+    """Busca apenas os IDs dos centros de custo diretamente pela PK composta."""
     rows = (
         db.query(UsuarioCentroCusto.centro_custo_id)
         .filter(UsuarioCentroCusto.usuario_id == usuario_id)
@@ -40,7 +42,6 @@ def login_api():
         return jsonify({'sucesso': False, 'mensagem': 'Informe o crachá e a senha.'}), 400
 
     db = get_db()
-    # Busca direta via índice único de colaboradores.cracha + JOIN em usuarios
     row = (
         db.query(
             Usuario.id,
@@ -97,7 +98,6 @@ def primeiro_acesso_api():
     codigo_hash = hashlib.sha256(codigo_raw.encode('utf-8')).hexdigest()
     agora = datetime.now(timezone.utc)
 
-    # Busca pelo índice único codigo_hash já trazendo colaborador e centros de custo
     convite = (
         db.query(ConviteAcesso)
         .options(
@@ -140,11 +140,11 @@ def primeiro_acesso_api():
     convite.utilizado_em = agora
     db.commit()
 
-    return jsonify({'sucesso': True, 'mensagem': 'Acesso ativado com sucesso! Você já pode fazer login.'}), 200
+    return jsonify({'sucesso': True, 'mensagem': 'Acesso ativado com sucesso!'}), 200
 
 
 # ==============================================================================
-# OPERACIONAL DE FALTAS (GESTOR & ROOT) - CONSULTA ÚNICA SEM N+1
+# OPERACIONAL DE OCORRÊNCIAS (GESTOR & ROOT)
 # ==============================================================================
 @api_bp.route('/faltas', methods=['GET'])
 def listar_faltas():
@@ -156,7 +156,6 @@ def listar_faltas():
     db = get_db()
     status_filtro = request.args.get('status', 'PENDENTE').upper()
 
-    # Consulta única com JOIN explícito nas tabelas envolvidas (evita centenas de roundtrips no RDS)
     query = (
         db.query(
             OcorrenciaFalta.id,
@@ -178,12 +177,10 @@ def listar_faltas():
         cc_ids = _obter_ccs_usuario(db, id_user)
         if not cc_ids:
             return jsonify({'sucesso': True, 'faltas': []}), 200
-        # Aproveita o índice composto ix_ocorrencias_cc_status (centro_custo_id, status)
         query = query.filter(OcorrenciaFalta.centro_custo_id.in_(cc_ids))
 
     rows = query.order_by(OcorrenciaFalta.data_ocorrencia.desc()).limit(300).all()
 
-    # Se estiver listando ANALISADA, busca os dados de auditoria em um único lote via IN
     analises_map = {}
     if status_filtro == 'ANALISADA' and rows:
         ocorr_ids = [r.id for r in rows]
@@ -254,11 +251,10 @@ def analisar_falta():
     if not autorizado_he and conseguiu_he:
         return jsonify({
             'sucesso': False,
-            'mensagem': 'Inconsistência: não é possível marcar cobertura por Hora Extra sem autorização de HE.'
+            'mensagem': 'Não é possível marcar cobertura por Hora Extra sem autorização de HE.'
         }), 400
 
     db = get_db()
-    # Bloqueio pessimista na PK para evitar gravação concorrente
     ocorrencia = (
         db.query(OcorrenciaFalta)
         .filter(OcorrenciaFalta.id == int(ocorrencia_id))
@@ -270,7 +266,6 @@ def analisar_falta():
         return jsonify({'sucesso': False, 'mensagem': 'Ocorrência não encontrada.'}), 404
 
     if perfil != 'ROOT':
-        # Verifica permissão direto pelo índice PK (usuario_id, centro_custo_id)
         tem_acesso = (
             db.query(UsuarioCentroCusto.usuario_id)
             .filter(
@@ -285,7 +280,7 @@ def analisar_falta():
 
     if ocorrencia.status == 'ANALISADA':
         db.rollback()
-        return jsonify({'sucesso': False, 'mensagem': 'Esta falta já foi analisada anteriormente.'}), 409
+        return jsonify({'sucesso': False, 'mensagem': 'Esta ocorrência já foi analisada.'}), 409
 
     nova_analise = AnaliseFalta(
         ocorrencia_id=ocorrencia.id,
@@ -304,8 +299,50 @@ def analisar_falta():
 
 
 # ==============================================================================
-# ADMINISTRAÇÃO ROOT (CONVITES, GESTORES, ETL E MÉTRICAS)
+# ADMINISTRAÇÃO ROOT (VALIDAÇÃO CRACHÁ, CONVITES, GESTORES, ETL E MÉTRICAS)
 # ==============================================================================
+@api_bp.route('/colaboradores/<string:cracha>', methods=['GET'])
+def validar_cracha_colaborador(cracha):
+    """Valida se o crachá existe e está ativo na base antes de avançar no Stepper."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    cracha_limpo = str(cracha).strip()
+    if not cracha_limpo:
+        return jsonify({'sucesso': False, 'mensagem': 'Informe o crachá.'}), 400
+
+    db = get_db()
+    row = (
+        db.query(
+            Colaborador.id,
+            Colaborador.cracha,
+            Colaborador.nome,
+            Colaborador.email,
+            CentroCusto.nome.label('setor_atual')
+        )
+        .join(CentroCusto, Colaborador.centro_custo_id == CentroCusto.id)
+        .filter(Colaborador.cracha == cracha_limpo, Colaborador.ativo.is_(True))
+        .first()
+    )
+
+    if not row:
+        return jsonify({
+            'sucesso': False,
+            'mensagem': f'Crachá "{cracha_limpo}" não encontrado ou colaborador inativo.'
+        }), 404
+
+    return jsonify({
+        'sucesso': True,
+        'colaborador': {
+            'id': row.id,
+            'cracha': row.cracha,
+            'nome': row.nome,
+            'email': row.email or '',
+            'setor_atual': row.setor_atual
+        }
+    }), 200
+
+
 @api_bp.route('/centros-custo', methods=['GET'])
 def listar_centros_custo():
     if session.get('usuario_perfil') != 'ROOT':
@@ -338,14 +375,19 @@ def convites_api():
         ccs_ids = data.get('centros_custo_ids', [])
         dias_validade = int(data.get('dias_validade', 7))
 
-        # Busca via índice único colaboradores.cracha
+        if not cracha:
+            return jsonify({'sucesso': False, 'mensagem': 'Informe o crachá do gestor.'}), 400
+
+        if not email_destino or '@' not in email_destino:
+            return jsonify({'sucesso': False, 'mensagem': 'Informe um e-mail de destino válido.'}), 400
+
         colab = (
-            db.query(Colaborador.id, Colaborador.nome, Colaborador.email)
+            db.query(Colaborador.id, Colaborador.nome)
             .filter(Colaborador.cracha == cracha, Colaborador.ativo.is_(True))
             .first()
         )
         if not colab:
-            return jsonify({'sucesso': False, 'mensagem': f'Colaborador com crachá {cracha} não encontrado.'}), 404
+            return jsonify({'sucesso': False, 'mensagem': f'Crachá {cracha} não encontrado ou inativo.'}), 404
 
         if not ccs_ids:
             return jsonify({'sucesso': False, 'mensagem': 'Selecione ao menos um Centro de Custo.'}), 400
@@ -356,7 +398,7 @@ def convites_api():
         novo_convite = ConviteAcesso(
             codigo_hash=codigo_hash,
             colaborador_id=colab.id,
-            email_destino=email_destino or colab.email or 'sem-email@funfarme.com.br',
+            email_destino=email_destino,
             status='DISPONIVEL',
             expira_em=datetime.now(timezone.utc) + timedelta(days=dias_validade),
             criado_por_id=session['usuario_id']
@@ -364,20 +406,55 @@ def convites_api():
         db.add(novo_convite)
         db.flush()
 
+        cc_ids_unicos = [int(cc_id) for cc_id in set(ccs_ids)]
+        nomes_ccs = [
+            row[0]
+            for row in db.query(CentroCusto.nome).filter(CentroCusto.id.in_(cc_ids_unicos)).all()
+        ]
+
         db.bulk_save_objects([
-            ConviteCentroCusto(convite_id=novo_convite.id, centro_custo_id=int(cc_id))
-            for cc_id in set(ccs_ids)
+            ConviteCentroCusto(convite_id=novo_convite.id, centro_custo_id=cc_id)
+            for cc_id in cc_ids_unicos
         ])
 
+        base_url = request.host_url.rstrip('/')
+        link_primeiro_acesso = f"{base_url}/primeiro-acesso?codigo={codigo_plain}"
+
+        notificador = NotificadorEmail()
+        enviado_ok, erro_envio = notificador.enviar_convite_primeiro_acesso(
+            destinatario=email_destino,
+            nome_gestor=colab.nome,
+            cracha=cracha,
+            codigo_hash=codigo_plain,
+            link_acesso=link_primeiro_acesso,
+            dias_validade=dias_validade,
+            centros_custo=nomes_ccs,
+        )
+
+        db.add(LogEnvioEmail(
+            convite_id=novo_convite.id,
+            destinatario=email_destino,
+            status_envio='ENVIADO' if enviado_ok else 'ERRO',
+            detalhe_erro=erro_envio,
+        ))
+
         db.commit()
+
+        msg_retorno = (
+            f'Convite gerado e enviado para {email_destino}!'
+            if enviado_ok
+            else f'Hash gerada para {colab.nome}, mas houve falha no envio do e-mail ({erro_envio}).'
+        )
+
         return jsonify({
             'sucesso': True,
-            'mensagem': f'Convite gerado para {colab.nome}!',
+            'email_enviado': enviado_ok,
+            'mensagem': msg_retorno,
             'codigo_ativacao': codigo_plain,
+            'link_acesso': link_primeiro_acesso,
             'colaborador': colab.nome
         }), 201
 
-    # Eager loading em lote para evitar N+1 na listagem de convites
     convites = (
         db.query(ConviteAcesso)
         .options(
@@ -473,7 +550,7 @@ def executar_etl():
             return jsonify({'sucesso': True, 'mensagem': 'Carga de estrutura e colaboradores concluída!'}), 200
         else:
             ETLFaltasDiario(dias_retroativos=15).executar()
-            return jsonify({'sucesso': True, 'mensagem': 'Carga diária de faltas (D-1) concluída!'}), 200
+            return jsonify({'sucesso': True, 'mensagem': 'Carga diária (D-1) concluída!'}), 200
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao executar ETL: {str(e)}'}), 500
 
@@ -484,7 +561,6 @@ def dashboard_metricas():
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     db = get_db()
-    # Agregação condicional única no índice de status (evita 2 varreduras separadas)
     stats_faltas = db.query(
         func.count(case((OcorrenciaFalta.status == 'PENDENTE', 1))).label('pendentes'),
         func.count(case((OcorrenciaFalta.status == 'ANALISADA', 1))).label('analisadas')

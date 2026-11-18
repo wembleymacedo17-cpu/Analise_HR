@@ -6,8 +6,8 @@
     <title>Primeiro Acesso | FUNFARME</title>
     <style>
         :root {
-            --bg-body: #f1f5f9;
             --funfarme-blue: #1e3a8a;
+            --funfarme-blue-dark: #172554;
             --funfarme-blue-hover: #1d4ed8;
             --accent: #0284c7;
             --text-main: #0f172a;
@@ -18,10 +18,11 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
         body {
-            background-color: var(--bg-body);
+            background: linear-gradient(145deg, #1e3a8a 0%, #172554 100%);
             background-image:
-                radial-gradient(circle at 15% 15%, rgba(30, 58, 138, 0.08), transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(2, 132, 199, 0.08), transparent 40%);
+                radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.16), transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(2, 132, 199, 0.18), transparent 45%),
+                linear-gradient(145deg, #1e3a8a 0%, #172554 100%);
             color: var(--text-main);
             display: flex;
             align-items: center;
@@ -39,21 +40,22 @@
         }
 
         .logo-top {
-            height: 44px;
+            height: 120px;
             width: auto;
             object-fit: contain;
             margin-bottom: 22px;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
         }
 
         .card {
             width: 100%;
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.35);
             border-radius: 20px;
             padding: 32px 28px;
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 22px 45px rgba(2, 6, 23, 0.38);
         }
 
         .card-header {
@@ -71,7 +73,7 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto 12px auto;
-            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.22);
+            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.25);
         }
 
         .card-header h1 {
@@ -119,7 +121,7 @@
 
         .form-group input:focus {
             border-color: var(--funfarme-blue);
-            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.14);
         }
 
         .input-codigo {
@@ -156,13 +158,13 @@
             font-size: 0.92rem;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 6px 18px rgba(30, 58, 138, 0.25);
+            box-shadow: 0 6px 18px rgba(30, 58, 138, 0.28);
             transition: transform 0.15s ease, box-shadow 0.2s ease;
         }
 
         .btn-submit:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 22px rgba(30, 58, 138, 0.32);
+            box-shadow: 0 8px 22px rgba(30, 58, 138, 0.35);
         }
 
         .btn-submit:disabled {
