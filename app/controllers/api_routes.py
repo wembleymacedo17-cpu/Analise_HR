@@ -16,7 +16,41 @@ from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
 from app.services.notificador_email import NotificadorEmail
 
+
+
+COORDENADORES_AUTORIZADORES = {
+    "Ana Paula Augusto Valverde",
+    "Débora Augusto Valverde",
+    "Janaina Souza de Lima",
+    "Kátia Luciana Franca Pereira",
+    "Rafaela Marqui",
+    "Suzilene Ribeiro",
+    "Juliane Cristina Souza Ferraroni",
+}
+
+
+
+
+
+
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# Mapa de horários e turnos incompatíveis entre si no mesmo dia
+TURNOS_LABELS = {
+    'MANHA': 'Manhã (07:00 - 13:00)',
+    'TARDE': 'Tarde (13:00 - 19:00)',
+    'DIURNO_12H': 'Diurno 12h (07:00 - 19:00)',
+    'NOTURNO_12H': 'Noturno 12h (19:00 - 07:00)',
+    'COMERCIAL': 'Comercial (08:00 - 18:00)',
+}
+
+TURNOS_CONFLITANTES = {
+    'MANHA': {'MANHA', 'DIURNO_12H', 'COMERCIAL'},
+    'TARDE': {'TARDE', 'DIURNO_12H', 'COMERCIAL'},
+    'DIURNO_12H': {'MANHA', 'TARDE', 'DIURNO_12H', 'COMERCIAL'},
+    'COMERCIAL': {'MANHA', 'TARDE', 'DIURNO_12H', 'COMERCIAL'},
+    'NOTURNO_12H': {'NOTURNO_12H'},
+}
 
 
 def _obter_ccs_usuario(db, usuario_id: int) -> list[int]:
@@ -184,11 +218,12 @@ def primeiro_acesso_api():
 # ==============================================================================
 @api_bp.route('/colaboradores/buscar', methods=['GET'])
 def buscar_colaboradores_cobertura():
-    """Busca rápida por crachá ou nome para o campo Origem da Cobertura."""
+    """Busca por crachá ou nome e informa se já possui cobertura alocada naquela data."""
     if not session.get('usuario_id'):
         return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
 
     termo = str(request.args.get('q', '')).strip()
+    data_str = str(request.args.get('data', '')).strip()
     if len(termo) < 2:
         return jsonify({'sucesso': True, 'colaboradores': []}), 200
 
@@ -215,6 +250,41 @@ def buscar_colaboradores_cobertura():
         .all()
     )
 
+    # Verifica se os colaboradores retornados já possuem cobertura registrada na data da falta
+    alocacoes_map = {}
+    if data_str and rows:
+        try:
+            data_dt = datetime.strptime(data_str, '%d/%m/%Y').date()
+            colab_ids = [r.id for r in rows]
+            FaltanteColab = aliased(Colaborador)
+
+            coberturas_existentes = (
+                db.query(
+                    AnaliseFalta.cobridor_colaborador_id,
+                    AnaliseFalta.turno_cobertura,
+                    FaltanteColab.nome.label('faltante_nome'),
+                    CentroCusto.nome.label('setor_falta')
+                )
+                .join(OcorrenciaFalta, AnaliseFalta.ocorrencia_id == OcorrenciaFalta.id)
+                .join(FaltanteColab, OcorrenciaFalta.colaborador_id == FaltanteColab.id)
+                .join(CentroCusto, OcorrenciaFalta.centro_custo_id == CentroCusto.id)
+                .filter(
+                    OcorrenciaFalta.data_ocorrencia == data_dt,
+                    AnaliseFalta.cobridor_colaborador_id.in_(colab_ids)
+                )
+                .all()
+            )
+            for cob in coberturas_existentes:
+                turno_code = cob.turno_cobertura or 'DIURNO_12H'
+                alocacoes_map.setdefault(cob.cobridor_colaborador_id, []).append({
+                    'turno': turno_code,
+                    'turno_label': TURNOS_LABELS.get(turno_code, turno_code),
+                    'faltante_nome': cob.faltante_nome,
+                    'setor_falta': cob.setor_falta
+                })
+        except ValueError:
+            pass
+
     return jsonify({
         'sucesso': True,
         'colaboradores': [
@@ -224,7 +294,8 @@ def buscar_colaboradores_cobertura():
                 'nome': r.nome,
                 'centro_custo_id': r.centro_custo_id,
                 'codigo_cc': r.codigo_cc,
-                'centro_custo': r.centro_custo_nome
+                'centro_custo': r.centro_custo_nome,
+                'coberturas_no_dia': alocacoes_map.get(r.id, [])
             }
             for r in rows
         ]
@@ -292,13 +363,16 @@ def listar_faltas():
         analises_rows = (
             db.query(
                 AnaliseFalta.ocorrencia_id,
+                AnaliseFalta.ausencia_programada,
                 AnaliseFalta.comunicada_2h_antecedencia,
                 AnaliseFalta.foi_troca_folga,
                 AnaliseFalta.autorizado_hora_extra,
                 AnaliseFalta.conseguiu_he_cobertura,
+                AnaliseFalta.turno_cobertura,
                 AnaliseFalta.redividiu_equipe,
                 AnaliseFalta.qtd_pacientes,
                 AnaliseFalta.qtd_colaboradores,
+                AnaliseFalta.justificativa_nao_redimensionada,
                 AnaliseFalta.respondido_em,
                 AvaliadorColab.nome.label('avaliador_nome'),
                 CobridorColab.cracha.label('cobridor_cracha'),
@@ -315,7 +389,9 @@ def listar_faltas():
         )
         for a in analises_rows:
             dt_resp = (a.respondido_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
+            turno_desc = f" [{TURNOS_LABELS.get(a.turno_cobertura, a.turno_cobertura)}]" if a.turno_cobertura else ""
             analises_map[a.ocorrencia_id] = {
+                'ausencia_programada': a.ausencia_programada,
                 'comunicada_2h_antecedencia': a.comunicada_2h_antecedencia,
                 'foi_troca_folga': a.foi_troca_folga,
                 'autorizado_hora_extra': a.autorizado_hora_extra,
@@ -323,8 +399,9 @@ def listar_faltas():
                 'redividiu_equipe': a.redividiu_equipe,
                 'qtd_pacientes': a.qtd_pacientes,
                 'qtd_colaboradores': a.qtd_colaboradores,
+                'justificativa_nao_redimensionada': a.justificativa_nao_redimensionada,
                 'cobridor': (
-                    f"{a.cobridor_cracha} - {a.cobridor_nome} ({a.cobridor_codigo_cc} - {a.cobridor_cc_nome})"
+                    f"{a.cobridor_cracha} - {a.cobridor_nome} ({a.cobridor_codigo_cc} - {a.cobridor_cc_nome}){turno_desc}"
                     if a.cobridor_nome else None
                 ),
                 'avaliador': a.avaliador_nome,
@@ -369,36 +446,7 @@ def analisar_falta():
     if not ocorrencia_id:
         return jsonify({'sucesso': False, 'mensagem': 'ID da ocorrência não informado.'}), 400
 
-    comunicada_2h = bool(data.get('comunicada_2h_antecedencia'))
-    foi_troca = bool(data.get('foi_troca_folga'))
-    autorizado_he = bool(data.get('autorizado_hora_extra'))
-    conseguiu_he = bool(data.get('conseguiu_he_cobertura'))
-    redividiu = bool(data.get('redividiu_equipe'))
-    cobridor_id_raw = data.get('cobridor_colaborador_id')
-
-    if not autorizado_he and conseguiu_he:
-        return jsonify({
-            'sucesso': False,
-            'mensagem': 'Não é possível marcar cobertura por Hora Extra sem autorização de HE.'
-        }), 400
-
-    qtd_pacientes = None
-    qtd_colaboradores = None
-    if redividiu:
-        try:
-            qtd_pacientes = int(data.get('qtd_pacientes'))
-            qtd_colaboradores = int(data.get('qtd_colaboradores'))
-        except (TypeError, ValueError):
-            return jsonify({
-                'sucesso': False,
-                'mensagem': 'Informe valores numéricos válidos para pacientes e colaboradores.'
-            }), 400
-
-        if qtd_pacientes <= 0 or qtd_colaboradores <= 0:
-            return jsonify({
-                'sucesso': False,
-                'mensagem': 'O número de pacientes e a quantidade de colaboradores devem ser maiores que zero.'
-            }), 400
+    ausencia_programada = bool(data.get('ausencia_programada'))
 
     db = get_db()
     ocorrencia = (
@@ -428,42 +476,157 @@ def analisar_falta():
         db.rollback()
         return jsonify({'sucesso': False, 'mensagem': 'Esta ocorrência já foi analisada.'}), 409
 
+    # Fluxo 1: Ausência programada pelo supervisor -> encerra imediatamente
+    if ausencia_programada:
+        nova_analise = AnaliseFalta(
+            ocorrencia_id=ocorrencia.id,
+            avaliador_id=id_user,
+            ausencia_programada=True,
+            comunicada_2h_antecedencia=None,
+            foi_troca_folga=None,
+            autorizado_hora_extra=None,
+            conseguiu_he_cobertura=None,
+            cobridor_colaborador_id=None,
+            cobridor_centro_custo_id=None,
+            turno_cobertura=None,
+            redividiu_equipe=None,
+            qtd_pacientes=None,
+            qtd_colaboradores=None,
+            justificativa_nao_redimensionada=None
+        )
+        ocorrencia.status = 'ANALISADA'
+        db.add(nova_analise)
+        db.commit()
+        return jsonify({'sucesso': True, 'mensagem': 'Ausência programada registrada com sucesso!'}), 200
+
+    # Fluxo 2: Ausência não programada
+    comunicada_2h = bool(data.get('comunicada_2h_antecedencia'))
+    autorizado_he = bool(data.get('autorizado_hora_extra'))
+    conseguiu_he = bool(data.get('conseguiu_he_cobertura')) if autorizado_he else False
+    cobridor_id_raw = data.get('cobridor_colaborador_id')
+    turno_cobertura = str(data.get('turno_cobertura') or '').strip().upper() or None
+
     cobridor_id = None
     cobridor_cc_id = None
+    redividiu = None
+    qtd_pacientes = None
+    qtd_colaboradores = None
+    justificativa_texto = None
 
-    if cobridor_id_raw:
+    # Caso 3a = Sim (Conseguiu cobertura -> exige substituto e turno; encerra aqui sem redimensionar equipe)
+    if autorizado_he and conseguiu_he:
+        if not cobridor_id_raw:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Informe o crachá/nome de quem cobriu a ausência.'}), 400
+
+        if not turno_cobertura or turno_cobertura not in TURNOS_LABELS:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Selecione o turno/horário da cobertura.'}), 400
+
         cobridor_row = (
-            db.query(Colaborador.id, Colaborador.centro_custo_id)
+            db.query(Colaborador.id, Colaborador.cracha, Colaborador.nome, Colaborador.centro_custo_id)
             .filter(Colaborador.id == int(cobridor_id_raw), Colaborador.ativo.is_(True))
+            .with_for_update()
             .first()
         )
         if not cobridor_row:
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Colaborador selecionado para cobertura não encontrado.'}), 400
+
         if cobridor_row.id == ocorrencia.colaborador_id:
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'O colaborador faltante não pode cobrir a própria falta.'}), 400
+
+        turnos_incompativeis = TURNOS_CONFLITANTES.get(turno_cobertura, {turno_cobertura})
+        FaltanteExistente = aliased(Colaborador)
+
+        conflito = (
+            db.query(
+                AnaliseFalta.id,
+                AnaliseFalta.turno_cobertura,
+                FaltanteExistente.nome.label('faltante_nome'),
+                CentroCusto.nome.label('setor_nome')
+            )
+            .join(OcorrenciaFalta, AnaliseFalta.ocorrencia_id == OcorrenciaFalta.id)
+            .join(FaltanteExistente, OcorrenciaFalta.colaborador_id == FaltanteExistente.id)
+            .join(CentroCusto, OcorrenciaFalta.centro_custo_id == CentroCusto.id)
+            .filter(
+                AnaliseFalta.cobridor_colaborador_id == cobridor_row.id,
+                OcorrenciaFalta.data_ocorrencia == ocorrencia.data_ocorrencia,
+                OcorrenciaFalta.id != ocorrencia.id,
+                or_(
+                    AnaliseFalta.turno_cobertura.in_(turnos_incompativeis),
+                    AnaliseFalta.turno_cobertura.is_(None)
+                )
+            )
+            .first()
+        )
+        if conflito:
+            db.rollback()
+            data_fmt = ocorrencia.data_ocorrencia.strftime('%d/%m/%Y')
+            turno_existente_lbl = TURNOS_LABELS.get(conflito.turno_cobertura, conflito.turno_cobertura or 'mesmo turno')
+            return jsonify({
+                'sucesso': False,
+                'mensagem': (
+                    f'Conflito de escala: {cobridor_row.nome} (Crachá {cobridor_row.cracha}) já está cobrindo '
+                    f'{conflito.faltante_nome} no setor {conflito.setor_nome} em {data_fmt} ({turno_existente_lbl}).'
+                )
+            }), 409
+
         cobridor_id = cobridor_row.id
         cobridor_cc_id = cobridor_row.centro_custo_id
-    elif conseguiu_he or foi_troca:
-        db.rollback()
-        return jsonify({
-            'sucesso': False,
-            'mensagem': 'Informe qual colaborador realizou a cobertura em Origem da Cobertura.'
-        }), 400
+        redividiu = False
+
+    # Caso 3 = Não OU (3 = Sim e 3a = Não) -> exige Etapa 4 (Equipe foi redimensionada?)
+    else:
+        turno_cobertura = None
+        if data.get('redividiu_equipe') is None:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Informe se a equipe foi redimensionada.'}), 400
+
+        redividiu = bool(data.get('redividiu_equipe'))
+
+        if redividiu:
+            try:
+                qtd_pacientes = int(data.get('qtd_pacientes'))
+                qtd_colaboradores = int(data.get('qtd_colaboradores'))
+            except (TypeError, ValueError):
+                db.rollback()
+                return jsonify({
+                    'sucesso': False,
+                    'mensagem': 'Informe o número de pacientes e o número de colaboradores.'
+                }), 400
+
+            if qtd_pacientes < 1 or qtd_colaboradores < 1:
+                db.rollback()
+                return jsonify({
+                    'sucesso': False,
+                    'mensagem': 'O número de pacientes e de colaboradores devem ser maiores que zero.'
+                }), 400
+        else:
+            justificativa_texto = str(data.get('justificativa_nao_redimensionada') or '').strip()
+            if not justificativa_texto:
+                db.rollback()
+                return jsonify({
+                    'sucesso': False,
+                    'mensagem': 'Descreva o que foi feito na ausência do colaborador.'
+                }), 400
 
     nova_analise = AnaliseFalta(
         ocorrencia_id=ocorrencia.id,
         avaliador_id=id_user,
+        ausencia_programada=False,
         comunicada_2h_antecedencia=comunicada_2h,
-        foi_troca_folga=foi_troca,
+        foi_troca_folga=False,
         autorizado_hora_extra=autorizado_he,
         conseguiu_he_cobertura=conseguiu_he,
         cobridor_colaborador_id=cobridor_id,
         cobridor_centro_custo_id=cobridor_cc_id,
+        turno_cobertura=turno_cobertura,
         redividiu_equipe=redividiu,
         qtd_pacientes=qtd_pacientes,
-        qtd_colaboradores=qtd_colaboradores
+        qtd_colaboradores=qtd_colaboradores,
+        justificativa_nao_redimensionada=justificativa_texto
     )
     ocorrencia.status = 'ANALISADA'
     db.add(nova_analise)

@@ -299,7 +299,7 @@
         .panel-title { font-size: 1.1rem; font-weight: 800; color: var(--funfarme-blue); letter-spacing: -0.2px; }
 
         .filters-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .input-control, .select-control {
+        .input-control, .select-control, .textarea-control {
             background: var(--bg-surface);
             border: 1px solid #cbd5e1;
             color: var(--text-main);
@@ -309,7 +309,13 @@
             outline: none;
             transition: all 0.2s ease;
         }
-        .input-control:focus, .select-control:focus {
+        .textarea-control {
+            width: 100%;
+            min-height: 88px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+        .input-control:focus, .select-control:focus, .textarea-control:focus {
             border-color: var(--funfarme-blue);
             box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
         }
@@ -501,7 +507,7 @@
         }
         .progress-fill {
             height: 100%;
-            width: 20%;
+            width: 25%;
             background: linear-gradient(90deg, #10b981 0%, #059669 100%);
             border-radius: 999px;
             box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
@@ -560,7 +566,21 @@
             box-shadow: 0 4px 12px rgba(30, 58, 138, 0.12);
         }
 
-        /* CAMPOS CONDICIONAIS DA REDIVISÃO DE EQUIPE (PERGUNTA 5) */
+        /* SUBPERGUNTAS E BLOCOS CONDICIONAIS NO MESMO QUADRO */
+        .sub-question-block {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px dashed #cbd5e1;
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .sub-question-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--funfarme-blue);
+            margin-bottom: 12px;
+        }
+
         .redivisao-detalhes-box {
             margin-top: 16px;
             padding: 16px;
@@ -826,7 +846,7 @@
             border: 1.5px solid #93c5fd;
             border-radius: 12px;
             padding: 14px;
-            margin-top: 16px;
+            margin-top: 14px;
             display: none;
             animation: fadeIn 0.2s ease;
         }
@@ -1443,7 +1463,7 @@
     {% endif %}
 
     <!-- ======================================================================= -->
-    <!-- MODAL DE ANÁLISE OPERACIONAL (1 PERGUNTA POR STEP + BARRA % VERDE)      -->
+    <!-- MODAL DE ANÁLISE OPERACIONAL (NOVO FLUXO CONDICIONAL + BARRA % VERDE)   -->
     <!-- ======================================================================= -->
     <div id="modal-analise" class="modal-backdrop">
         <div class="modal-card">
@@ -1458,23 +1478,53 @@
             <!-- BARRA DE PORCENTAGEM CONCLUÍDA EM VERDE -->
             <div class="progress-container">
                 <div class="progress-header">
-                    <span class="progress-step-label" id="lbl-progresso-etapa">Pergunta 1 de 5</span>
-                    <span class="progress-pct-badge" id="lbl-progresso-pct">20% concluído</span>
+                    <span class="progress-step-label" id="lbl-progresso-etapa">Etapa 1 de 4</span>
+                    <span class="progress-pct-badge" id="lbl-progresso-pct">25% concluído</span>
                 </div>
                 <div class="progress-track">
-                    <div class="progress-fill" id="barra-progresso-fill" style="width: 20%;"></div>
+                    <div class="progress-fill" id="barra-progresso-fill" style="width: 25%;"></div>
                 </div>
             </div>
 
-            <form id="form-analise-falta">
+            <form id="form-analise-falta" class="modal-body-scroll">
                 <input type="hidden" id="analise-ocorrencia-id">
                 <input type="hidden" id="analise-faltante-id">
                 <input type="hidden" id="cobridor-colaborador-id">
 
-                <!-- STEP 1: PERGUNTA 1 -->
+                <!-- ETAPA 1: AUSÊNCIA PROGRAMADA PELO SUPERVISOR -->
                 <div id="an-step-pane-1" class="step-pane active">
                     <div class="single-question-card">
-                        <div class="single-question-title">1. A falta foi comunicada com 2h de antecedência?</div>
+                        <div class="single-question-title">1. Ausência programada pelo supervisor?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card">
+                                <input type="radio" name="q_programada" value="1" onchange="atualizarAcaoStep1()">
+                                <span>Sim</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_programada" value="0" onchange="atualizarAcaoStep1()">
+                                <span>Não</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions" style="justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="btn-step1-next" onclick="avancarDoStep1()">
+                            Próximo
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn btn-success" id="btn-step1-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">
+                            Salvar e Finalizar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ETAPA 2: COMUNICADA COM 2HRS DE ANTECEDÊNCIA -->
+                <div id="an-step-pane-2" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">2. A falta foi comunicada com 2h de antecedência?</div>
                         <div class="choice-cards-grid">
                             <label class="choice-card">
                                 <input type="radio" name="q_comunicada" value="1">
@@ -1487,33 +1537,6 @@
                         </div>
                     </div>
 
-                    <div class="modal-actions" style="justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
-                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(2)">
-                            Próximo
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- STEP 2: PERGUNTA 2 -->
-                <div id="an-step-pane-2" class="step-pane">
-                    <div class="single-question-card">
-                        <div class="single-question-title">2. Foi troca de folga?</div>
-                        <div class="choice-cards-grid">
-                            <label class="choice-card">
-                                <input type="radio" name="q_troca" value="1">
-                                <span>Sim</span>
-                            </label>
-                            <label class="choice-card">
-                                <input type="radio" name="q_troca" value="0">
-                                <span>Não</span>
-                            </label>
-                        </div>
-                    </div>
-
                     <div class="modal-actions">
                         <button type="button" class="btn btn-secondary" onclick="irStepAnalise(1)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1521,7 +1544,7 @@
                             </svg>
                             Voltar
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(3)">
+                        <button type="button" class="btn btn-primary" onclick="avancarDoStep2()">
                             Próximo
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="9 18 15 12 9 6"></polyline>
@@ -1530,19 +1553,92 @@
                     </div>
                 </div>
 
-                <!-- STEP 3: PERGUNTA 3 -->
+                <!-- ETAPA 3: AUTORIZADO HORAS EXTRAS + 3a (COORDENADOR) + 3b (COBERTURA) -->
                 <div id="an-step-pane-3" class="step-pane">
                     <div class="single-question-card">
-                        <div class="single-question-title">3. Foi autorizado hora extra para cobertura?</div>
+                        <div class="single-question-title">3. Foi autorizado horas extras para a cobertura?</div>
                         <div class="choice-cards-grid">
                             <label class="choice-card">
-                                <input type="radio" name="q_aut_he" value="1">
+                                <input type="radio" name="q_aut_he" value="1" onchange="atualizarSubpergunta3a()">
                                 <span>Sim</span>
                             </label>
                             <label class="choice-card">
-                                <input type="radio" name="q_aut_he" value="0">
+                                <input type="radio" name="q_aut_he" value="0" onchange="atualizarSubpergunta3a()">
                                 <span>Não</span>
                             </label>
+                        </div>
+
+                        <!-- SUBPERGUNTAS 3a E 3b (ABREM NO MESMO QUADRO SE 3 = SIM) -->
+                        <div id="bloco-pergunta-3a" class="sub-question-block">
+                            <!-- 3a) QUEM AUTORIZOU? -->
+                            <div class="sub-question-title">3a. Quem autorizou?</div>
+                            <div class="field-group" style="margin-bottom: 16px;">
+                                <select id="select-autorizador-he" class="select-control" style="width: 100%;">
+                                    <option value="">Selecione o coordenador...</option>
+                                    <option value="Ana Paula Augusto Valverde">Ana Paula Augusto Valverde</option>
+                                    <option value="Débora Augusto Valverde">Débora Augusto Valverde</option>
+                                    <option value="Janaina Souza de Lima">Janaina Souza de Lima</option>
+                                    <option value="Kátia Luciana Franca Pereira">Kátia Luciana Franca Pereira</option>
+                                    <option value="Rafaela Marqui">Rafaela Marqui</option>
+                                    <option value="Suzilene Ribeiro">Suzilene Ribeiro</option>
+                                    <option value="Juliane Cristina Souza Ferraroni">Juliane Cristina Souza Ferraroni</option>
+                                </select>
+                            </div>
+
+                            <!-- 3b) CONSEGUIU COBERTURA PARA ESTA AUSÊNCIA? -->
+                            <div class="sub-question-title" style="padding-top: 14px; border-top: 1px dashed #cbd5e1;">
+                                3b. Conseguiu cobertura para esta ausência?
+                            </div>
+                            <div class="choice-cards-grid">
+                                <label class="choice-card">
+                                    <input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()">
+                                    <span>Sim</span>
+                                </label>
+                                <label class="choice-card">
+                                    <input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()">
+                                    <span>Não</span>
+                                </label>
+                            </div>
+
+                            <!-- ORIGEM DA COBERTURA (SE 3b = SIM) -->
+                            <div class="cobertura-box" id="box-origem-cobertura">
+                                <label class="cobertura-label" for="input-busca-cobridor">
+                                    Informe o crachá ou nome de quem cobriu *
+                                </label>
+                                <div class="autocomplete-wrap">
+                                    <input
+                                        type="text"
+                                        id="input-busca-cobridor"
+                                        class="input-control"
+                                        style="width: 100%;"
+                                        placeholder="Digite o crachá ou nome do colaborador substituto..."
+                                        autocomplete="off"
+                                        oninput="buscarCobridorDebounced()"
+                                    >
+                                    <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
+                                </div>
+
+                                <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
+                                    <div class="cobridor-selecionado-info">
+                                        <strong id="lbl-cobridor-nome">--</strong>
+                                        <span id="lbl-cobridor-cc">--</span>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+                                </div>
+
+                                <div id="box-turno-cobertura" class="field-group" style="margin-top: 12px; display: none;">
+                                    <label for="select-turno-cobertura">Turno / Horário da Cobertura *</label>
+                                    <select id="select-turno-cobertura" class="select-control" onchange="validarConflitoTurnoFrontend()">
+                                        <option value="">Selecione o horário coberto...</option>
+                                        <option value="MANHA">Manhã (07:00 - 13:00)</option>
+                                        <option value="TARDE">Tarde (13:00 - 19:00)</option>
+                                        <option value="DIURNO_12H">Diurno 12h (07:00 - 19:00)</option>
+                                        <option value="NOTURNO_12H">Noturno 12h (19:00 - 07:00)</option>
+                                        <option value="COMERCIAL">Comercial (08:00 - 18:00)</option>
+                                    </select>
+                                    <div id="alerta-conflito-turno" style="display:none; margin-top:6px; font-size:0.78rem; font-weight:700; color:#dc2626;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1553,56 +1649,56 @@
                             </svg>
                             Voltar
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(4)">
+                        <button type="button" class="btn btn-primary" id="btn-step3-next" onclick="avancarDoStep3()">
                             Próximo
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
                         </button>
+                        <button type="button" class="btn btn-success" id="btn-step3-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">
+                            Salvar e Finalizar Análise
+                        </button>
                     </div>
                 </div>
 
-                <!-- STEP 4: PERGUNTA 4 + ORIGEM DA COBERTURA -->
+                <!-- ETAPA 4: EQUIPE FOI REDIMENSIONADA? -->
                 <div id="an-step-pane-4" class="step-pane">
                     <div class="single-question-card">
-                        <div id="bloco-pergunta-4">
-                            <div class="single-question-title">4. Conseguiu horas extras para cobertura?</div>
-                            <div class="choice-cards-grid">
-                                <label class="choice-card">
-                                    <input type="radio" name="q_cons_he" value="1" onchange="atualizarVisibilidadeCobridor()">
-                                    <span>Sim</span>
-                                </label>
-                                <label class="choice-card">
-                                    <input type="radio" name="q_cons_he" value="0" onchange="atualizarVisibilidadeCobridor()">
-                                    <span>Não</span>
-                                </label>
+                        <div class="single-question-title">4. A equipe foi redimensionada?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card">
+                                <input type="radio" name="q_redividiu" value="1" onchange="atualizarDetalhesStep4()">
+                                <span>Sim</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_redividiu" value="0" onchange="atualizarDetalhesStep4()">
+                                <span>Não</span>
+                            </label>
+                        </div>
+
+                        <!-- SE SIM: NÚMERO DE PACIENTES E NÚMERO DE COLABORADORES -->
+                        <div id="box-redivisao-sim" class="redivisao-detalhes-box">
+                            <div class="redivisao-grid">
+                                <div class="field-group">
+                                    <label for="input-qtd-pacientes">Número de Pacientes *</label>
+                                    <input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1" placeholder="Ex: 12">
+                                </div>
+                                <div class="field-group">
+                                    <label for="input-qtd-colaboradores">Número de Colaboradores *</label>
+                                    <input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1" placeholder="Ex: 4">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- ORIGEM DA COBERTURA (QUEM COBRIU A FALTA) -->
-                        <div class="cobertura-box" id="box-origem-cobertura">
-                            <label class="cobertura-label" for="input-busca-cobridor">
-                                Origem da Cobertura (Quem cobriu a falta?) *
-                            </label>
-                            <div class="autocomplete-wrap">
-                                <input
-                                    type="text"
-                                    id="input-busca-cobridor"
-                                    class="input-control"
-                                    style="width: 100%;"
-                                    placeholder="Digite o crachá ou nome do colaborador substituto..."
-                                    autocomplete="off"
-                                    oninput="buscarCobridorDebounced()"
-                                >
-                                <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
-                            </div>
-
-                            <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
-                                <div class="cobridor-selecionado-info">
-                                    <strong id="lbl-cobridor-nome">--</strong>
-                                    <span id="lbl-cobridor-cc">--</span>
-                                </div>
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+                        <!-- SE NÃO: DESCREVER O QUE FOI FEITO (OBRIGATÓRIO) -->
+                        <div id="box-redivisao-nao" class="redivisao-detalhes-box">
+                            <div class="field-group">
+                                <label for="input-justificativa-nao">Descreva o que foi feito *</label>
+                                <textarea
+                                    id="input-justificativa-nao"
+                                    class="textarea-control"
+                                    placeholder="Informe detalhadamente como o setor absorveu a ausência sem redimensionar a equipe..."
+                                ></textarea>
                             </div>
                         </div>
                     </div>
@@ -1614,53 +1710,9 @@
                             </svg>
                             Voltar
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="avancarStepAnalise(5)">
-                            Próximo
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
+                        <button type="button" class="btn btn-success" id="btn-step4-salvar" onclick="salvarAnaliseCompleta()">
+                            Salvar e Finalizar Análise
                         </button>
-                    </div>
-                </div>
-
-                <!-- STEP 5: PERGUNTA 5 + CAMPOS CONDICIONAIS DE REDIVISÃO -->
-                <div id="an-step-pane-5" class="step-pane">
-                    <div class="single-question-card">
-                        <div class="single-question-title">5. Foi necessário redividir a equipe?</div>
-                        <div class="choice-cards-grid">
-                            <label class="choice-card">
-                                <input type="radio" name="q_redividiu" value="1" onchange="atualizarVisibilidadeRedivisao()">
-                                <span>Sim</span>
-                            </label>
-                            <label class="choice-card">
-                                <input type="radio" name="q_redividiu" value="0" onchange="atualizarVisibilidadeRedivisao()">
-                                <span>Não</span>
-                            </label>
-                        </div>
-
-                        <!-- CAMPOS CONDICIONAIS SE SIM -->
-                        <div id="box-redivisao-detalhes" class="redivisao-detalhes-box">
-                            <div class="redivisao-grid">
-                                <div class="field-group">
-                                    <label for="input-qtd-pacientes">Número de Pacientes *</label>
-                                    <input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1" placeholder="Ex: 12">
-                                </div>
-                                <div class="field-group">
-                                    <label for="input-qtd-colaboradores">Qtd. de Colaboradores *</label>
-                                    <input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1" placeholder="Ex: 4">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="voltarDoStep5()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="15 18 9 12 15 6"></polyline>
-                            </svg>
-                            Voltar
-                        </button>
-                        <button type="submit" class="btn btn-success" id="btn-salvar-analise">Salvar Análise</button>
                     </div>
                 </div>
             </form>
@@ -1702,7 +1754,16 @@
         let gestorValidadoAtual = null;
         let cobridorSelecionadoObj = null;
         let timerBuscaCobridor = null;
-        let pulouStep4Cobertura = false;
+        let dataOcorrenciaAtual = "";
+        let faltanteCrachaAtual = "";
+
+        const CONFLITOS_TURNO_JS = {
+            MANHA: ["MANHA", "DIURNO_12H", "COMERCIAL"],
+            TARDE: ["TARDE", "DIURNO_12H", "COMERCIAL"],
+            DIURNO_12H: ["MANHA", "TARDE", "DIURNO_12H", "COMERCIAL"],
+            COMERCIAL: ["MANHA", "TARDE", "DIURNO_12H", "COMERCIAL"],
+            NOTURNO_12H: ["NOTURNO_12H"]
+        };
 
         function toggleSidebarMobile() {
             document.getElementById("sidebar").classList.toggle("open");
@@ -2474,16 +2535,28 @@
                 if (f.status === "PENDENTE") {
                     acaoHtml = `<button class="btn btn-primary btn-sm" onclick="abrirModalAnalise(${f.id})">Analisar</button>`;
                 } else if (f.analise) {
+                    const infoProg = f.analise.ausencia_programada
+                        ? `<div style="font-size:0.74rem; color:#0284c7; font-weight:700; margin-top:2px;">Ausência programada pelo supervisor</div>`
+                        : "";
+                    const infoAutorizador = f.analise.autorizador_he_nome
+                        ? `<div style="font-size:0.73rem; color:#334155; margin-top:2px;">Autorizado por: <strong>${f.analise.autorizador_he_nome}</strong></div>`
+                        : "";
                     const infoCobridor = f.analise.cobridor
                         ? `<div style="font-size:0.74rem; color:var(--funfarme-blue); margin-top:2px;">Coberto por: <strong>${f.analise.cobridor}</strong></div>`
                         : "";
                     const infoRedivisao = f.analise.redividiu_equipe && f.analise.qtd_pacientes
-                        ? `<div style="font-size:0.73rem; color:#64748b;">Redivisão: ${f.analise.qtd_pacientes} pac. / ${f.analise.qtd_colaboradores} colab.</div>`
+                        ? `<div style="font-size:0.73rem; color:#64748b;">Redimensionada: ${f.analise.qtd_pacientes} pac. / ${f.analise.qtd_colaboradores} colab.</div>`
+                        : "";
+                    const infoJustificativa = (!f.analise.ausencia_programada && !f.analise.cobridor && f.analise.redividiu_equipe === false && f.analise.justificativa_nao_redimensionada)
+                        ? `<div style="font-size:0.73rem; color:#475569;">Ação: ${f.analise.justificativa_nao_redimensionada}</div>`
                         : "";
                     acaoHtml = `
                         <span style="font-size:0.78rem; color:#475569;"><strong>${f.analise.avaliador}</strong> • ${f.analise.respondido_em}</span>
+                        ${infoProg}
+                        ${infoAutorizador}
                         ${infoCobridor}
                         ${infoRedivisao}
+                        ${infoJustificativa}
                     `;
                 }
 
@@ -2502,7 +2575,7 @@
         }
 
         // ---------------------------------------------------------------------
-        // MODAL DE ANÁLISE OPERACIONAL (1 PERGUNTA POR STEP + BARRA % VERDE)
+        // MODAL DE ANÁLISE OPERACIONAL (FLUXO CONDICIONAL + BARRA % VERDE)
         // ---------------------------------------------------------------------
         function abrirModalAnalise(idOcorrencia) {
             const falta = listaFaltasCache.find(item => item.id === idOcorrencia);
@@ -2511,14 +2584,25 @@
             document.getElementById("form-analise-falta").reset();
             document.getElementById("analise-ocorrencia-id").value = falta.id;
             document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
+            dataOcorrenciaAtual = falta.data_ocorrencia || "";
+            faltanteCrachaAtual = falta.cracha || "";
             document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
 
-            pulouStep4Cobertura = false;
             limparCobridorSelecionado();
+            document.getElementById("btn-step1-next").style.display = "inline-flex";
+            document.getElementById("btn-step1-salvar").style.display = "none";
+
+            document.getElementById("bloco-pergunta-3a").style.display = "none";
+            document.getElementById("select-autorizador-he").value = "";
             document.getElementById("box-origem-cobertura").style.display = "none";
-            document.getElementById("box-redivisao-detalhes").style.display = "none";
+            document.getElementById("btn-step3-next").style.display = "inline-flex";
+            document.getElementById("btn-step3-salvar").style.display = "none";
+
+            document.getElementById("box-redivisao-sim").style.display = "none";
+            document.getElementById("box-redivisao-nao").style.display = "none";
             document.getElementById("input-qtd-pacientes").value = "";
             document.getElementById("input-qtd-colaboradores").value = "";
+            document.getElementById("input-justificativa-nao").value = "";
 
             irStepAnalise(1);
             document.getElementById("modal-analise").style.display = "flex";
@@ -2528,124 +2612,164 @@
             document.getElementById("modal-analise").style.display = "none";
         }
 
-        function atualizarBarraProgressoAnalise(numStep) {
-            const mapaPct = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 };
-            const pct = mapaPct[numStep] || 20;
+        function atualizarBarraProgressoAnalise(numStep, pctCustom = null, labelCustom = null) {
+            const mapaPct = { 1: 25, 2: 50, 3: 75, 4: 100 };
+            const pct = pctCustom !== null ? pctCustom : (mapaPct[numStep] || 25);
 
-            document.getElementById("lbl-progresso-etapa").innerText = `Pergunta ${numStep} de 5`;
+            document.getElementById("lbl-progresso-etapa").innerText = labelCustom || `Etapa ${numStep} de 4`;
             document.getElementById("lbl-progresso-pct").innerText = `${pct}% concluído`;
             document.getElementById("barra-progresso-fill").style.width = `${pct}%`;
         }
 
         function irStepAnalise(numStep) {
-            [1, 2, 3, 4, 5].forEach(idx => {
+            [1, 2, 3, 4].forEach(idx => {
                 const pane = document.getElementById(`an-step-pane-${idx}`);
                 if (pane) pane.classList.toggle("active", idx === numStep);
             });
-            atualizarBarraProgressoAnalise(numStep);
-        }
-
-        function avancarStepAnalise(proximoStep) {
-            if (proximoStep === 2) {
-                if (!document.querySelector('input[name="q_comunicada"]:checked')) {
-                    mostrarToast("Selecione Sim ou Não para a pergunta 1.", true);
-                    return;
-                }
-                irStepAnalise(2);
-            } else if (proximoStep === 3) {
-                if (!document.querySelector('input[name="q_troca"]:checked')) {
-                    mostrarToast("Selecione Sim ou Não para a pergunta 2.", true);
-                    return;
-                }
-                irStepAnalise(3);
-            } else if (proximoStep === 4) {
-                const q3 = document.querySelector('input[name="q_aut_he"]:checked');
-                if (!q3) {
-                    mostrarToast("Selecione Sim ou Não para a pergunta 3.", true);
-                    return;
-                }
-
-                const autHe = q3.value === "1";
-                const isTroca = document.querySelector('input[name="q_troca"]:checked')?.value === "1";
-
-                if (!autHe) {
-                    // Sem autorização de HE, pergunta 4 fica automaticamente "Não"
-                    document.querySelector('input[name="q_cons_he"][value="0"]').checked = true;
-
-                    if (!isTroca) {
-                        // Nem HE autorizada nem Troca de folga -> pula direto para a Pergunta 5
-                        pulouStep4Cobertura = true;
-                        limparCobridorSelecionado();
-                        irStepAnalise(5);
-                        return;
-                    }
-
-                    // Foi troca de folga (sem HE autorizada): oculta pergunta 4 e mostra só Origem da Cobertura
-                    pulouStep4Cobertura = false;
-                    document.getElementById("bloco-pergunta-4").style.display = "none";
-                    document.getElementById("box-origem-cobertura").style.display = "block";
-                    irStepAnalise(4);
-                    return;
-                }
-
-                // HE autorizada: exibe pergunta 4 normalmente
-                pulouStep4Cobertura = false;
-                document.getElementById("bloco-pergunta-4").style.display = "block";
-                atualizarVisibilidadeCobridor();
-                irStepAnalise(4);
-            } else if (proximoStep === 5) {
-                const q4 = document.querySelector('input[name="q_cons_he"]:checked');
-                if (!q4) {
-                    mostrarToast("Selecione Sim ou Não para a pergunta 4.", true);
-                    return;
-                }
-
-                const isTroca = document.querySelector('input[name="q_troca"]:checked')?.value === "1";
-                const conseguiuHe = q4.value === "1";
-
-                if ((conseguiuHe || isTroca) && !cobridorSelecionadoObj) {
-                    mostrarToast("Selecione qual colaborador realizou a cobertura.", true);
-                    document.getElementById("input-busca-cobridor").focus();
-                    return;
-                }
-                irStepAnalise(5);
-            }
-        }
-
-        function voltarDoStep5() {
-            if (pulouStep4Cobertura) {
-                irStepAnalise(3);
+            if (numStep === 1) {
+                atualizarAcaoStep1();
+            } else if (numStep === 3) {
+                atualizarSubpergunta3a();
             } else {
-                irStepAnalise(4);
+                atualizarBarraProgressoAnalise(numStep);
             }
         }
 
-        function atualizarVisibilidadeCobridor() {
-            const isTroca = document.querySelector('input[name="q_troca"]:checked')?.value === "1";
-            const conseguiuHe = document.querySelector('input[name="q_cons_he"]:checked')?.value === "1";
-            const boxCobertura = document.getElementById("box-origem-cobertura");
+        // --- STEP 1: AUSÊNCIA PROGRAMADA ---
+        function atualizarAcaoStep1() {
+            const q1 = document.querySelector('input[name="q_programada"]:checked');
+            const btnNext = document.getElementById("btn-step1-next");
+            const btnSalvar = document.getElementById("btn-step1-salvar");
 
-            if (isTroca || conseguiuHe) {
-                boxCobertura.style.display = "block";
+            if (q1 && q1.value === "1") {
+                btnNext.style.display = "none";
+                btnSalvar.style.display = "inline-flex";
+                atualizarBarraProgressoAnalise(1, 100, "Etapa 1 • Pronta para finalizar");
+            } else {
+                btnNext.style.display = "inline-flex";
+                btnSalvar.style.display = "none";
+                atualizarBarraProgressoAnalise(1, 25, "Etapa 1 de 4");
+            }
+        }
+
+        function avancarDoStep1() {
+            const q1 = document.querySelector('input[name="q_programada"]:checked');
+            if (!q1) {
+                mostrarToast("Selecione Sim ou Não para a pergunta 1.", true);
+                return;
+            }
+            if (q1.value === "1") {
+                salvarAnaliseCompleta();
+                return;
+            }
+            irStepAnalise(2);
+        }
+
+        // --- STEP 2: COMUNICADA COM 2HRS ---
+        function avancarDoStep2() {
+            const q2 = document.querySelector('input[name="q_comunicada"]:checked');
+            if (!q2) {
+                mostrarToast("Selecione Sim ou Não para a pergunta 2.", true);
+                return;
+            }
+            irStepAnalise(3);
+        }
+
+        // --- STEP 3: AUTORIZADO HORAS EXTRAS + SUBPERGUNTAS 3a E 3b ---
+        function atualizarSubpergunta3a() {
+            const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+            const bloco3a = document.getElementById("bloco-pergunta-3a");
+            const btnNext = document.getElementById("btn-step3-next");
+            const btnSalvar = document.getElementById("btn-step3-salvar");
+
+            if (q3 && q3.value === "1") {
+                bloco3a.style.display = "block";
+                atualizarCampoCobridor3a();
+            } else {
+                bloco3a.style.display = "none";
+                document.getElementById("select-autorizador-he").value = "";
+                document.querySelectorAll('input[name="q_cons_he"]').forEach(r => r.checked = false);
+                limparCobridorSelecionado();
+                document.getElementById("box-origem-cobertura").style.display = "none";
+                btnNext.style.display = "inline-flex";
+                btnSalvar.style.display = "none";
+                atualizarBarraProgressoAnalise(3, 75, "Etapa 3 de 4");
+            }
+        }
+
+        function atualizarCampoCobridor3a() {
+            const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+            const boxCobridor = document.getElementById("box-origem-cobertura");
+            const btnNext = document.getElementById("btn-step3-next");
+            const btnSalvar = document.getElementById("btn-step3-salvar");
+
+            if (q3b && q3b.value === "1") {
+                boxCobridor.style.display = "block";
+                btnNext.style.display = "none";
+                btnSalvar.style.display = "inline-flex";
+                atualizarBarraProgressoAnalise(3, 100, "Etapa 3 • Cobertura confirmada");
             } else {
                 limparCobridorSelecionado();
-                boxCobertura.style.display = "none";
+                boxCobridor.style.display = "none";
+                btnNext.style.display = "inline-flex";
+                btnSalvar.style.display = "none";
+                atualizarBarraProgressoAnalise(3, 75, "Etapa 3 de 4");
             }
         }
 
-        function atualizarVisibilidadeRedivisao() {
-            const redividiu = document.querySelector('input[name="q_redividiu"]:checked')?.value === "1";
-            const box = document.getElementById("box-redivisao-detalhes");
-            if (redividiu) {
-                box.style.display = "block";
+        function avancarDoStep3() {
+            const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+            if (!q3) {
+                mostrarToast("Selecione Sim ou Não para a pergunta 3.", true);
+                return;
+            }
+            if (q3.value === "1") {
+                const autorizador = document.getElementById("select-autorizador-he").value.trim();
+                if (!autorizador) {
+                    mostrarToast("Selecione o coordenador que autorizou as horas extras (3a).", true);
+                    document.getElementById("select-autorizador-he").focus();
+                    return;
+                }
+                const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+                if (!q3b) {
+                    mostrarToast("Responda a pergunta 3b (Conseguiu cobertura?).", true);
+                    return;
+                }
+                if (q3b.value === "1") {
+                    salvarAnaliseCompleta();
+                    return;
+                }
+            }
+            irStepAnalise(4);
+        }
+
+        // --- STEP 4: EQUIPE FOI REDIMENSIONADA ---
+        function atualizarDetalhesStep4() {
+            const q4 = document.querySelector('input[name="q_redividiu"]:checked');
+            const boxSim = document.getElementById("box-redivisao-sim");
+            const boxNao = document.getElementById("box-redivisao-nao");
+
+            if (!q4) {
+                boxSim.style.display = "none";
+                boxNao.style.display = "none";
+                return;
+            }
+
+            if (q4.value === "1") {
+                boxSim.style.display = "block";
+                boxNao.style.display = "none";
+                document.getElementById("input-justificativa-nao").value = "";
                 document.getElementById("input-qtd-pacientes").focus();
             } else {
-                box.style.display = "none";
+                boxSim.style.display = "none";
+                boxNao.style.display = "block";
                 document.getElementById("input-qtd-pacientes").value = "";
                 document.getElementById("input-qtd-colaboradores").value = "";
+                document.getElementById("input-justificativa-nao").focus();
             }
         }
 
+        // --- AUTOCOMPLETE DO COLABORADOR SUBSTITUTO ---
         function buscarCobridorDebounced() {
             clearTimeout(timerBuscaCobridor);
             const termo = document.getElementById("input-busca-cobridor").value.trim();
@@ -2658,21 +2782,29 @@
 
             timerBuscaCobridor = setTimeout(async () => {
                 try {
-                    const res = await fetch(`/api/colaboradores/buscar?q=${encodeURIComponent(termo)}`);
+                    const url = `/api/colaboradores/buscar?q=${encodeURIComponent(termo)}&data=${encodeURIComponent(dataOcorrenciaAtual)}`;
+                    const res = await fetch(url);
                     const data = await res.json();
-                    const faltanteId = parseInt(document.getElementById("analise-faltante-id").value || "0");
+                    const faltanteId = parseInt(document.getElementById("analise-faltante-id").value || "0", 10);
 
                     if (data.sucesso) {
-                        const filtrados = data.colaboradores.filter(c => c.id !== faltanteId);
+                        const filtrados = data.colaboradores.filter(c => c.id !== faltanteId && c.cracha !== faltanteCrachaAtual);
                         if (!filtrados.length) {
-                            listaBox.innerHTML = '<div class="autocomplete-item"><span>Nenhum colaborador encontrado.</span></div>';
+                            listaBox.innerHTML = '<div class="autocomplete-item"><span>Nenhum colaborador elegível encontrado.</span></div>';
                         } else {
-                            listaBox.innerHTML = filtrados.map(c => `
-                                <div class="autocomplete-item" onclick='selecionarCobridor(${JSON.stringify(c)})'>
-                                    <strong>${c.cracha} - ${c.nome}</strong>
-                                    <span>Setor de origem: ${c.codigo_cc} - ${c.centro_custo}</span>
-                                </div>
-                            `).join("");
+                            listaBox.innerHTML = filtrados.map(c => {
+                                const temCobertura = c.coberturas_no_dia && c.coberturas_no_dia.length > 0;
+                                const avisoHtml = temCobertura
+                                    ? `<span style="color:#d97706; font-weight:700;">⚠️ Já cobrindo em ${dataOcorrenciaAtual}: ${c.coberturas_no_dia.map(x => `${x.turno_label} (${x.faltante_nome})`).join("; ")}</span>`
+                                    : "";
+                                return `
+                                    <div class="autocomplete-item" onclick='selecionarCobridor(${JSON.stringify(c)})'>
+                                        <strong>${c.cracha} - ${c.nome}</strong>
+                                        <span>Setor de origem: ${c.codigo_cc} - ${c.centro_custo}</span>
+                                        ${avisoHtml}
+                                    </div>
+                                `;
+                            }).join("");
                         }
                         listaBox.style.display = "block";
                     }
@@ -2683,6 +2815,12 @@
         }
 
         function selecionarCobridor(colab) {
+            const faltanteId = parseInt(document.getElementById("analise-faltante-id").value || "0", 10);
+            if (colab.id === faltanteId || colab.cracha === faltanteCrachaAtual) {
+                mostrarToast("O colaborador faltante não pode cobrir a própria falta.", true);
+                return;
+            }
+
             cobridorSelecionadoObj = colab;
             document.getElementById("cobridor-colaborador-id").value = colab.id;
             document.getElementById("lbl-cobridor-nome").innerText = `${colab.cracha} — ${colab.nome}`;
@@ -2692,6 +2830,29 @@
             document.getElementById("input-busca-cobridor").style.display = "none";
             document.getElementById("lista-resultados-cobridor").style.display = "none";
             document.getElementById("card-cobridor-selecionado").style.display = "flex";
+            document.getElementById("box-turno-cobertura").style.display = "flex";
+            document.getElementById("select-turno-cobertura").value = "";
+            document.getElementById("alerta-conflito-turno").style.display = "none";
+        }
+
+        function validarConflitoTurnoFrontend() {
+            const alertaBox = document.getElementById("alerta-conflito-turno");
+            const turnoSelecionado = document.getElementById("select-turno-cobertura").value;
+            alertaBox.style.display = "none";
+
+            if (!cobridorSelecionadoObj || !turnoSelecionado) return true;
+
+            const existentes = cobridorSelecionadoObj.coberturas_no_dia || [];
+            const incompativeis = CONFLITOS_TURNO_JS[turnoSelecionado] || [turnoSelecionado];
+            const conflito = existentes.find(item => incompativeis.includes(item.turno));
+
+            if (conflito) {
+                alertaBox.innerText = `Conflito: ${cobridorSelecionadoObj.nome} já está cobrindo ${conflito.faltante_nome} no horário ${conflito.turno_label}.`;
+                alertaBox.style.display = "block";
+                mostrarToast("Este colaborador já está alocado neste mesmo dia e horário.", true);
+                return false;
+            }
+            return true;
         }
 
         function limparCobridorSelecionado() {
@@ -2702,53 +2863,146 @@
             inputBusca.style.display = "block";
             document.getElementById("lista-resultados-cobridor").style.display = "none";
             document.getElementById("card-cobridor-selecionado").style.display = "none";
+            document.getElementById("box-turno-cobertura").style.display = "none";
+            document.getElementById("select-turno-cobertura").value = "";
+            document.getElementById("alerta-conflito-turno").style.display = "none";
         }
 
-        document.getElementById("form-analise-falta").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const q5 = document.querySelector('input[name="q_redividiu"]:checked');
-            if (!q5) {
-                mostrarToast("Selecione Sim ou Não para a pergunta 5.", true);
+        // --- ENVIO CENTRALIZADO DA ANÁLISE ---
+        async function salvarAnaliseCompleta() {
+            const q1 = document.querySelector('input[name="q_programada"]:checked');
+            if (!q1) {
+                mostrarToast("Selecione Sim ou Não para a pergunta 1.", true);
                 return;
             }
 
-            const redividiu = q5.value === "1";
-            let qtdPacientes = null;
-            let qtdColaboradores = null;
+            const ausenciaProgramada = q1.value === "1";
+            const ocorrenciaId = parseInt(document.getElementById("analise-ocorrencia-id").value, 10);
 
-            if (redividiu) {
-                qtdPacientes = parseInt(document.getElementById("input-qtd-pacientes").value, 10);
-                qtdColaboradores = parseInt(document.getElementById("input-qtd-colaboradores").value, 10);
+            let payload = {
+                ocorrencia_id: ocorrenciaId,
+                ausencia_programada: ausenciaProgramada
+            };
 
-                if (!qtdPacientes || qtdPacientes < 1) {
-                    mostrarToast("Informe o número de pacientes (mínimo 1).", true);
-                    document.getElementById("input-qtd-pacientes").focus();
+            if (!ausenciaProgramada) {
+                const q2 = document.querySelector('input[name="q_comunicada"]:checked');
+                if (!q2) {
+                    mostrarToast("Responda a pergunta 2.", true);
+                    irStepAnalise(2);
                     return;
                 }
-                if (!qtdColaboradores || qtdColaboradores < 1) {
-                    mostrarToast("Informe a quantidade de colaboradores (mínimo 1).", true);
-                    document.getElementById("input-qtd-colaboradores").focus();
+
+                const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+                if (!q3) {
+                    mostrarToast("Responda a pergunta 3.", true);
+                    irStepAnalise(3);
                     return;
+                }
+
+                const autHe = q3.value === "1";
+                let autorizadorHeNome = null;
+                let conseguiuHe = false;
+                let cobridorId = null;
+                let turnoCobertura = null;
+
+                if (autHe) {
+                    autorizadorHeNome = document.getElementById("select-autorizador-he").value.trim();
+                    if (!autorizadorHeNome) {
+                        mostrarToast("Selecione o coordenador que autorizou as horas extras (3a).", true);
+                        irStepAnalise(3);
+                        document.getElementById("select-autorizador-he").focus();
+                        return;
+                    }
+
+                    const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+                    if (!q3b) {
+                        mostrarToast("Responda a pergunta 3b (Conseguiu cobertura?).", true);
+                        irStepAnalise(3);
+                        return;
+                    }
+                    conseguiuHe = q3b.value === "1";
+                }
+
+                if (autHe && conseguiuHe) {
+                    if (!cobridorSelecionadoObj) {
+                        mostrarToast("Informe o crachá/nome de quem cobriu a ausência.", true);
+                        document.getElementById("input-busca-cobridor").focus();
+                        return;
+                    }
+                    turnoCobertura = document.getElementById("select-turno-cobertura").value;
+                    if (!turnoCobertura) {
+                        mostrarToast("Selecione o turno/horário da cobertura.", true);
+                        document.getElementById("select-turno-cobertura").focus();
+                        return;
+                    }
+                    if (!validarConflitoTurnoFrontend()) {
+                        return;
+                    }
+                    cobridorId = cobridorSelecionadoObj.id;
+
+                    payload = {
+                        ...payload,
+                        comunicada_2h_antecedencia: q2.value === "1",
+                        autorizado_hora_extra: true,
+                        autorizador_he_nome: autorizadorHeNome,
+                        conseguiu_he_cobertura: true,
+                        cobridor_colaborador_id: cobridorId,
+                        turno_cobertura: turnoCobertura
+                    };
+                } else {
+                    const q4 = document.querySelector('input[name="q_redividiu"]:checked');
+                    if (!q4) {
+                        mostrarToast("Selecione Sim ou Não para a pergunta 4.", true);
+                        irStepAnalise(4);
+                        return;
+                    }
+
+                    const redividiu = q4.value === "1";
+                    let qtdPacientes = null;
+                    let qtdColaboradores = null;
+                    let justificativaNao = null;
+
+                    if (redividiu) {
+                        qtdPacientes = parseInt(document.getElementById("input-qtd-pacientes").value, 10);
+                        qtdColaboradores = parseInt(document.getElementById("input-qtd-colaboradores").value, 10);
+
+                        if (!qtdPacientes || qtdPacientes < 1) {
+                            mostrarToast("Informe o número de pacientes (mínimo 1).", true);
+                            document.getElementById("input-qtd-pacientes").focus();
+                            return;
+                        }
+                        if (!qtdColaboradores || qtdColaboradores < 1) {
+                            mostrarToast("Informe o número de colaboradores (mínimo 1).", true);
+                            document.getElementById("input-qtd-colaboradores").focus();
+                            return;
+                        }
+                    } else {
+                        justificativaNao = document.getElementById("input-justificativa-nao").value.trim();
+                        if (!justificativaNao) {
+                            mostrarToast("Descreva o que foi feito na ausência do colaborador.", true);
+                            document.getElementById("input-justificativa-nao").focus();
+                            return;
+                        }
+                    }
+
+                    payload = {
+                        ...payload,
+                        comunicada_2h_antecedencia: q2.value === "1",
+                        autorizado_hora_extra: autHe,
+                        autorizador_he_nome: autorizadorHeNome,
+                        conseguiu_he_cobertura: false,
+                        redividiu_equipe: redividiu,
+                        qtd_pacientes: qtdPacientes,
+                        qtd_colaboradores: qtdColaboradores,
+                        justificativa_nao_redimensionada: justificativaNao
+                    };
                 }
             }
 
-            const btn = document.getElementById("btn-salvar-analise");
-            btn.disabled = true;
-            btn.innerText = "Salvando...";
-
-            const cobridorIdVal = document.getElementById("cobridor-colaborador-id").value;
-
-            const payload = {
-                ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value),
-                comunicada_2h_antecedencia: document.querySelector('input[name="q_comunicada"]:checked').value === "1",
-                foi_troca_folga: document.querySelector('input[name="q_troca"]:checked').value === "1",
-                autorizado_hora_extra: document.querySelector('input[name="q_aut_he"]:checked').value === "1",
-                conseguiu_he_cobertura: document.querySelector('input[name="q_cons_he"]:checked').value === "1",
-                cobridor_colaborador_id: cobridorIdVal ? parseInt(cobridorIdVal) : null,
-                redividiu_equipe: redividiu,
-                qtd_pacientes: qtdPacientes,
-                qtd_colaboradores: qtdColaboradores
-            };
+            const botoesSalvar = ["btn-step1-salvar", "btn-step3-salvar", "btn-step4-salvar"]
+                .map(id => document.getElementById(id))
+                .filter(Boolean);
+            botoesSalvar.forEach(b => b.disabled = true);
 
             try {
                 const res = await fetch("/api/analisar-falta", {
@@ -2763,14 +3017,18 @@
                     await carregarFaltas();
                     await carregarMetricasRoot();
                 } else {
-                    mostrarToast(data.mensagem || "Erro ao salvar.", true);
+                    mostrarToast(data.mensagem || "Erro ao salvar análise.", true);
                 }
             } catch (err) {
-                mostrarToast("Erro de comunicação.", true);
+                mostrarToast("Erro de comunicação com o servidor.", true);
             } finally {
-                btn.disabled = false;
-                btn.innerText = "Salvar Análise";
+                botoesSalvar.forEach(b => b.disabled = false);
             }
+        }
+
+        document.getElementById("form-analise-falta").addEventListener("submit", (e) => {
+            e.preventDefault();
+            salvarAnaliseCompleta();
         });
 
         // ---------------------------------------------------------------------
