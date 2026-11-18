@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request, session
-from sqlalchemy import func, case
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload, selectinload, load_only
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -30,7 +30,7 @@ def _obter_ccs_usuario(db, usuario_id: int) -> list[int]:
 
 
 def _expirar_convites_vencidos(db, colaborador_id: int | None = None):
-    """Atualiza convites DISPONIVEL com data expirada para EXPIRADO."""
+    """Atualiza convites DISPONIVEL com data expirada para EXPIRADO usando índice."""
     agora = datetime.now(timezone.utc)
     q = db.query(ConviteAcesso).filter(
         ConviteAcesso.status == 'DISPONIVEL',
@@ -39,6 +39,13 @@ def _expirar_convites_vencidos(db, colaborador_id: int | None = None):
     if colaborador_id is not None:
         q = q.filter(ConviteAcesso.colaborador_id == colaborador_id)
     q.update({'status': 'EXPIRADO'}, synchronize_session=False)
+
+
+def _normalizar_utc(dt: datetime) -> datetime:
+    """Garante comparação segura entre datetimes com e sem tzinfo."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 # ==============================================================================
@@ -107,52 +114,72 @@ def primeiro_acesso_api():
         return jsonify({'sucesso': False, 'mensagem': 'Preencha todos os campos (senha mínima de 6 caracteres).'}), 400
 
     db = get_db()
-    codigo_hash = hashlib.sha256(codigo_raw.encode('utf-8')).hexdigest()
-    agora = datetime.now(timezone.utc)
+    try:
+        codigo_hash = hashlib.sha256(codigo_raw.encode('utf-8')).hexdigest()
+        agora = datetime.now(timezone.utc)
 
-    convite = (
-        db.query(ConviteAcesso)
-        .options(
-            joinedload(ConviteAcesso.colaborador).load_only(Colaborador.id, Colaborador.cpf),
-            selectinload(ConviteAcesso.centros_custo)
+        # Consulta direta pelo índice único codigo_hash sem outer join no FOR UPDATE
+        convite = (
+            db.query(ConviteAcesso)
+            .filter(ConviteAcesso.codigo_hash == codigo_hash)
+            .with_for_update()
+            .first()
         )
-        .filter(ConviteAcesso.codigo_hash == codigo_hash)
-        .with_for_update(of=ConviteAcesso)
-        .first()
-    )
 
-    if not convite or convite.status != 'DISPONIVEL' or convite.expira_em < agora:
-        db.rollback()
-        return jsonify({'sucesso': False, 'mensagem': 'Código de convite inválido, já utilizado ou expirado.'}), 400
+        if not convite or convite.status != 'DISPONIVEL' or _normalizar_utc(convite.expira_em) < agora:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Código de convite inválido, já utilizado ou expirado.'}), 400
 
-    if convite.colaborador.cpf != cpf:
-        db.rollback()
-        return jsonify({'sucesso': False, 'mensagem': 'O CPF informado não corresponde ao titular do convite.'}), 400
-
-    usuario = db.query(Usuario).filter(Usuario.colaborador_id == convite.colaborador_id).first()
-    if not usuario:
-        usuario = Usuario(
-            colaborador_id=convite.colaborador_id,
-            senha_hash=generate_password_hash(nova_senha),
-            role='GESTOR',
-            ativo=True
+        # Valida CPF diretamente via PK de colaboradores
+        colab_cpf = (
+            db.query(Colaborador.cpf)
+            .filter(Colaborador.id == convite.colaborador_id)
+            .scalar()
         )
-        db.add(usuario)
-        db.flush()
-    else:
-        usuario.senha_hash = generate_password_hash(nova_senha)
-        usuario.ativo = True
+        if not colab_cpf or colab_cpf.strip().zfill(11) != cpf:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'O CPF informado não corresponde ao titular do convite.'}), 400
 
-    ccs_atuais = set(_obter_ccs_usuario(db, usuario.id))
-    for cc_convite in convite.centros_custo:
-        if cc_convite.centro_custo_id not in ccs_atuais:
-            db.add(UsuarioCentroCusto(usuario_id=usuario.id, centro_custo_id=cc_convite.centro_custo_id))
+        usuario = db.query(Usuario).filter(Usuario.colaborador_id == convite.colaborador_id).first()
+        if not usuario:
+            usuario = Usuario(
+                colaborador_id=convite.colaborador_id,
+                senha_hash=generate_password_hash(nova_senha),
+                role='GESTOR',
+                ativo=True
+            )
+            db.add(usuario)
+            db.flush()
+        else:
+            usuario.senha_hash = generate_password_hash(nova_senha)
+            usuario.ativo = True
 
-    convite.status = 'UTILIZADO'
-    convite.utilizado_em = agora
-    db.commit()
+        # Busca CCs do convite e do usuário em projeções leves (sem carregar ORM completo)
+        ccs_convite = [
+            r[0] for r in db.query(ConviteCentroCusto.centro_custo_id)
+            .filter(ConviteCentroCusto.convite_id == convite.id)
+            .all()
+        ]
+        ccs_atuais = set(_obter_ccs_usuario(db, usuario.id))
 
-    return jsonify({'sucesso': True, 'mensagem': 'Acesso ativado com sucesso!'}), 200
+        novos_vinculos = [
+            UsuarioCentroCusto(usuario_id=usuario.id, centro_custo_id=cc_id)
+            for cc_id in ccs_convite
+            if cc_id not in ccs_atuais
+        ]
+        if novos_vinculos:
+            db.bulk_save_objects(novos_vinculos)
+
+        convite.status = 'UTILIZADO'
+        convite.utilizado_em = agora
+        db.commit()
+
+        return jsonify({'sucesso': True, 'mensagem': 'Acesso ativado com sucesso!'}), 200
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ [ERRO PRIMEIRO ACESSO] {e}")
+        return jsonify({'sucesso': False, 'mensagem': f'Erro interno ao ativar acesso: {str(e)}'}), 500
 
 
 # ==============================================================================
@@ -189,6 +216,7 @@ def listar_faltas():
         cc_ids = _obter_ccs_usuario(db, id_user)
         if not cc_ids:
             return jsonify({'sucesso': True, 'faltas': []}), 200
+        # Aproveita o índice composto ix_ocorrencias_cc_status_data (centro_custo_id, status, data_ocorrencia)
         query = query.filter(OcorrenciaFalta.centro_custo_id.in_(cc_ids))
 
     rows = query.order_by(OcorrenciaFalta.data_ocorrencia.desc()).limit(300).all()
@@ -347,7 +375,7 @@ def validar_cracha_colaborador(cracha):
     db.commit()
 
     convite_ativo = (
-        db.query(ConviteAcesso.id, ConviteAcesso.email_destino)
+        db.query(ConviteAcesso.id)
         .filter(
             ConviteAcesso.colaborador_id == row.id,
             ConviteAcesso.status == 'DISPONIVEL'
@@ -380,6 +408,7 @@ def listar_centros_custo():
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     db = get_db()
+    # Aproveita o índice composto ix_centros_custo_ativo_nome (ativo, nome)
     ccs = (
         db.query(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
         .filter(CentroCusto.ativo.is_(True))
@@ -703,19 +732,30 @@ def dashboard_metricas():
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     db = get_db()
-    stats_faltas = db.query(
-        func.count(case((OcorrenciaFalta.status == 'PENDENTE', 1))).label('pendentes'),
-        func.count(case((OcorrenciaFalta.status == 'ANALISADA', 1))).label('analisadas')
-    ).first()
+    # GROUP BY usa diretamente o índice ix_ocorrencias_status_data
+    stats_rows = (
+        db.query(OcorrenciaFalta.status, func.count(OcorrenciaFalta.id))
+        .group_by(OcorrenciaFalta.status)
+        .all()
+    )
+    stats_map = dict(stats_rows)
 
-    total_gestores = db.query(func.count(Usuario.id)).filter(Usuario.role == 'GESTOR', Usuario.ativo.is_(True)).scalar() or 0
-    convites_ativos = db.query(func.count(ConviteAcesso.id)).filter(ConviteAcesso.status == 'DISPONIVEL').scalar() or 0
+    total_gestores = (
+        db.query(func.count(Usuario.id))
+        .filter(Usuario.role == 'GESTOR', Usuario.ativo.is_(True))
+        .scalar() or 0
+    )
+    convites_ativos = (
+        db.query(func.count(ConviteAcesso.id))
+        .filter(ConviteAcesso.status == 'DISPONIVEL')
+        .scalar() or 0
+    )
 
     return jsonify({
         'sucesso': True,
         'kpis': {
-            'pendentes': stats_faltas.pendentes or 0,
-            'analisadas': stats_faltas.analisadas or 0,
+            'pendentes': stats_map.get('PENDENTE', 0),
+            'analisadas': stats_map.get('ANALISADA', 0),
             'gestores_ativos': total_gestores,
             'convites_disponiveis': convites_ativos
         }
