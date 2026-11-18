@@ -155,7 +155,6 @@
             box-shadow: 0 2px 8px rgba(30, 58, 138, 0.28);
         }
 
-        /* RODAPÉ DO USUÁRIO NA SIDEBAR */
         .sidebar-footer {
             padding-top: 14px;
             border-top: 1px solid rgba(255, 255, 255, 0.14);
@@ -329,20 +328,14 @@
             gap: 8px;
             letter-spacing: 0.1px;
         }
-        .btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-        }
-        .btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
         .btn-primary {
             background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(30, 58, 138, 0.24);
         }
-        .btn-primary:hover:not(:disabled) {
-            box-shadow: 0 6px 18px rgba(30, 58, 138, 0.34);
-        }
+        .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 18px rgba(30, 58, 138, 0.34); }
         .btn-outline {
             background: #f8fafc;
             color: var(--funfarme-blue);
@@ -354,21 +347,14 @@
             border-color: var(--funfarme-blue);
             box-shadow: 0 4px 10px rgba(30, 58, 138, 0.08);
         }
-        .btn-secondary {
-            background: #e2e8f0;
-            color: var(--text-secondary);
-        }
-        .btn-secondary:hover:not(:disabled) {
-            background: #cbd5e1;
-        }
+        .btn-secondary { background: #e2e8f0; color: var(--text-secondary); }
+        .btn-secondary:hover:not(:disabled) { background: #cbd5e1; }
         .btn-success {
             background: linear-gradient(135deg, #059669 0%, #10b981 100%);
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(5, 150, 105, 0.24);
         }
-        .btn-success:hover:not(:disabled) {
-            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.34);
-        }
+        .btn-success:hover:not(:disabled) { box-shadow: 0 6px 18px rgba(5, 150, 105, 0.34); }
         .btn-warning {
             background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
             color: #ffffff;
@@ -379,6 +365,7 @@
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(220, 38, 38, 0.22);
         }
+        .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 8px; gap: 5px; }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .table-wrapper { overflow-x: auto; }
@@ -407,7 +394,7 @@
         .pill-inativo, .pill-expirado { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 
         /* =====================================================================
-           STEPPER (WIZARD DE 3 ETAPAS ENXUTO)
+           STEPPER (WIZARD DE 4 ETAPAS)
            ===================================================================== */
         .stepper-bar {
             display: flex;
@@ -416,24 +403,19 @@
             background: var(--bg-subtle);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 14px 22px;
+            padding: 14px 20px;
             margin-bottom: 22px;
-            gap: 12px;
+            gap: 8px;
         }
-        .step-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
+        .step-item { display: flex; align-items: center; gap: 9px; flex: 1; }
         .step-circle {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: #e2e8f0;
             color: var(--text-muted);
             font-weight: 800;
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -445,21 +427,13 @@
             color: #ffffff;
             box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.14);
         }
-        .step-item.completed .step-circle {
-            background: var(--success);
-            color: #ffffff;
-        }
-        .step-title { font-size: 0.86rem; font-weight: 700; color: var(--text-muted); }
+        .step-item.completed .step-circle { background: var(--success); color: #ffffff; }
+        .step-title { font-size: 0.83rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
         .step-item.active .step-title { color: var(--funfarme-blue); }
         .step-item.completed .step-title { color: var(--success); }
 
-        .step-divider {
-            height: 2px;
-            flex: 0.35;
-            background: #cbd5e1;
-            border-radius: 2px;
-        }
-        @media (max-width: 720px) {
+        .step-divider { height: 2px; flex: 0.3; background: #cbd5e1; border-radius: 2px; }
+        @media (max-width: 820px) {
             .stepper-bar { flex-direction: column; align-items: flex-start; }
             .step-divider { display: none; }
         }
@@ -481,6 +455,22 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
         .field-group { display: flex; flex-direction: column; gap: 6px; }
         .field-group label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 700; }
+
+        .alerta-duplicado-box {
+            margin-top: 14px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            font-size: 0.84rem;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
 
         .gestor-pill-banner {
             display: inline-flex;
@@ -551,28 +541,85 @@
             border-radius: 999px;
         }
 
-        .codigo-gerado-box {
-            margin-top: 18px;
-            padding: 16px 18px;
-            border-radius: 12px;
-            background: #ecfdf5;
-            border: 1px solid #6ee7b7;
-            display: none;
+        /* =====================================================================
+           ETAPA 4: CARTÃO DE CONFIRMAÇÃO DE ENVIO DA HASH
+           ===================================================================== */
+        .step4-status-card {
+            border-radius: 14px;
+            padding: 26px 24px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
             gap: 12px;
+        }
+        .step4-status-card.status-ok {
+            background: #ecfdf5;
+            border: 1.5px solid #6ee7b7;
+        }
+        .step4-status-card.status-warn {
+            background: #fffbeb;
+            border: 1.5px solid #fcd34d;
+        }
+        .step4-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-ok .step4-icon {
+            background: #d1fae5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+        .status-warn .step4-icon {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+        .step4-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+        .status-ok .step4-title { color: #065f46; }
+        .status-warn .step4-title { color: #92400e; }
+
+        .step4-desc {
+            font-size: 0.88rem;
+            color: #334155;
+            max-width: 520px;
+            line-height: 1.45;
+        }
+
+        .step4-erro-detalhe {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            font-size: 0.8rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            max-width: 560px;
+            word-break: break-word;
+        }
+
+        .step4-hash-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: #ffffff;
+            border: 1.5px dashed #94a3b8;
+            padding: 10px 18px;
+            border-radius: 12px;
+            margin-top: 6px;
         }
         .codigo-destaque {
             font-family: monospace;
-            font-size: 1.35rem;
+            font-size: 1.4rem;
             font-weight: 800;
-            letter-spacing: 2.5px;
-            color: #065f46;
-            background: #ffffff;
-            border: 1px solid #a7f3d0;
-            padding: 7px 16px;
-            border-radius: 8px;
+            letter-spacing: 3px;
+            color: var(--funfarme-blue);
         }
 
         /* CARDS DE ETL */
@@ -602,6 +649,7 @@
             padding: 16px;
             z-index: 100;
         }
+        .modal-backdrop.modal-top { z-index: 150; }
         .modal-card {
             background: #ffffff;
             border: 1px solid var(--border-color);
@@ -614,7 +662,46 @@
             display: flex;
             flex-direction: column;
         }
-        .modal-card.modal-lg { max-width: 920px; }
+        .modal-card.modal-lg { max-width: 1060px; }
+
+        /* MODAL DE CONFIRMAÇÃO PERSONALIZADO */
+        .confirm-card {
+            max-width: 410px;
+            text-align: center;
+            padding: 28px 24px;
+            animation: fadeIn 0.18s ease;
+        }
+        .confirm-icon-danger {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px auto;
+        }
+        .confirm-title {
+            font-size: 1.08rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+        .confirm-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+            margin-bottom: 22px;
+        }
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .confirm-actions .btn { flex: 1; padding: 10px 14px; }
+
         .modal-header {
             margin-bottom: 16px;
             border-bottom: 1px solid var(--border-color);
@@ -628,6 +715,8 @@
         .modal-header h3 { font-size: 1.1rem; color: var(--funfarme-blue); }
         .modal-info { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
         .modal-body-scroll { overflow-y: auto; flex: 1; }
+
+        .acoes-convite-cell { display: flex; gap: 6px; flex-wrap: nowrap; }
 
         .question-row {
             display: flex;
@@ -657,9 +746,11 @@
             font-weight: 600;
             color: #fff;
             background: var(--funfarme-blue);
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
             display: none;
-            z-index: 200;
+            z-index: 250;
+            max-width: 480px;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -832,7 +923,7 @@
 
             {% if perfil == 'ROOT' %}
             <!-- =============================================================== -->
-            <!-- ABA 2: CONVITES DE ACESSO (STEPPER ENXUTO + E-MAIL OBRIGATÓRIO) -->
+            <!-- ABA 2: CONVITES DE ACESSO (WIZARD DE 4 ETAPAS)                  -->
             <!-- =============================================================== -->
             <section id="aba-convites" class="tab-content">
                 <div class="panel">
@@ -847,7 +938,7 @@
                         </button>
                     </div>
 
-                    <!-- STEPPER -->
+                    <!-- STEPPER 4 ETAPAS -->
                     <div class="stepper-bar">
                         <div class="step-item active" id="step-ind-1">
                             <div class="step-circle">1</div>
@@ -861,7 +952,12 @@
                         <div class="step-divider"></div>
                         <div class="step-item" id="step-ind-3">
                             <div class="step-circle">3</div>
-                            <span class="step-title">Gerar Hash</span>
+                            <span class="step-title">Conferência</span>
+                        </div>
+                        <div class="step-divider"></div>
+                        <div class="step-item" id="step-ind-4">
+                            <div class="step-circle">4</div>
+                            <span class="step-title">Confirmação</span>
                         </div>
                     </div>
 
@@ -870,7 +966,7 @@
                         <div class="form-grid">
                             <div class="field-group">
                                 <label for="conv-cracha">Crachá *</label>
-                                <input type="text" id="conv-cracha" class="input-control" placeholder="Ex: 12345">
+                                <input type="text" id="conv-cracha" class="input-control" placeholder="Ex: 12345" oninput="ocultarAlertaDuplicado()">
                             </div>
                             <div class="field-group">
                                 <label for="conv-email">E-mail de Envio *</label>
@@ -884,6 +980,13 @@
                                     <option value="15">15 dias</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div id="alerta-convite-duplicado" class="alerta-duplicado-box">
+                            <span id="lbl-alerta-duplicado">Já existe uma hash disponível para este crachá.</span>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="abrirModalHistoricoConvites(document.getElementById('conv-cracha').value.trim())">
+                                Gerenciar no Histórico
+                            </button>
                         </div>
 
                         <div class="step-actions" style="justify-content: flex-end;">
@@ -935,7 +1038,7 @@
                         </div>
                     </div>
 
-                    <!-- STEP 3: CONFERÊNCIA E GERAÇÃO DA HASH -->
+                    <!-- STEP 3: CONFERÊNCIA DOS DADOS -->
                     <div id="step-pane-3" class="step-pane">
                         <div class="review-card">
                             <div class="review-row">
@@ -956,16 +1059,6 @@
                             </div>
                         </div>
 
-                        <div id="box-codigo-gerado" class="codigo-gerado-box">
-                            <div style="font-size:0.85rem; color:#065f46;" id="lbl-status-envio">
-                                Convite emitido para <strong id="lbl-nome-convidado"></strong>.
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <span class="codigo-destaque" id="lbl-codigo-hash">--------</span>
-                                <button type="button" class="btn btn-success" onclick="copiarCodigo()">Copiar</button>
-                            </div>
-                        </div>
-
                         <div class="step-actions">
                             <button type="button" class="btn btn-secondary" id="btn-voltar-step3" onclick="irParaStep(2)">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -973,16 +1066,38 @@
                                 </svg>
                                 Voltar
                             </button>
-                            <div style="display:flex; gap:10px;">
-                                <button type="button" class="btn btn-outline" id="btn-novo-reset" style="display:none;" onclick="resetarStepperConvite()">Novo Convite</button>
-                                <button type="button" class="btn btn-success" id="btn-gerar-convite" onclick="submeterConviteStepper()">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M22 2L11 13"></path>
-                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                    </svg>
-                                    Gerar Hash & Enviar
-                                </button>
+                            <button type="button" class="btn btn-success" id="btn-gerar-convite" onclick="submeterConviteStepper()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 2L11 13"></path>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                                Gerar Hash & Enviar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: CONFIRMAÇÃO DE ENVIO DA HASH -->
+                    <div id="step-pane-4" class="step-pane">
+                        <div id="step4-card" class="step4-status-card status-ok">
+                            <div class="step4-icon" id="step4-icon">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
                             </div>
+                            <h3 class="step4-title" id="step4-titulo">Hash Enviada com Sucesso!</h3>
+                            <p class="step4-desc" id="step4-descricao">--</p>
+                            <div class="step4-erro-detalhe" id="step4-erro-box" style="display:none;"></div>
+
+                            <div class="step4-hash-box">
+                                <span class="codigo-destaque" id="lbl-codigo-hash">--------</span>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="copiarCodigo()">Copiar Hash</button>
+                            </div>
+                        </div>
+
+                        <div class="step-actions" style="justify-content: flex-end;">
+                            <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoConvites()">Ver Histórico</button>
+                            <button type="button" class="btn btn-primary" onclick="resetarStepperConvite()">Novo Convite</button>
                         </div>
                     </div>
                 </div>
@@ -1046,7 +1161,7 @@
     </div>
 
     <!-- ======================================================================= -->
-    <!-- MODAL DO HISTÓRICO DE CONVITES                                          -->
+    <!-- MODAL DO HISTÓRICO DE CONVITES (COM REENVIAR E REMOVER HASH)            -->
     <!-- ======================================================================= -->
     {% if perfil == 'ROOT' %}
     <div id="modal-historico-convites" class="modal-backdrop">
@@ -1054,7 +1169,7 @@
             <div class="modal-header">
                 <h3>Histórico de Convites</h3>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="text" id="filtro-hist-convites" class="input-control" style="padding:7px 11px; font-size:0.8rem;" placeholder="Buscar..." oninput="filtrarHistoricoConvites()">
+                    <input type="text" id="filtro-hist-convites" class="input-control" style="padding:7px 11px; font-size:0.8rem;" placeholder="Buscar crachá, nome ou status..." oninput="filtrarHistoricoConvites()">
                     <button type="button" class="btn btn-secondary" style="padding:7px 12px;" onclick="fecharModalHistoricoConvites()">Fechar</button>
                 </div>
             </div>
@@ -1069,10 +1184,11 @@
                             <th>Setores</th>
                             <th>Status</th>
                             <th>Expira em</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-convites">
-                        <tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando...</td></tr>
+                        <tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1143,6 +1259,29 @@
         </div>
     </div>
 
+    <!-- ======================================================================= -->
+    <!-- MODAL DE CONFIRMAÇÃO PERSONALIZADO                                      -->
+    <!-- ======================================================================= -->
+    <div id="modal-confirmacao" class="modal-backdrop modal-top">
+        <div class="modal-card confirm-card">
+            <div class="confirm-icon-danger">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                </svg>
+            </div>
+            <h3 class="confirm-title" id="confirm-titulo">Remover Convite</h3>
+            <p class="confirm-desc" id="confirm-mensagem">Tem certeza que deseja continuar?</p>
+            <div class="confirm-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalConfirmacao()">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-confirmar-acao">Sim, Remover</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-msg" class="toast"></div>
 
     <script>
@@ -1161,7 +1300,12 @@
             t.innerText = msg;
             t.style.background = erro ? "#dc2626" : "#059669";
             t.style.display = "block";
-            setTimeout(() => { t.style.display = "none"; }, 4000);
+            setTimeout(() => { t.style.display = "none"; }, 5000);
+        }
+
+        function ocultarAlertaDuplicado() {
+            const box = document.getElementById("alerta-convite-duplicado");
+            if (box) box.style.display = "none";
         }
 
         function trocarAba(idAba, btn) {
@@ -1188,13 +1332,41 @@
         }
 
         // ---------------------------------------------------------------------
-        // STEPPER DE CONVITES + VALIDAÇÃO DE CRACHÁ + E-MAIL OBRIGATÓRIO
+        // MODAL DE CONFIRMAÇÃO PERSONALIZADO
+        // ---------------------------------------------------------------------
+        function abrirModalConfirmacao({ titulo, mensagem, textoBotao = "Confirmar", onConfirm }) {
+            const modal = document.getElementById("modal-confirmacao");
+            const btnConfirmar = document.getElementById("btn-confirmar-acao");
+
+            document.getElementById("confirm-titulo").innerText = titulo;
+            document.getElementById("confirm-mensagem").innerHTML = mensagem;
+            btnConfirmar.innerText = textoBotao;
+            btnConfirmar.disabled = false;
+
+            btnConfirmar.onclick = async () => {
+                btnConfirmar.disabled = true;
+                btnConfirmar.innerText = "Removendo...";
+                await onConfirm();
+                fecharModalConfirmacao();
+            };
+
+            modal.style.display = "flex";
+        }
+
+        function fecharModalConfirmacao() {
+            document.getElementById("modal-confirmacao").style.display = "none";
+        }
+
+        // ---------------------------------------------------------------------
+        // STEPPER DE CONVITES (4 ETAPAS)
         // ---------------------------------------------------------------------
         async function validarEAvancarStep2() {
             const crachaInput = document.getElementById("conv-cracha");
             const emailInput = document.getElementById("conv-email");
             const cracha = crachaInput.value.trim();
             const email = emailInput.value.trim();
+
+            ocultarAlertaDuplicado();
 
             if (!cracha) {
                 mostrarToast("Informe o crachá do gestor.", true);
@@ -1205,7 +1377,7 @@
             const btnNext = document.getElementById("btn-step1-next");
             const htmlOriginal = btnNext.innerHTML;
             btnNext.disabled = true;
-            btnNext.innerText = "Validando crachá...";
+            btnNext.innerText = "Validando...";
 
             try {
                 const res = await fetch(`/api/colaboradores/${encodeURIComponent(cracha)}`);
@@ -1213,14 +1385,17 @@
 
                 if (!res.ok || !data.sucesso) {
                     gestorValidadoAtual = null;
-                    mostrarToast(data.mensagem || "Crachá não encontrado na base.", true);
+                    if (data.convite_duplicado) {
+                        document.getElementById("lbl-alerta-duplicado").innerText = data.mensagem;
+                        document.getElementById("alerta-convite-duplicado").style.display = "flex";
+                    }
+                    mostrarToast(data.mensagem || "Crachá não encontrado.", true);
                     crachaInput.focus();
                     return;
                 }
 
                 gestorValidadoAtual = data.colaborador;
 
-                // Se o administrador ainda não digitou e-mail, preenche com o do Senior (se existir)
                 if (!email && gestorValidadoAtual.email) {
                     emailInput.value = gestorValidadoAtual.email;
                 }
@@ -1265,7 +1440,7 @@
                 document.getElementById("rev-ccs-lista").innerHTML = chipsHtml;
             }
 
-            [1, 2, 3].forEach(idx => {
+            [1, 2, 3, 4].forEach(idx => {
                 const pane = document.getElementById(`step-pane-${idx}`);
                 const ind = document.getElementById(`step-ind-${idx}`);
                 pane.classList.toggle("active", idx === numeroStep);
@@ -1274,21 +1449,19 @@
                 if (idx < numeroStep) {
                     ind.classList.add("completed");
                 } else if (idx === numeroStep) {
-                    ind.classList.add("active");
+                    // Se chegou na Etapa 4 (final), marca como concluída
+                    ind.classList.add(numeroStep === 4 ? "completed" : "active");
                 }
             });
         }
 
         function resetarStepperConvite() {
             gestorValidadoAtual = null;
+            ocultarAlertaDuplicado();
             document.getElementById("conv-cracha").value = "";
             document.getElementById("conv-email").value = "";
             document.getElementById("conv-validade").value = "7";
             alternarTodosCCs(false);
-            document.getElementById("box-codigo-gerado").style.display = "none";
-            document.getElementById("btn-gerar-convite").style.display = "inline-flex";
-            document.getElementById("btn-voltar-step3").style.display = "inline-flex";
-            document.getElementById("btn-novo-reset").style.display = "none";
             irParaStep(1);
         }
 
@@ -1321,16 +1494,9 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.sucesso) {
-                    document.getElementById("lbl-codigo-hash").innerText = data.codigo_ativacao;
-                    document.getElementById("lbl-status-envio").innerHTML = data.email_enviado
-                        ? `E-mail enviado para <strong>${email_destino}</strong> (${data.colaborador}).`
-                        : `Hash gerada para <strong>${data.colaborador}</strong> (falha no envio SMTP).`;
-                    document.getElementById("box-codigo-gerado").style.display = "flex";
-                    btn.style.display = "none";
-                    document.getElementById("btn-voltar-step3").style.display = "none";
-                    document.getElementById("btn-novo-reset").style.display = "inline-flex";
+                    renderizarStep4Confirmacao(data, email_destino);
+                    irParaStep(4);
                     carregarMetricasRoot();
-                    mostrarToast(data.mensagem, !data.email_enviado);
                 } else {
                     mostrarToast(data.mensagem || "Erro ao gerar convite.", true);
                 }
@@ -1342,6 +1508,43 @@
             }
         }
 
+        function renderizarStep4Confirmacao(data, emailDestino) {
+            const card = document.getElementById("step4-card");
+            const iconBox = document.getElementById("step4-icon");
+            const titulo = document.getElementById("step4-titulo");
+            const desc = document.getElementById("step4-descricao");
+            const erroBox = document.getElementById("step4-erro-box");
+            const hashLbl = document.getElementById("lbl-codigo-hash");
+
+            hashLbl.innerText = data.codigo_ativacao;
+
+            if (data.email_enviado) {
+                card.className = "step4-status-card status-ok";
+                iconBox.innerHTML = `
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                `;
+                titulo.innerText = "Hash Gerada e Enviada por E-mail!";
+                desc.innerHTML = `O código de acesso e o link de ativação foram entregues com sucesso para <strong>${emailDestino}</strong> (${data.colaborador}).`;
+                erroBox.style.display = "none";
+            } else {
+                card.className = "step4-status-card status-warn";
+                iconBox.innerHTML = `
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                `;
+                titulo.innerText = "Hash Gerada, mas Falha no Envio do E-mail";
+                desc.innerHTML = `A hash de <strong>${data.colaborador}</strong> foi salva no sistema, porém não foi possível disparar o e-mail para <strong>${emailDestino}</strong>. Você pode copiar o código abaixo ou reenviar pelo Histórico.`;
+                erroBox.innerText = `Detalhe: ${data.erro_envio || "Falha na comunicação com o provedor de e-mail."}`;
+                erroBox.style.display = "block";
+            }
+        }
+
         function atualizarContadorCCs() {
             const qtd = document.querySelectorAll('input[name="ccs_selecionados"]:checked').length;
             const lbl = document.getElementById("lbl-qtd-ccs");
@@ -1349,9 +1552,11 @@
         }
 
         // ---------------------------------------------------------------------
-        // MODAL DE HISTÓRICO DE CONVITES
+        // MODAL DE HISTÓRICO DE CONVITES (REENVIAR E REMOVER HASH)
         // ---------------------------------------------------------------------
-        function abrirModalHistoricoConvites() {
+        function abrirModalHistoricoConvites(filtroInicial = "") {
+            const inputFiltro = document.getElementById("filtro-hist-convites");
+            if (inputFiltro) inputFiltro.value = filtroInicial;
             document.getElementById("modal-historico-convites").style.display = "flex";
             carregarConvites();
         }
@@ -1363,17 +1568,17 @@
         async function carregarConvites() {
             const tbody = document.getElementById("tbody-convites");
             if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando...</td></tr>';
 
             try {
                 const res = await fetch("/api/convites");
                 const data = await res.json();
                 if (data.sucesso) {
                     listaConvitesCache = data.convites;
-                    renderizarHistoricoConvites(listaConvitesCache);
+                    filtrarHistoricoConvites();
                 }
             } catch (err) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc2626;">Erro ao carregar histórico.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc2626;">Erro ao carregar histórico.</td></tr>';
             }
         }
 
@@ -1391,11 +1596,40 @@
         function renderizarHistoricoConvites(lista) {
             const tbody = document.getElementById("tbody-convites");
             if (!lista.length) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Nenhum convite emitido.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Nenhum convite encontrado.</td></tr>';
                 return;
             }
             tbody.innerHTML = lista.map(c => {
                 const pillClass = c.status === "DISPONIVEL" ? "pill-disponivel" : (c.status === "UTILIZADO" ? "pill-utilizado" : "pill-expirado");
+
+                let acoesHtml = '<span style="color:#94a3b8; font-size:0.78rem;">—</span>';
+                if (c.status === "DISPONIVEL") {
+                    acoesHtml = `
+                        <div class="acoes-convite-cell">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="reenviarConvite(${c.id}, this)" title="Gera nova hash e reenvia e-mail">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                Reenviar
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removerConvite(${c.id}, '${c.cracha}', this)" title="Cancela e remove esta hash">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                                Remover
+                            </button>
+                        </div>
+                    `;
+                } else if (c.status === "EXPIRADO") {
+                    acoesHtml = `
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removerConvite(${c.id}, '${c.cracha}', this)">
+                            Remover
+                        </button>
+                    `;
+                }
+
                 return `
                     <tr>
                         <td><strong>${c.cracha}</strong></td>
@@ -1404,9 +1638,54 @@
                         <td>${c.centros_custo.join(", ")}</td>
                         <td><span class="status-pill ${pillClass}">${c.status}</span></td>
                         <td>${c.expira_em}</td>
+                        <td>${acoesHtml}</td>
                     </tr>
                 `;
             }).join("");
+        }
+
+        async function reenviarConvite(conviteId, btn) {
+            const htmlOrig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerText = "Enviando...";
+
+            try {
+                const res = await fetch(`/api/convites/${conviteId}/reenviar`, { method: "POST" });
+                const data = await res.json();
+                mostrarToast(data.mensagem, !data.sucesso);
+                if (data.sucesso) {
+                    carregarConvites();
+                }
+            } catch (err) {
+                mostrarToast("Erro de comunicação ao reenviar.", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = htmlOrig;
+            }
+        }
+
+        function removerConvite(conviteId, cracha, btn) {
+            abrirModalConfirmacao({
+                titulo: "Remover Hash de Acesso",
+                mensagem: `Deseja remover a hash do crachá <strong>${cracha}</strong>?<br>O código atual será invalidado imediatamente.`,
+                textoBotao: "Sim, Remover",
+                onConfirm: async () => {
+                    if (btn) btn.disabled = true;
+                    try {
+                        const res = await fetch(`/api/convites/${conviteId}`, { method: "DELETE" });
+                        const data = await res.json();
+                        mostrarToast(data.mensagem, !data.sucesso);
+                        if (data.sucesso) {
+                            ocultarAlertaDuplicado();
+                            carregarConvites();
+                            carregarMetricasRoot();
+                        }
+                    } catch (err) {
+                        mostrarToast("Erro de comunicação ao remover.", true);
+                        if (btn) btn.disabled = false;
+                    }
+                }
+            });
         }
 
         // ---------------------------------------------------------------------
@@ -1478,7 +1757,7 @@
 
                 let acaoHtml = "";
                 if (f.status === "PENDENTE") {
-                    acaoHtml = `<button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem;" onclick="abrirModalAnalise(${f.id})">Analisar</button>`;
+                    acaoHtml = `<button class="btn btn-primary btn-sm" onclick="abrirModalAnalise(${f.id})">Analisar</button>`;
                 } else if (f.analise) {
                     acaoHtml = `<span style="font-size:0.78rem; color:#475569;"><strong>${f.analise.avaliador}</strong> • ${f.analise.respondido_em}</span>`;
                 }
@@ -1615,7 +1894,7 @@
                         <td>${g.centros_custo.join(", ") || "Nenhum"}</td>
                         <td><span class="status-pill ${g.ativo ? 'pill-ativo' : 'pill-inativo'}">${g.ativo ? 'ATIVO' : 'BLOQUEADO'}</span></td>
                         <td>
-                            <button class="btn ${g.ativo ? 'btn-danger' : 'btn-success'}" style="padding:6px 12px; font-size:0.76rem;" onclick="alternarGestor(${g.id})">
+                            <button class="btn ${g.ativo ? 'btn-danger' : 'btn-success'} btn-sm" onclick="alternarGestor(${g.id})">
                                 ${g.ativo ? 'Bloquear' : 'Ativar'}
                             </button>
                         </td>

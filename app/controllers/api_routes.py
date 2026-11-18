@@ -29,6 +29,18 @@ def _obter_ccs_usuario(db, usuario_id: int) -> list[int]:
     return [r[0] for r in rows]
 
 
+def _expirar_convites_vencidos(db, colaborador_id: int | None = None):
+    """Atualiza convites DISPONIVEL com data expirada para EXPIRADO."""
+    agora = datetime.now(timezone.utc)
+    q = db.query(ConviteAcesso).filter(
+        ConviteAcesso.status == 'DISPONIVEL',
+        ConviteAcesso.expira_em < agora
+    )
+    if colaborador_id is not None:
+        q = q.filter(ConviteAcesso.colaborador_id == colaborador_id)
+    q.update({'status': 'EXPIRADO'}, synchronize_session=False)
+
+
 # ==============================================================================
 # AUTENTICAÇÃO E PRIMEIRO ACESSO
 # ==============================================================================
@@ -105,7 +117,7 @@ def primeiro_acesso_api():
             selectinload(ConviteAcesso.centros_custo)
         )
         .filter(ConviteAcesso.codigo_hash == codigo_hash)
-        .with_for_update()
+        .with_for_update(of=ConviteAcesso)
         .first()
     )
 
@@ -303,7 +315,7 @@ def analisar_falta():
 # ==============================================================================
 @api_bp.route('/colaboradores/<string:cracha>', methods=['GET'])
 def validar_cracha_colaborador(cracha):
-    """Valida se o crachá existe e está ativo na base antes de avançar no Stepper."""
+    """Valida se o crachá existe, está ativo e se já não possui uma hash DISPONIVEL."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
@@ -330,6 +342,25 @@ def validar_cracha_colaborador(cracha):
             'sucesso': False,
             'mensagem': f'Crachá "{cracha_limpo}" não encontrado ou colaborador inativo.'
         }), 404
+
+    _expirar_convites_vencidos(db, row.id)
+    db.commit()
+
+    convite_ativo = (
+        db.query(ConviteAcesso.id, ConviteAcesso.email_destino)
+        .filter(
+            ConviteAcesso.colaborador_id == row.id,
+            ConviteAcesso.status == 'DISPONIVEL'
+        )
+        .first()
+    )
+
+    if convite_ativo:
+        return jsonify({
+            'sucesso': False,
+            'convite_duplicado': True,
+            'mensagem': f'Já existe uma hash DISPONÍVEL para o crachá {cracha_limpo} ({row.nome}). Reenvie ou remova a atual no Histórico.'
+        }), 409
 
     return jsonify({
         'sucesso': True,
@@ -392,6 +423,21 @@ def convites_api():
         if not ccs_ids:
             return jsonify({'sucesso': False, 'mensagem': 'Selecione ao menos um Centro de Custo.'}), 400
 
+        _expirar_convites_vencidos(db, colab.id)
+        ja_existe = (
+            db.query(ConviteAcesso.id)
+            .filter(
+                ConviteAcesso.colaborador_id == colab.id,
+                ConviteAcesso.status == 'DISPONIVEL'
+            )
+            .first()
+        )
+        if ja_existe:
+            return jsonify({
+                'sucesso': False,
+                'mensagem': f'O crachá {cracha} ({colab.nome}) já possui uma hash DISPONÍVEL. Use o botão Reenviar ou Remover no Histórico.'
+            }), 409
+
         codigo_plain = secrets.token_hex(4).upper()
         codigo_hash = hashlib.sha256(codigo_plain.encode('utf-8')).hexdigest()
 
@@ -443,17 +489,21 @@ def convites_api():
         msg_retorno = (
             f'Convite gerado e enviado para {email_destino}!'
             if enviado_ok
-            else f'Hash gerada para {colab.nome}, mas houve falha no envio do e-mail ({erro_envio}).'
+            else f'Hash gerada, mas falha no e-mail: {erro_envio}'
         )
 
         return jsonify({
             'sucesso': True,
             'email_enviado': enviado_ok,
+            'erro_envio': erro_envio,
             'mensagem': msg_retorno,
             'codigo_ativacao': codigo_plain,
             'link_acesso': link_primeiro_acesso,
             'colaborador': colab.nome
         }), 201
+
+    _expirar_convites_vencidos(db)
+    db.commit()
 
     convites = (
         db.query(ConviteAcesso)
@@ -464,7 +514,7 @@ def convites_api():
             .load_only(CentroCusto.nome)
         )
         .order_by(ConviteAcesso.criado_em.desc())
-        .limit(50)
+        .limit(80)
         .all()
     )
 
@@ -483,6 +533,98 @@ def convites_api():
     ]
 
     return jsonify({'sucesso': True, 'convites': lista}), 200
+
+
+@api_bp.route('/convites/<int:convite_id>/reenviar', methods=['POST'])
+def reenviar_convite_api(convite_id):
+    """Regenera um novo código para o convite DISPONIVEL, atualiza a hash e reenvia o e-mail."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    convite = (
+        db.query(ConviteAcesso)
+        .options(
+            joinedload(ConviteAcesso.colaborador).load_only(Colaborador.cracha, Colaborador.nome),
+            selectinload(ConviteAcesso.centros_custo)
+            .joinedload(ConviteCentroCusto.centro_custo)
+            .load_only(CentroCusto.nome)
+        )
+        .filter(ConviteAcesso.id == convite_id)
+        .with_for_update(of=ConviteAcesso)
+        .first()
+    )
+
+    if not convite:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Convite não encontrado.'}), 404
+
+    if convite.status != 'DISPONIVEL':
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Não é possível reenviar um convite com status {convite.status}.'}), 400
+
+    novo_codigo_plain = secrets.token_hex(4).upper()
+    convite.codigo_hash = hashlib.sha256(novo_codigo_plain.encode('utf-8')).hexdigest()
+    convite.expira_em = datetime.now(timezone.utc) + timedelta(days=7)
+
+    nomes_ccs = [cc.centro_custo.nome for cc in convite.centros_custo]
+    base_url = request.host_url.rstrip('/')
+    link_primeiro_acesso = f"{base_url}/primeiro-acesso?codigo={novo_codigo_plain}"
+
+    notificador = NotificadorEmail()
+    enviado_ok, erro_envio = notificador.enviar_convite_primeiro_acesso(
+        destinatario=convite.email_destino,
+        nome_gestor=convite.colaborador.nome,
+        cracha=convite.colaborador.cracha,
+        codigo_hash=novo_codigo_plain,
+        link_acesso=link_primeiro_acesso,
+        dias_validade=7,
+        centros_custo=nomes_ccs,
+    )
+
+    db.add(LogEnvioEmail(
+        convite_id=convite.id,
+        destinatario=convite.email_destino,
+        status_envio='ENVIADO' if enviado_ok else 'ERRO',
+        detalhe_erro=erro_envio,
+    ))
+
+    db.commit()
+
+    if enviado_ok:
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Nova hash ({novo_codigo_plain}) reenviada para {convite.email_destino}!',
+            'codigo_ativacao': novo_codigo_plain
+        }), 200
+    else:
+        return jsonify({
+            'sucesso': False,
+            'mensagem': f'Falha ao reenviar e-mail: {erro_envio}'
+        }), 502
+
+
+@api_bp.route('/convites/<int:convite_id>', methods=['DELETE'])
+def remover_convite_api(convite_id):
+    """Cancela/remove uma hash DISPONIVEL, liberando o crachá para novo convite."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    convite = db.query(ConviteAcesso).filter(ConviteAcesso.id == convite_id).with_for_update().first()
+
+    if not convite:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Convite não encontrado.'}), 404
+
+    if convite.status == 'UTILIZADO':
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Convites já utilizados não podem ser removidos.'}), 400
+
+    db.delete(convite)
+    db.commit()
+
+    return jsonify({'sucesso': True, 'mensagem': 'Hash removida com sucesso! O crachá está liberado.'}), 200
 
 
 @api_bp.route('/gestores', methods=['GET'])

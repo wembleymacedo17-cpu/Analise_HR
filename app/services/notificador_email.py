@@ -1,78 +1,69 @@
 import base64
 import json
 import os
+import smtplib
+import ssl
 import urllib.error
 import urllib.request
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from io import BytesIO
 from dotenv import load_dotenv
 
-# Carrega o .env da raiz Analise_Hr apenas se existir localmente (sem sobrescrever variáveis de produção)
-DOTENV_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
-if os.path.exists(DOTENV_PATH):
-    load_dotenv(dotenv_path=DOTENV_PATH, override=False)
+# Procura o .env tanto na raiz de Analise_Hr quanto na pasta pai (SuperMerge)
+BASE_SERVICES = os.path.dirname(os.path.abspath(__file__))
+CANDIDATOS_ENV = [
+    os.path.abspath(os.path.join(BASE_SERVICES, '..', '..', '.env')),
+    os.path.abspath(os.path.join(BASE_SERVICES, '..', '..', '..', '.env')),
+]
+for caminho_env in CANDIDATOS_ENV:
+    if os.path.exists(caminho_env):
+        load_dotenv(dotenv_path=caminho_env, override=False)
+
+
+def _limpar_env(chave: str, padrao: str = "") -> str:
+    val = os.getenv(chave, padrao)
+    return str(val).strip().strip('"').strip("'") if val else padrao
 
 
 class NotificadorEmail:
     def __init__(self):
-        self.api_key_brevo = os.getenv("SENHA_KEY")
-        self.email_remetente = os.getenv("EMAIL_REMETENTE")
+        self.api_key_brevo = _limpar_env("SENHA_KEY")
+        self.email_remetente = _limpar_env("EMAIL_REMETENTE")
+        self.smtp_server = _limpar_env("SERVIDOR_BREVO", "smtp-relay.brevo.com")
+        self.smtp_port = int(_limpar_env("PORTA_BREVO", "587") or 587)
+        self.login_smtp = _limpar_env("LOGIN_SMTP")
         self.nome_remetente = "Análise de Hora Extra - FUNFARME"
 
-    def disparar(
+    def _disparar_via_api_rest(
         self,
-        destinatarios,
+        remetente_final: str,
+        to_list: list[dict],
         assunto: str,
-        corpo_texto: str = "",
-        corpo_html: str = None,
-        remetente: str = None,
+        corpo_texto: str,
+        corpo_html: str | None,
         anexo=None,
-        nome_anexo: str = None,
+        nome_anexo: str | None = None,
     ) -> tuple[bool, str | None]:
-        """
-        Dispara e-mails transacionais utilizando a API REST v3 do Brevo sobre HTTPS (Porta 443).
-        Retorna (True, None) em caso de sucesso ou (False, mensagem_erro) em caso de falha.
-        """
-        remetente_final = remetente or self.email_remetente
-
-        if not remetente_final:
-            erro = "EMAIL_REMETENTE não configurado nas variáveis de ambiente."
-            print(f"❌ [BREVO API ERROR] {erro}")
-            return False, erro
-
-        if not self.api_key_brevo:
-            erro = "SENHA_KEY (API Key Brevo) não encontrada nas variáveis de ambiente."
-            print(f"❌ [BREVO API ERROR] {erro}")
-            return False, erro
-
-        if isinstance(destinatarios, str):
-            destinatarios = [destinatarios]
-
-        to_list = [{"email": dest.strip()} for dest in destinatarios if dest and dest.strip()]
-        if not to_list:
-            return False, "Nenhum destinatário válido informado."
-
         url = "https://api.brevo.com/v3/smtp/email"
         headers = {
             "accept": "application/json",
             "content-type": "application/json",
             "api-key": self.api_key_brevo,
+            "user-agent": "FUNFARME-AnaliseHoraExtra/1.0",
         }
 
         payload = {
-            "sender": {
-                "name": self.nome_remetente,
-                "email": remetente_final,
-            },
+            "sender": {"name": self.nome_remetente, "email": remetente_final},
             "to": to_list,
             "subject": assunto,
         }
-
         if corpo_html:
             payload["htmlContent"] = corpo_html
         if corpo_texto:
             payload["textContent"] = corpo_texto
 
-        # Tratamento opcional de anexos (BytesIO / bytes -> base64)
         if anexo and nome_anexo:
             if isinstance(anexo, BytesIO):
                 anexo.seek(0)
@@ -84,34 +75,133 @@ class NotificadorEmail:
                 conteudo_bytes = str(anexo).encode("utf-8")
 
             payload["attachment"] = [
-                {
-                    "name": nome_anexo,
-                    "content": base64.b64encode(conteudo_bytes).decode("utf-8"),
-                }
+                {"name": nome_anexo, "content": base64.b64encode(conteudo_bytes).decode("utf-8")}
             ]
 
+        # Contexto SSL compatível com redes corporativas Windows
+        ctx_ssl = ssl.create_default_context()
         try:
-            print(f"📧 [BREVO API LOG] Disparando e-mail para {destinatarios}...")
+            import certifi
+            ctx_ssl.load_verify_locations(certifi.where())
+        except Exception:
+            ctx_ssl.check_hostname = False
+            ctx_ssl.verify_mode = ssl.CERT_NONE
+
+        try:
             data = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with urllib.request.urlopen(req, timeout=15, context=ctx_ssl) as response:
+                resp_body = response.read().decode("utf-8", errors="ignore")
                 if response.status in (200, 201, 202):
-                    print("✅ [BREVO API LOG] E-mail entregue com sucesso!")
+                    print(f"✅ [BREVO API] E-mail enviado com sucesso! {resp_body}")
                     return True, None
-                erro = f"Status inesperado da API Brevo: HTTP {response.status}"
-                print(f"❌ [BREVO API ERROR] {erro}")
-                return False, erro
-
+                return False, f"API HTTP {response.status}: {resp_body}"
         except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8") if e.fp else str(e)
-            erro = f"HTTP {e.code}: {error_body}"
-            print(f"❌ [BREVO API ERROR] {erro}")
-            return False, erro
+            body = e.read().decode("utf-8", errors="ignore") if e.fp else str(e)
+            return False, f"API HTTP {e.code}: {body}"
         except Exception as e:
-            erro = str(e)
-            print(f"❌ [BREVO API ERROR] Falha no disparo: {erro}")
+            return False, f"API Erro: {e}"
+
+    def _disparar_via_smtp(
+        self,
+        remetente_final: str,
+        destinatarios: list[str],
+        assunto: str,
+        corpo_texto: str,
+        corpo_html: str | None,
+        anexo=None,
+        nome_anexo: str | None = None,
+    ) -> tuple[bool, str | None]:
+        if not self.login_smtp or not self.api_key_brevo:
+            return False, "LOGIN_SMTP ou SENHA_KEY ausentes para envio SMTP."
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = assunto
+        msg["From"] = f"{self.nome_remetente} <{remetente_final}>"
+        msg["To"] = ", ".join(destinatarios)
+
+        if corpo_texto:
+            msg.attach(MIMEText(corpo_texto, "plain", "utf-8"))
+        if corpo_html:
+            msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+
+        if anexo and nome_anexo:
+            if isinstance(anexo, BytesIO):
+                anexo.seek(0)
+                conteudo_bytes = anexo.read()
+                anexo.seek(0)
+            elif isinstance(anexo, bytes):
+                conteudo_bytes = anexo
+            else:
+                conteudo_bytes = str(anexo).encode("utf-8")
+            part = MIMEApplication(conteudo_bytes, Name=nome_anexo)
+            part["Content-Disposition"] = f'attachment; filename="{nome_anexo}"'
+            msg.attach(part)
+
+        try:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(self.login_smtp, self.api_key_brevo)
+                server.sendmail(remetente_final, destinatarios, msg.as_string())
+            print("✅ [BREVO SMTP] E-mail enviado com sucesso via SMTP!")
+            return True, None
+        except Exception as e:
+            return False, f"SMTP Erro: {e}"
+
+    def disparar(
+        self,
+        destinatarios,
+        assunto: str,
+        corpo_texto: str = "",
+        corpo_html: str = None,
+        remetente: str = None,
+        anexo=None,
+        nome_anexo: str = None,
+    ) -> tuple[bool, str | None]:
+        remetente_final = (remetente or self.email_remetente or "").strip()
+
+        if not remetente_final:
+            erro = "EMAIL_REMETENTE não encontrado no .env."
+            print(f"❌ [EMAIL ERROR] {erro}")
             return False, erro
+
+        if not self.api_key_brevo:
+            erro = "SENHA_KEY não encontrada no .env."
+            print(f"❌ [EMAIL ERROR] {erro}")
+            return False, erro
+
+        if isinstance(destinatarios, str):
+            destinatarios = [destinatarios]
+
+        dests_limpos = [d.strip() for d in destinatarios if d and d.strip()]
+        if not dests_limpos:
+            return False, "Nenhum destinatário válido informado."
+
+        to_list = [{"email": d} for d in dests_limpos]
+
+        print(f"📧 [NOTIFICADOR] Enviando de '{remetente_final}' para {dests_limpos}...")
+
+        # 1ª tentativa: API REST v3 HTTPS (Porta 443)
+        ok_api, erro_api = self._disparar_via_api_rest(
+            remetente_final, to_list, assunto, corpo_texto, corpo_html, anexo, nome_anexo
+        )
+        if ok_api:
+            return True, None
+
+        print(f"⚠️ [NOTIFICADOR] Falha na API REST ({erro_api}). Tentando fallback SMTP...")
+
+        # 2ª tentativa: SMTP Brevo (Porta 587)
+        ok_smtp, erro_smtp = self._disparar_via_smtp(
+            remetente_final, dests_limpos, assunto, corpo_texto, corpo_html, anexo, nome_anexo
+        )
+        if ok_smtp:
+            return True, None
+
+        erro_final = f"{erro_api} | {erro_smtp}"
+        print(f"❌ [NOTIFICADOR] Falha total no envio: {erro_final}")
+        return False, erro_final
 
     def enviar_convite_primeiro_acesso(
         self,
@@ -123,7 +213,6 @@ class NotificadorEmail:
         dias_validade: int,
         centros_custo: list[str] | None = None,
     ) -> tuple[bool, str | None]:
-        """Envia o convite de ativação com a Hash e o link direto de primeiro acesso."""
         assunto = "Convite de Acesso - Análise de Hora Extra | FUNFARME"
 
         setores_txt = ", ".join(centros_custo) if centros_custo else "Conforme vínculo RH"
