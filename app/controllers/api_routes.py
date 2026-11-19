@@ -829,6 +829,198 @@ def validar_cracha_colaborador(cracha):
         }
     }), 200
 
+@api_bp.route('/visao-global/gestores', methods=['GET'])
+def visao_global_gestores():
+    """Retorna para o ROOT os gestores com contagem de análises feitas e pendentes, e as ocorrências de cada gestor."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+
+    usuarios = (
+        db.query(Usuario)
+        .options(
+            joinedload(Usuario.colaborador).load_only(Colaborador.cracha, Colaborador.nome),
+            selectinload(Usuario.centros_custo)
+            .joinedload(UsuarioCentroCusto.centro_custo)
+            .load_only(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
+        )
+        .filter(Usuario.role == 'GESTOR', Usuario.ativo.is_(True))
+        .order_by(Usuario.id.asc())
+        .all()
+    )
+
+    todos_cc_ids = {
+        uc.centro_custo_id
+        for u in usuarios
+        for uc in u.centros_custo
+    }
+
+    ocorrencias_por_cc = {cc_id: [] for cc_id in todos_cc_ids}
+
+    if todos_cc_ids:
+        AvaliadorColab = aliased(Colaborador)
+        CobridorColab = aliased(Colaborador)
+        CobridorCC = aliased(CentroCusto)
+
+        rows = (
+            db.query(
+                OcorrenciaFalta.id,
+                OcorrenciaFalta.colaborador_id,
+                OcorrenciaFalta.centro_custo_id,
+                OcorrenciaFalta.data_ocorrencia,
+                OcorrenciaFalta.status,
+                Colaborador.cracha,
+                Colaborador.nome.label('colaborador_nome'),
+                Colaborador.sexo,
+                Cargo.titulo.label('cargo_titulo'),
+                CentroCusto.codigo_cc,
+                CentroCusto.nome.label('centro_custo_nome'),
+                AnaliseFalta.ausencia_programada,
+                AnaliseFalta.comunicada_2h_antecedencia,
+                AnaliseFalta.autorizado_hora_extra,
+                AnaliseFalta.autorizador_he_nome,
+                AnaliseFalta.conseguiu_he_cobertura,
+                AnaliseFalta.redividiu_equipe,
+                AnaliseFalta.qtd_pacientes,
+                AnaliseFalta.qtd_colaboradores,
+                AnaliseFalta.justificativa_nao_redimensionada,
+                AnaliseFalta.respondido_em,
+                AvaliadorColab.nome.label('avaliador_nome'),
+                CobridorColab.cracha.label('cobridor_cracha'),
+                CobridorColab.nome.label('cobridor_nome'),
+                CobridorCC.codigo_cc.label('cobridor_codigo_cc'),
+                CobridorCC.nome.label('cobridor_cc_nome')
+            )
+            .join(Colaborador, OcorrenciaFalta.colaborador_id == Colaborador.id)
+            .join(CentroCusto, OcorrenciaFalta.centro_custo_id == CentroCusto.id)
+            .outerjoin(Cargo, Colaborador.cargo_id == Cargo.id)
+            .outerjoin(AnaliseFalta, AnaliseFalta.ocorrencia_id == OcorrenciaFalta.id)
+            .outerjoin(Usuario, AnaliseFalta.avaliador_id == Usuario.id)
+            .outerjoin(AvaliadorColab, Usuario.colaborador_id == AvaliadorColab.id)
+            .outerjoin(CobridorColab, AnaliseFalta.cobridor_colaborador_id == CobridorColab.id)
+            .outerjoin(CobridorCC, AnaliseFalta.cobridor_centro_custo_id == CobridorCC.id)
+            .filter(OcorrenciaFalta.centro_custo_id.in_(todos_cc_ids))
+            .order_by(OcorrenciaFalta.data_ocorrencia.desc())
+            .all()
+        )
+
+        for r in rows:
+            analise_obj = None
+            if r.status == 'ANALISADA' and r.avaliador_nome:
+                dt_resp = (r.respondido_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if r.respondido_em else ''
+                analise_obj = {
+                    'ausencia_programada': r.ausencia_programada,
+                    'comunicada_2h_antecedencia': r.comunicada_2h_antecedencia,
+                    'autorizado_hora_extra': r.autorizado_hora_extra,
+                    'autorizador_he_nome': r.autorizador_he_nome,
+                    'conseguiu_he_cobertura': r.conseguiu_he_cobertura,
+                    'redividiu_equipe': r.redividiu_equipe,
+                    'qtd_pacientes': r.qtd_pacientes,
+                    'qtd_colaboradores': r.qtd_colaboradores,
+                    'justificativa_nao_redimensionada': r.justificativa_nao_redimensionada,
+                    'cobridor': (
+                        f"{r.cobridor_cracha} - {r.cobridor_nome} ({r.cobridor_codigo_cc} - {r.cobridor_cc_nome})"
+                        if r.cobridor_nome else None
+                    ),
+                    'avaliador': r.avaliador_nome,
+                    'respondido_em': dt_resp
+                }
+
+            ocorrencias_por_cc.setdefault(r.centro_custo_id, []).append({
+                'id': r.id,
+                'colaborador_id': r.colaborador_id,
+                'centro_custo_id': r.centro_custo_id,
+                'cracha': r.cracha,
+                'colaborador_nome': r.colaborador_nome,
+                'sexo': r.sexo,
+                'cargo': r.cargo_titulo or '---',
+                'codigo_cc': r.codigo_cc,
+                'centro_custo': r.centro_custo_nome,
+                'data_ocorrencia': r.data_ocorrencia.strftime('%d/%m/%Y'),
+                'status': r.status,
+                'analise': analise_obj
+            })
+
+    gestores_payload = []
+    for u in usuarios:
+        cc_ids_u = [uc.centro_custo_id for uc in u.centros_custo]
+        ccs_nomes_u = [f"{uc.centro_custo.codigo_cc} - {uc.centro_custo.nome}" for uc in u.centros_custo]
+
+        vistas = set()
+        ocorr_gestor = []
+        for cc_id in cc_ids_u:
+            for oc in ocorrencias_por_cc.get(cc_id, []):
+                if oc['id'] not in vistas:
+                    vistas.add(oc['id'])
+                    ocorr_gestor.append(oc)
+
+        qtd_analisadas = sum(1 for oc in ocorr_gestor if oc['status'] == 'ANALISADA')
+        qtd_pendentes = sum(1 for oc in ocorr_gestor if oc['status'] == 'PENDENTE')
+
+        gestores_payload.append({
+            'id': u.id,
+            'cracha': u.colaborador.cracha,
+            'nome': u.colaborador.nome,
+            'centros_custo': ccs_nomes_u,
+            'analises_feitas': qtd_analisadas,
+            'pendentes': qtd_pendentes,
+            'ocorrencias': ocorr_gestor
+        })
+
+    return jsonify({
+        'sucesso': True,
+        'gestores': gestores_payload
+    }), 200
+
+@api_bp.route('/faltas/<int:ocorrencia_id>/desfazer-analise', methods=['POST'])
+def desfazer_analise_falta(ocorrencia_id):
+    id_user = session.get('usuario_id')
+    perfil = session.get('usuario_perfil')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    data = request.json or {}
+    motivo = str(data.get('motivo') or '').strip()
+    if not motivo:
+        return jsonify({'sucesso': False, 'mensagem': 'Informe o motivo para desfazer a análise.'}), 400
+
+    db = get_db()
+    ocorrencia = (
+        db.query(OcorrenciaFalta)
+        .filter(OcorrenciaFalta.id == int(ocorrencia_id))
+        .with_for_update()
+        .first()
+    )
+    if not ocorrencia:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Ocorrência não encontrada.'}), 404
+
+    if perfil != 'ROOT':
+        tem_acesso = (
+            db.query(UsuarioCentroCusto.usuario_id)
+            .filter(
+                UsuarioCentroCusto.usuario_id == id_user,
+                UsuarioCentroCusto.centro_custo_id == ocorrencia.centro_custo_id
+            )
+            .first()
+        )
+        if not tem_acesso:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Sem permissão para este Centro de Custo.'}), 403
+
+    if ocorrencia.status != 'ANALISADA':
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Esta ocorrência não está analisada.'}), 400
+
+    print(f"↩️ [DESFAZER ANÁLISE] Ocorrência #{ocorrencia.id} por usuário #{id_user} ({perfil}) | Motivo: {motivo}")
+
+    db.query(AnaliseFalta).filter(AnaliseFalta.ocorrencia_id == ocorrencia.id).delete(synchronize_session=False)
+    ocorrencia.status = 'PENDENTE'
+    db.commit()
+
+    return jsonify({'sucesso': True, 'mensagem': 'Análise desfeita! Ocorrência retornou para Pendentes.'}), 200
+
 
 @api_bp.route('/centros-custo', methods=['GET'])
 def listar_centros_custo():
