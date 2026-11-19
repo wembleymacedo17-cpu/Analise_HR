@@ -14,8 +14,8 @@ if ROOT_DIR not in sys.path:
 load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
 from app.services.conector_oracle import OracleConnector
-from app.services.queries_senior import montar_query_faltas
-from app.models.models import Colaborador, CentroCusto, OcorrenciaFalta
+from app.services.queries_senior import montar_query_faltas, CARGOS_REJEITADOS_LEGADO
+from app.models.models import Colaborador, CentroCusto, Cargo, OcorrenciaFalta
 
 
 class ETLFaltasDiario:
@@ -41,7 +41,17 @@ class ETLFaltasDiario:
             hoje = datetime.now().date()
             data_inicio_janela = hoje - timedelta(days=self.dias_retroativos)
 
-            map_colabs = {c.cpf: c for c in session.query(Colaborador).all() if c.cpf}
+            cargos_rejeitados_ids = {
+                c.id
+                for c in session.query(Cargo.id, Cargo.codigo_cargo).all()
+                if str(c.codigo_cargo or "").strip() in CARGOS_REJEITADOS_LEGADO
+            }
+
+            map_colabs = {
+                c.cpf: c
+                for c in session.query(Colaborador).all()
+                if c.cpf and c.cargo_id not in cargos_rejeitados_ids
+            }
             map_ccs = {cc.codigo_cc: cc.id for cc in session.query(CentroCusto).all()}
 
             # Mapeia ocorrências já existentes no PostgreSQL dentro da janela

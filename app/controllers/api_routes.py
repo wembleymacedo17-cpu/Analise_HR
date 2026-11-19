@@ -16,8 +16,6 @@ from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
 from app.services.notificador_email import NotificadorEmail
 
-
-
 COORDENADORES_AUTORIZADORES = {
     "Ana Paula Augusto Valverde",
     "Débora Augusto Valverde",
@@ -28,33 +26,10 @@ COORDENADORES_AUTORIZADORES = {
     "Juliane Cristina Souza Ferraroni",
 }
 
-
-
-
-
-
 api_bp = Blueprint('api', __name__, url_prefix='/api')
-
-# Mapa de horários e turnos incompatíveis entre si no mesmo dia
-TURNOS_LABELS = {
-    'MANHA': 'Manhã (07:00 - 13:00)',
-    'TARDE': 'Tarde (13:00 - 19:00)',
-    'DIURNO_12H': 'Diurno 12h (07:00 - 19:00)',
-    'NOTURNO_12H': 'Noturno 12h (19:00 - 07:00)',
-    'COMERCIAL': 'Comercial (08:00 - 18:00)',
-}
-
-TURNOS_CONFLITANTES = {
-    'MANHA': {'MANHA', 'DIURNO_12H', 'COMERCIAL'},
-    'TARDE': {'TARDE', 'DIURNO_12H', 'COMERCIAL'},
-    'DIURNO_12H': {'MANHA', 'TARDE', 'DIURNO_12H', 'COMERCIAL'},
-    'COMERCIAL': {'MANHA', 'TARDE', 'DIURNO_12H', 'COMERCIAL'},
-    'NOTURNO_12H': {'NOTURNO_12H'},
-}
 
 
 def _obter_ccs_usuario(db, usuario_id: int) -> list[int]:
-    """Busca apenas os IDs dos centros de custo diretamente pela PK composta."""
     rows = (
         db.query(UsuarioCentroCusto.centro_custo_id)
         .filter(UsuarioCentroCusto.usuario_id == usuario_id)
@@ -64,7 +39,6 @@ def _obter_ccs_usuario(db, usuario_id: int) -> list[int]:
 
 
 def _expirar_convites_vencidos(db, colaborador_id: int | None = None):
-    """Atualiza convites DISPONIVEL com data expirada para EXPIRADO usando índice."""
     agora = datetime.now(timezone.utc)
     q = db.query(ConviteAcesso).filter(
         ConviteAcesso.status == 'DISPONIVEL',
@@ -76,7 +50,6 @@ def _expirar_convites_vencidos(db, colaborador_id: int | None = None):
 
 
 def _normalizar_utc(dt: datetime) -> datetime:
-    """Garante comparação segura entre datetimes com e sem tzinfo."""
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
@@ -214,11 +187,10 @@ def primeiro_acesso_api():
 
 
 # ==============================================================================
-# BUSCA DE COLABORADOR PARA COBERTURA (GESTOR & ROOT)
+# BUSCA DE COLABORADOR PARA COBERTURA & TRANSFERÊNCIA DE CENTRO DE CUSTO
 # ==============================================================================
 @api_bp.route('/colaboradores/buscar', methods=['GET'])
 def buscar_colaboradores_cobertura():
-    """Busca por crachá ou nome e informa se já possui cobertura alocada naquela data."""
     if not session.get('usuario_id'):
         return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
 
@@ -239,6 +211,7 @@ def buscar_colaboradores_cobertura():
             Colaborador.id,
             Colaborador.cracha,
             Colaborador.nome,
+            Colaborador.sexo,
             CentroCusto.id.label('centro_custo_id'),
             CentroCusto.codigo_cc,
             CentroCusto.nome.label('centro_custo_nome')
@@ -250,7 +223,6 @@ def buscar_colaboradores_cobertura():
         .all()
     )
 
-    # Verifica se os colaboradores retornados já possuem cobertura registrada na data da falta
     alocacoes_map = {}
     if data_str and rows:
         try:
@@ -261,7 +233,6 @@ def buscar_colaboradores_cobertura():
             coberturas_existentes = (
                 db.query(
                     AnaliseFalta.cobridor_colaborador_id,
-                    AnaliseFalta.turno_cobertura,
                     FaltanteColab.nome.label('faltante_nome'),
                     CentroCusto.nome.label('setor_falta')
                 )
@@ -275,10 +246,7 @@ def buscar_colaboradores_cobertura():
                 .all()
             )
             for cob in coberturas_existentes:
-                turno_code = cob.turno_cobertura or 'DIURNO_12H'
                 alocacoes_map.setdefault(cob.cobridor_colaborador_id, []).append({
-                    'turno': turno_code,
-                    'turno_label': TURNOS_LABELS.get(turno_code, turno_code),
                     'faltante_nome': cob.faltante_nome,
                     'setor_falta': cob.setor_falta
                 })
@@ -292,6 +260,7 @@ def buscar_colaboradores_cobertura():
                 'id': r.id,
                 'cracha': r.cracha,
                 'nome': r.nome,
+                'sexo': r.sexo,
                 'centro_custo_id': r.centro_custo_id,
                 'codigo_cc': r.codigo_cc,
                 'centro_custo': r.centro_custo_nome,
@@ -299,6 +268,175 @@ def buscar_colaboradores_cobertura():
             }
             for r in rows
         ]
+    }), 200
+
+
+@api_bp.route('/centros-custo/transferencia', methods=['GET'])
+@api_bp.route('/meus-centros-custo', methods=['GET'])
+def listar_ccs_para_transferencia():
+    """Retorna todos os CCs ativos (destino) e os CCs vinculados ao usuário logado."""
+    id_user = session.get('usuario_id')
+    perfil = session.get('usuario_perfil')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    db = get_db()
+    todos_ccs = (
+        db.query(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
+        .filter(CentroCusto.ativo.is_(True))
+        .order_by(CentroCusto.nome.asc())
+        .all()
+    )
+
+    meus_cc_ids = [] if perfil == 'ROOT' else _obter_ccs_usuario(db, id_user)
+    ccs_vinculados = (
+        todos_ccs
+        if perfil == 'ROOT'
+        else [c for c in todos_ccs if c.id in set(meus_cc_ids)]
+    )
+
+    return jsonify({
+        'sucesso': True,
+        'meus_cc_ids': meus_cc_ids,
+        'centros_custo': [{'id': c.id, 'codigo_cc': c.codigo_cc, 'nome': c.nome} for c in ccs_vinculados],
+        'todos_centros_custo': [{'id': c.id, 'codigo_cc': c.codigo_cc, 'nome': c.nome} for c in todos_ccs]
+    }), 200
+
+
+@api_bp.route('/ocorrencias/buscar-externa', methods=['GET'])
+@api_bp.route('/faltas/externas', methods=['GET'])
+def buscar_ocorrencia_externa():
+    """Permite ao gestor localizar ocorrências pendentes de colaboradores alocados em outros CCs para puxá-las."""
+    id_user = session.get('usuario_id')
+    perfil = session.get('usuario_perfil')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    termo = str(request.args.get('q', '')).strip()
+    if len(termo) < 2:
+        return jsonify({'sucesso': True, 'ocorrencias': [], 'faltas': []}), 200
+
+    db = get_db()
+    filtro = (
+        Colaborador.cracha.ilike(f'{termo}%')
+        if termo.isdigit()
+        else or_(Colaborador.nome.ilike(f'%{termo}%'), Colaborador.cracha.ilike(f'%{termo}%'))
+    )
+
+    query = (
+        db.query(
+            OcorrenciaFalta.id,
+            OcorrenciaFalta.data_ocorrencia,
+            OcorrenciaFalta.centro_custo_id,
+            Colaborador.cracha,
+            Colaborador.nome.label('colaborador_nome'),
+            Colaborador.sexo,
+            Cargo.titulo.label('cargo_titulo'),
+            CentroCusto.codigo_cc,
+            CentroCusto.nome.label('centro_custo_nome')
+        )
+        .join(Colaborador, OcorrenciaFalta.colaborador_id == Colaborador.id)
+        .join(CentroCusto, OcorrenciaFalta.centro_custo_id == CentroCusto.id)
+        .outerjoin(Cargo, Colaborador.cargo_id == Cargo.id)
+        .filter(OcorrenciaFalta.status == 'PENDENTE', filtro)
+    )
+
+    if perfil != 'ROOT':
+        meus_ccs = _obter_ccs_usuario(db, id_user)
+        if meus_ccs:
+            query = query.filter(OcorrenciaFalta.centro_custo_id.notin_(meus_ccs))
+
+    rows = query.order_by(OcorrenciaFalta.data_ocorrencia.desc()).limit(15).all()
+
+    itens = [
+        {
+            'id': r.id,
+            'cracha': r.cracha,
+            'colaborador_nome': r.colaborador_nome,
+            'sexo': r.sexo,
+            'cargo': r.cargo_titulo or '---',
+            'data_ocorrencia': r.data_ocorrencia.strftime('%d/%m/%Y'),
+            'centro_custo_id': r.centro_custo_id,
+            'codigo_cc': r.codigo_cc,
+            'centro_custo': r.centro_custo_nome
+        }
+        for r in rows
+    ]
+
+    return jsonify({
+        'sucesso': True,
+        'ocorrencias': itens,
+        'faltas': itens
+    }), 200
+
+
+@api_bp.route('/faltas/<int:ocorrencia_id>/mover-cc', methods=['PUT'])
+def mover_centro_custo_ocorrencia(ocorrencia_id):
+    """Move a ocorrência pendente (e opcionalmente o cadastro do colaborador) para outro Centro de Custo."""
+    id_user = session.get('usuario_id')
+    perfil = session.get('usuario_perfil')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    data = request.json or {}
+    novo_cc_id = data.get('novo_centro_custo_id') or data.get('centro_custo_id')
+    atualizar_cadastro_colab = bool(data.get('atualizar_cadastro_colaborador', True))
+
+    if not novo_cc_id:
+        return jsonify({'sucesso': False, 'mensagem': 'Selecione o Centro de Custo de destino.'}), 400
+
+    novo_cc_id = int(novo_cc_id)
+    db = get_db()
+
+    ocorrencia = (
+        db.query(OcorrenciaFalta)
+        .filter(OcorrenciaFalta.id == ocorrencia_id)
+        .with_for_update()
+        .first()
+    )
+    if not ocorrencia:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Ocorrência não encontrada.'}), 404
+
+    if ocorrencia.status != 'PENDENTE':
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Apenas ocorrências pendentes podem ser movidas de setor.'}), 400
+
+    cc_destino = (
+        db.query(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
+        .filter(CentroCusto.id == novo_cc_id, CentroCusto.ativo.is_(True))
+        .first()
+    )
+    if not cc_destino:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'Centro de Custo de destino inválido.'}), 404
+
+    if ocorrencia.centro_custo_id == novo_cc_id:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': 'A ocorrência já pertence a este Centro de Custo.'}), 400
+
+    if perfil != 'ROOT':
+        meus_ccs = set(_obter_ccs_usuario(db, id_user))
+        origem_eh_meu = ocorrencia.centro_custo_id in meus_ccs
+        destino_eh_meu = novo_cc_id in meus_ccs
+        if not origem_eh_meu and not destino_eh_meu:
+            db.rollback()
+            return jsonify({
+                'sucesso': False,
+                'mensagem': 'Você só pode transferir ocorrências saindo do seu setor ou puxando para o seu setor.'
+            }), 403
+
+    ocorrencia.centro_custo_id = novo_cc_id
+
+    if atualizar_cadastro_colab:
+        colab = db.query(Colaborador).filter(Colaborador.id == ocorrencia.colaborador_id).first()
+        if colab:
+            colab.centro_custo_id = novo_cc_id
+
+    db.commit()
+    return jsonify({
+        'sucesso': True,
+        'mensagem': f'Ocorrência transferida para {cc_destino.codigo_cc} - {cc_destino.nome}!'
     }), 200
 
 
@@ -334,10 +472,12 @@ def listar_faltas():
         db.query(
             OcorrenciaFalta.id,
             OcorrenciaFalta.colaborador_id,
+            OcorrenciaFalta.centro_custo_id,
             OcorrenciaFalta.data_ocorrencia,
             OcorrenciaFalta.status,
             Colaborador.cracha,
             Colaborador.nome.label('colaborador_nome'),
+            Colaborador.sexo,
             Cargo.titulo.label('cargo_titulo'),
             CentroCusto.codigo_cc,
             CentroCusto.nome.label('centro_custo_nome')
@@ -367,8 +507,8 @@ def listar_faltas():
                 AnaliseFalta.comunicada_2h_antecedencia,
                 AnaliseFalta.foi_troca_folga,
                 AnaliseFalta.autorizado_hora_extra,
+                AnaliseFalta.autorizador_he_nome,
                 AnaliseFalta.conseguiu_he_cobertura,
-                AnaliseFalta.turno_cobertura,
                 AnaliseFalta.redividiu_equipe,
                 AnaliseFalta.qtd_pacientes,
                 AnaliseFalta.qtd_colaboradores,
@@ -389,19 +529,19 @@ def listar_faltas():
         )
         for a in analises_rows:
             dt_resp = (a.respondido_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
-            turno_desc = f" [{TURNOS_LABELS.get(a.turno_cobertura, a.turno_cobertura)}]" if a.turno_cobertura else ""
             analises_map[a.ocorrencia_id] = {
                 'ausencia_programada': a.ausencia_programada,
                 'comunicada_2h_antecedencia': a.comunicada_2h_antecedencia,
                 'foi_troca_folga': a.foi_troca_folga,
                 'autorizado_hora_extra': a.autorizado_hora_extra,
+                'autorizador_he_nome': a.autorizador_he_nome,
                 'conseguiu_he_cobertura': a.conseguiu_he_cobertura,
                 'redividiu_equipe': a.redividiu_equipe,
                 'qtd_pacientes': a.qtd_pacientes,
                 'qtd_colaboradores': a.qtd_colaboradores,
                 'justificativa_nao_redimensionada': a.justificativa_nao_redimensionada,
                 'cobridor': (
-                    f"{a.cobridor_cracha} - {a.cobridor_nome} ({a.cobridor_codigo_cc} - {a.cobridor_cc_nome}){turno_desc}"
+                    f"{a.cobridor_cracha} - {a.cobridor_nome} ({a.cobridor_codigo_cc} - {a.cobridor_cc_nome})"
                     if a.cobridor_nome else None
                 ),
                 'avaliador': a.avaliador_nome,
@@ -412,8 +552,10 @@ def listar_faltas():
         {
             'id': r.id,
             'colaborador_id': r.colaborador_id,
+            'centro_custo_id': r.centro_custo_id,
             'cracha': r.cracha,
             'colaborador_nome': r.colaborador_nome,
+            'sexo': r.sexo,
             'cargo': r.cargo_titulo or '---',
             'codigo_cc': r.codigo_cc,
             'centro_custo': r.centro_custo_nome,
@@ -476,7 +618,6 @@ def analisar_falta():
         db.rollback()
         return jsonify({'sucesso': False, 'mensagem': 'Esta ocorrência já foi analisada.'}), 409
 
-    # Fluxo 1: Ausência programada pelo supervisor -> encerra imediatamente
     if ausencia_programada:
         nova_analise = AnaliseFalta(
             ocorrencia_id=ocorrencia.id,
@@ -485,10 +626,10 @@ def analisar_falta():
             comunicada_2h_antecedencia=None,
             foi_troca_folga=None,
             autorizado_hora_extra=None,
+            autorizador_he_nome=None,
             conseguiu_he_cobertura=None,
             cobridor_colaborador_id=None,
             cobridor_centro_custo_id=None,
-            turno_cobertura=None,
             redividiu_equipe=None,
             qtd_pacientes=None,
             qtd_colaboradores=None,
@@ -499,12 +640,18 @@ def analisar_falta():
         db.commit()
         return jsonify({'sucesso': True, 'mensagem': 'Ausência programada registrada com sucesso!'}), 200
 
-    # Fluxo 2: Ausência não programada
     comunicada_2h = bool(data.get('comunicada_2h_antecedencia'))
     autorizado_he = bool(data.get('autorizado_hora_extra'))
+    autorizador_he_nome = str(data.get('autorizador_he_nome') or '').strip() or None
     conseguiu_he = bool(data.get('conseguiu_he_cobertura')) if autorizado_he else False
     cobridor_id_raw = data.get('cobridor_colaborador_id')
-    turno_cobertura = str(data.get('turno_cobertura') or '').strip().upper() or None
+
+    if autorizado_he:
+        if not autorizador_he_nome or autorizador_he_nome not in COORDENADORES_AUTORIZADORES:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Selecione o coordenador que autorizou as horas extras.'}), 400
+    else:
+        autorizador_he_nome = None
 
     cobridor_id = None
     cobridor_cc_id = None
@@ -513,15 +660,10 @@ def analisar_falta():
     qtd_colaboradores = None
     justificativa_texto = None
 
-    # Caso 3a = Sim (Conseguiu cobertura -> exige substituto e turno; encerra aqui sem redimensionar equipe)
     if autorizado_he and conseguiu_he:
         if not cobridor_id_raw:
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Informe o crachá/nome de quem cobriu a ausência.'}), 400
-
-        if not turno_cobertura or turno_cobertura not in TURNOS_LABELS:
-            db.rollback()
-            return jsonify({'sucesso': False, 'mensagem': 'Selecione o turno/horário da cobertura.'}), 400
 
         cobridor_row = (
             db.query(Colaborador.id, Colaborador.cracha, Colaborador.nome, Colaborador.centro_custo_id)
@@ -537,13 +679,10 @@ def analisar_falta():
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'O colaborador faltante não pode cobrir a própria falta.'}), 400
 
-        turnos_incompativeis = TURNOS_CONFLITANTES.get(turno_cobertura, {turno_cobertura})
         FaltanteExistente = aliased(Colaborador)
-
         conflito = (
             db.query(
                 AnaliseFalta.id,
-                AnaliseFalta.turno_cobertura,
                 FaltanteExistente.nome.label('faltante_nome'),
                 CentroCusto.nome.label('setor_nome')
             )
@@ -553,23 +692,18 @@ def analisar_falta():
             .filter(
                 AnaliseFalta.cobridor_colaborador_id == cobridor_row.id,
                 OcorrenciaFalta.data_ocorrencia == ocorrencia.data_ocorrencia,
-                OcorrenciaFalta.id != ocorrencia.id,
-                or_(
-                    AnaliseFalta.turno_cobertura.in_(turnos_incompativeis),
-                    AnaliseFalta.turno_cobertura.is_(None)
-                )
+                OcorrenciaFalta.id != ocorrencia.id
             )
             .first()
         )
         if conflito:
             db.rollback()
             data_fmt = ocorrencia.data_ocorrencia.strftime('%d/%m/%Y')
-            turno_existente_lbl = TURNOS_LABELS.get(conflito.turno_cobertura, conflito.turno_cobertura or 'mesmo turno')
             return jsonify({
                 'sucesso': False,
                 'mensagem': (
                     f'Conflito de escala: {cobridor_row.nome} (Crachá {cobridor_row.cracha}) já está cobrindo '
-                    f'{conflito.faltante_nome} no setor {conflito.setor_nome} em {data_fmt} ({turno_existente_lbl}).'
+                    f'{conflito.faltante_nome} no setor {conflito.setor_nome} em {data_fmt}.'
                 )
             }), 409
 
@@ -577,9 +711,7 @@ def analisar_falta():
         cobridor_cc_id = cobridor_row.centro_custo_id
         redividiu = False
 
-    # Caso 3 = Não OU (3 = Sim e 3a = Não) -> exige Etapa 4 (Equipe foi redimensionada?)
     else:
-        turno_cobertura = None
         if data.get('redividiu_equipe') is None:
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Informe se a equipe foi redimensionada.'}), 400
@@ -619,10 +751,10 @@ def analisar_falta():
         comunicada_2h_antecedencia=comunicada_2h,
         foi_troca_folga=False,
         autorizado_hora_extra=autorizado_he,
+        autorizador_he_nome=autorizador_he_nome,
         conseguiu_he_cobertura=conseguiu_he,
         cobridor_colaborador_id=cobridor_id,
         cobridor_centro_custo_id=cobridor_cc_id,
-        turno_cobertura=turno_cobertura,
         redividiu_equipe=redividiu,
         qtd_pacientes=qtd_pacientes,
         qtd_colaboradores=qtd_colaboradores,
@@ -640,7 +772,6 @@ def analisar_falta():
 # ==============================================================================
 @api_bp.route('/colaboradores/<string:cracha>', methods=['GET'])
 def validar_cracha_colaborador(cracha):
-    """Valida se o crachá existe, está ativo e se já não possui uma hash DISPONIVEL."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
@@ -862,7 +993,6 @@ def convites_api():
 
 @api_bp.route('/convites/<int:convite_id>/reenviar', methods=['POST'])
 def reenviar_convite_api(convite_id):
-    """Regenera um novo código para o convite DISPONIVEL, atualiza a hash e reenvia o e-mail."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
@@ -931,7 +1061,6 @@ def reenviar_convite_api(convite_id):
 
 @api_bp.route('/convites/<int:convite_id>', methods=['DELETE'])
 def remover_convite_api(convite_id):
-    """Cancela/remove uma hash DISPONIVEL, liberando o crachá para novo convite."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
@@ -992,7 +1121,6 @@ def listar_gestores():
 
 @api_bp.route('/gestores/<int:usuario_id>/centros-custo', methods=['PUT'])
 def atualizar_ccs_gestor(usuario_id):
-    """Atualiza os centros de custo vinculados a um usuário GESTOR."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
@@ -1022,7 +1150,6 @@ def atualizar_ccs_gestor(usuario_id):
 
 @api_bp.route('/gestores/<int:usuario_id>/privilegios', methods=['PUT'])
 def atualizar_privilegios_gestor(usuario_id):
-    """Altera o privilégio entre GESTOR e ROOT (limpando CCs ao promover para ROOT)."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
@@ -1062,7 +1189,6 @@ def atualizar_privilegios_gestor(usuario_id):
 
 @api_bp.route('/gestores/<int:usuario_id>/senha', methods=['PUT'])
 def atualizar_senha_gestor(usuario_id):
-    """Redefine a senha de um usuário diretamente pelo painel ROOT."""
     if session.get('usuario_perfil') != 'ROOT':
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 

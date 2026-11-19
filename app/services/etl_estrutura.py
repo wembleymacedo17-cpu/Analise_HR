@@ -15,8 +15,19 @@ if ROOT_DIR not in sys.path:
 load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
 from app.services.conector_oracle import OracleConnector
-from app.services.queries_senior import QUERY_ESTRUTURA_COLABORADORES
+from app.services.queries_senior import QUERY_ESTRUTURA_COLABORADORES, CARGOS_REJEITADOS_LEGADO
 from app.models.models import Unidade, CentroCusto, Cargo, Colaborador, Usuario
+
+
+def _normalizar_sexo(valor) -> str | None:
+    if valor is None or pd.isna(valor):
+        return None
+    s = str(valor).strip().upper()
+    if s in ("M", "MASCULINO", "1"):
+        return "M"
+    if s in ("F", "FEMININO", "2"):
+        return "F"
+    return s[:10] if s else None
 
 
 class ETLEstruturaSenior:
@@ -74,6 +85,14 @@ class ETLEstruturaSenior:
         df.columns = [str(c).lower().strip() for c in df.columns]
         df["data_nascimento"] = pd.to_datetime(df["data_nascimento"], errors="coerce").dt.date
 
+        # Garantia adicional no DataFrame contra cargos legados rejeitados
+        df["codigo_cargo_limpo"] = df["codigo_cargo"].astype(str).str.strip()
+        df = df[~df["codigo_cargo_limpo"].isin(CARGOS_REJEITADOS_LEGADO)]
+
+        if df.empty:
+            print("⚠️ Nenhum colaborador elegível após filtrar CARGOS_REJEITADOS_LEGADO.")
+            return
+
         session = self.Session()
         try:
             # 1. UNIDADES
@@ -108,8 +127,10 @@ class ETLEstruturaSenior:
 
             # 3. CARGOS
             map_cargos = {c.codigo_cargo: c for c in session.query(Cargo).all()}
-            for _, row in df[["codigo_cargo", "titulo_cargo"]].drop_duplicates(subset=["codigo_cargo"]).dropna().iterrows():
-                cod_car = str(row["codigo_cargo"]).strip()
+            for _, row in df[["codigo_cargo_limpo", "titulo_cargo"]].drop_duplicates(subset=["codigo_cargo_limpo"]).dropna().iterrows():
+                cod_car = row["codigo_cargo_limpo"]
+                if cod_car in CARGOS_REJEITADOS_LEGADO:
+                    continue
                 titulo = str(row["titulo_cargo"]).strip()
                 if cod_car not in map_cargos:
                     car = Cargo(codigo_cargo=cod_car, titulo=titulo)
@@ -125,15 +146,20 @@ class ETLEstruturaSenior:
             inseridos, atualizados = 0, 0
 
             for _, row in df.drop_duplicates(subset=["cpf"]).iterrows():
+                cod_car = row["codigo_cargo_limpo"]
+                if cod_car in CARGOS_REJEITADOS_LEGADO:
+                    continue
+
                 cpf = str(row["cpf"]).strip().zfill(11) if pd.notna(row["cpf"]) else None
                 cracha = str(row["cracha"]).strip() if pd.notna(row["cracha"]) else None
                 dt_nasc = row["data_nascimento"]
                 cc_obj = map_ccs.get(str(row["codigo_cc"]).strip())
-                cargo_obj = map_cargos.get(str(row["codigo_cargo"]).strip())
+                cargo_obj = map_cargos.get(cod_car)
 
                 if not cpf or not cracha or pd.isna(dt_nasc) or not cc_obj or not cargo_obj:
                     continue
 
+                sexo_val = _normalizar_sexo(row["sexo"]) if "sexo" in row else None
                 email_val = str(row["email"]).strip().lower() if pd.notna(row["email"]) and str(row["email"]).strip() else None
                 nome_val = str(row["nome"]).strip()
                 cpfs_ativos_senior.add(cpf)
@@ -142,6 +168,7 @@ class ETLEstruturaSenior:
                     c = colabs_banco[cpf]
                     c.cracha = cracha
                     c.nome = nome_val
+                    c.sexo = sexo_val or c.sexo
                     c.data_nascimento = dt_nasc
                     c.email = email_val or c.email
                     c.cargo_id = cargo_obj.id
@@ -152,6 +179,7 @@ class ETLEstruturaSenior:
                     novo = Colaborador(
                         cracha=cracha,
                         nome=nome_val,
+                        sexo=sexo_val,
                         cpf=cpf,
                         data_nascimento=dt_nasc,
                         email=email_val,
@@ -162,7 +190,7 @@ class ETLEstruturaSenior:
                     session.add(novo)
                     inseridos += 1
 
-            # Inativa quem saiu da base ativa do Senior
+            # Inativa quem saiu da base ativa do Senior ou caiu em cargo rejeitado
             inativados = 0
             for cpf, colab in colabs_banco.items():
                 if cpf not in cpfs_ativos_senior and colab.ativo:
