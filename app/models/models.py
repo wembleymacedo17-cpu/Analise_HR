@@ -196,3 +196,21 @@ class LogEnvioEmail(Base):
     status_envio = Column(String(20), nullable=False)
     detalhe_erro = Column(Text, nullable=True)
     tentativa_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class HistoricoAnaliseDesfeita(Base):
+    __tablename__ = "historico_analises_desfeitas"
+    __table_args__ = (
+        Index("ix_hist_desfeitas_ocorrencia_id", "ocorrencia_id"),
+        Index("ix_hist_desfeitas_usuario_id", "desfeito_por_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    ocorrencia_id = Column(Integer, ForeignKey("ocorrencias_faltas.id", ondelete="CASCADE"), nullable=False)
+    colaborador_id = Column(Integer, ForeignKey("colaboradores.id", ondelete="CASCADE"), nullable=False)
+    centro_custo_id = Column(Integer, ForeignKey("centros_custo.id", ondelete="CASCADE"), nullable=False)
+    data_ocorrencia = Column(Date, nullable=False)
+    desfeito_por_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    motivo = Column(Text, nullable=False)
+    dados_analise_anterior = Column(Text, nullable=True)
+    desfeito_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)    
