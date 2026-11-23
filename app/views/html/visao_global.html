@@ -8,7 +8,7 @@
                     <option value="PENDENTE" selected>Pendentes</option>
                     <option value="ANALISADA">Analisadas</option>
                 </select>
-                <button type="button" class="btn btn-outline" onclick="abrirModalPuxarColaborador()">Buscar de Outro Setor</button>
+                <button type="button" id="btn-buscar-outro-setor" class="btn btn-outline {{ 'is-hidden' if perfil == 'ROOT' else '' }}" onclick="abrirModalPuxarColaborador()">Buscar de Outro Setor</button>
                 <button type="button" class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
             </div>
         </div>
@@ -242,8 +242,10 @@
         if (PERFIL_LOGADO !== "ROOT") return;
         const busca = document.getElementById("filtro-busca");
         const status = document.getElementById("filtro-status");
+        const btnOutroSetor = document.getElementById("btn-buscar-outro-setor");
         if (busca) busca.classList.toggle("is-hidden", !exibir);
         if (status) status.classList.toggle("is-hidden", !exibir);
+        if (btnOutroSetor) btnOutroSetor.classList.toggle("is-hidden", !exibir);
     }
 
     function aoMudarFiltroStatus() {
