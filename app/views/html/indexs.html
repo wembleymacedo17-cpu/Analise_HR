@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Hora Extra | FUNFARME</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/analise_he.css') }}">
+    <style>
+        .timeline-entry {
+            display: flex; align-items: center; justify-content: space-between; gap: 6px;
+            position: relative; padding: 5px 8px; border-radius: 8px; border: 1px solid transparent;
+            cursor: pointer; transition: all 0.16s ease;
+        }
+        .timeline-entry:hover {
+            background: #dbeafe; border-color: #60a5fa;
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.14); transform: translateX(2px);
+        }
+        .timeline-entry:hover .timeline-date { color: #1e3a8a; }
+        .desfazer-motivo-box {
+            margin-top: 10px; padding: 14px; border-radius: 12px;
+            background: #fef2f2; border: 1.5px solid #fca5a5; display: none; animation: fadeIn 0.18s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebarMobile()"></div>
+
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-box">
+                <img src="{{ url_for('static', filename='img/Logo_funfarme.png') }}" alt="FUNFARME">
+                <div class="brand-title">Análise de Hora Extra</div>
+            </div>
+
+            <div>
+                <div class="nav-section-label">Menu</div>
+                <nav class="glass-menu">
+                    <button type="button" class="glass-nav-btn active" onclick="trocarAba('aba-faltas', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>
+                        </span>
+                        <span>{{ 'Visão Global' if perfil == 'ROOT' else 'Ocorrências' }}</span>
+                    </button>
+
+                    {% if perfil == 'ROOT' %}
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-convites', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                        </span>
+                        <span>Convites de Acesso</span>
+                    </button>
+
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-gestores', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </span>
+                        <span>Gestão de Perfis</span>
+                    </button>
+
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-etl', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                        </span>
+                        <span>Integração Senior</span>
+                    </button>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="user-glass-card">
+                <div class="user-name">{{ usuario }}</div>
+                <div class="user-meta">
+                    <span class="user-cracha">Crachá: {{ cracha }}</span>
+                    <span class="badge-role {{ 'badge-root' if perfil == 'ROOT' else 'badge-gestor' }}">
+                        {{ 'ADMIN' if perfil == 'ROOT' else 'GESTOR' }}
+                    </span>
+                </div>
+            </div>
+            <a href="/logout" class="btn-logout">Sair</a>
+        </div>
+    </aside>
+
+    <div class="main-wrapper">
+        <div class="mobile-topbar">
+            <button type="button" class="btn-menu-mobile" onclick="toggleSidebarMobile()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <span style="font-weight:700; font-size:0.95rem;">Análise de Hora Extra</span>
+            <span class="badge-role {{ 'badge-root' if perfil == 'ROOT' else 'badge-gestor' }}">{{ perfil }}</span>
+        </div>
+
+        <main class="container">
+            <section id="kpi-grid" class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-label">Pendentes</span>
+                    <span class="kpi-value kpi-pendente" id="kpi-pendentes">--</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Analisadas</span>
+                    <span class="kpi-value kpi-analisada" id="kpi-analisadas">--</span>
+                </div>
+                {% if perfil == 'ROOT' %}
+                <div class="kpi-card">
+                    <span class="kpi-label">Gestores Ativos</span>
+                    <span class="kpi-value kpi-info" id="kpi-gestores">--</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Convites Ativos</span>
+                    <span class="kpi-value" id="kpi-convites">--</span>
+                </div>
+                {% endif %}
+            </section>
+
+            <section id="aba-faltas" class="tab-content active">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title" id="titulo-aba-faltas">{{ 'Visão Global por Gestor' if perfil == 'ROOT' else 'Ocorrências' }}</h2>
+                        <div class="filters-row">
+                            <input type="text" id="filtro-busca" class="input-control {{ 'is-hidden' if perfil == 'ROOT' else '' }}" placeholder="Buscar nome, crachá ou cargo..." oninput="filtrarTabelaFaltas()">
+                            <select id="filtro-status" class="select-control {{ 'is-hidden' if perfil == 'ROOT' else '' }}" onchange="aoMudarFiltroStatus()">
+                                <option value="PENDENTE" selected>Pendentes</option>
+                                <option value="ANALISADA">Analisadas</option>
+                            </select>
+                            <button type="button" class="btn btn-outline" onclick="abrirModalPuxarColaborador()">Buscar de Outro Setor</button>
+                            <button type="button" class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
+                        </div>
+                    </div>
+
+                    <div id="banner-gestor-selecionado" class="gestor-detalhe-banner">
+                        <div>
+                            <strong id="lbl-vg-gestor-nome" style="color:var(--funfarme-blue); font-size:0.95rem;">--</strong>
+                            <div id="lbl-vg-gestor-resumo" style="font-size:0.78rem; color:#334155; margin-top:2px;">--</div>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="voltarListaGestoresGlobal()">← Voltar para Gestores</button>
+                    </div>
+
+                    <div id="grid-gestores-global" class="gestores-global-grid" style="display:none;"></div>
+
+                    <div id="grid-faltas-bento" class="bento-ocorrencias-grid">
+                        <div style="grid-column: 1 / -1; text-align:center; color:#64748b; padding: 24px;">Carregando ocorrências...</div>
+                    </div>
+                </div>
+            </section>
+
+            {% if perfil == 'ROOT' %}
+            <section id="aba-convites" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Novo Convite</h2>
+                        <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoConvites()">Histórico</button>
+                    </div>
+
+                    <div class="stepper-bar">
+                        <div class="step-item active" id="step-ind-1"><div class="step-circle">1</div><span class="step-title">Identificação</span></div>
+                        <div class="step-divider"></div>
+                        <div class="step-item" id="step-ind-2"><div class="step-circle">2</div><span class="step-title">Centros de Custo</span></div>
+                        <div class="step-divider"></div>
+                        <div class="step-item" id="step-ind-3"><div class="step-circle">3</div><span class="step-title">Conferência</span></div>
+                        <div class="step-divider"></div>
+                        <div class="step-item" id="step-ind-4"><div class="step-circle">4</div><span class="step-title">Confirmação</span></div>
+                    </div>
+
+                    <div id="step-pane-1" class="step-pane active">
+                        <div class="form-grid">
+                            <div class="field-group">
+                                <label for="conv-cracha">Crachá *</label>
+                                <input type="text" id="conv-cracha" class="input-control" placeholder="Ex: 12345" oninput="ocultarAlertaDuplicado()">
+                            </div>
+                            <div class="field-group">
+                                <label for="conv-email">E-mail de Envio *</label>
+                                <input type="email" id="conv-email" class="input-control" required placeholder="gestor@funfarme.com.br">
+                            </div>
+                            <div class="field-group">
+                                <label for="conv-validade">Validade</label>
+                                <select id="conv-validade" class="select-control">
+                                    <option value="3">3 dias</option>
+                                    <option value="7" selected>7 dias</option>
+                                    <option value="15">15 dias</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="alerta-convite-duplicado" class="alerta-duplicado-box">
+                            <span id="lbl-alerta-duplicado">Já existe uma hash disponível para este crachá.</span>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="abrirModalHistoricoConvites(document.getElementById('conv-cracha').value.trim())">Gerenciar no Histórico</button>
+                        </div>
+
+                        <div class="step-actions" style="justify-content: flex-end;">
+                            <button type="button" class="btn btn-primary" id="btn-step1-next" onclick="validarEAvancarStep2()">Próximo: Selecionar Setores</button>
+                        </div>
+                    </div>
+
+                    <div id="step-pane-2" class="step-pane">
+                        <div class="gestor-pill-banner" id="banner-gestor-validado"><span id="lbl-gestor-validado">--</span></div>
+                        <div class="field-group">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom: 6px;">
+                                <label>Selecionados: <span id="lbl-qtd-ccs" style="color:var(--funfarme-blue); font-weight:800;">0</span></label>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <input type="text" id="busca-cc" class="input-control" style="padding: 7px 11px; font-size:0.8rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesCC()">
+                                    <button type="button" class="btn btn-secondary" style="padding: 7px 12px; font-size:0.78rem;" onclick="alternarTodosCCs(false)">Limpar</button>
+                                </div>
+                            </div>
+                            <div id="lista-ccs-checkbox" class="cc-checklist"><span style="color:#64748b; font-size:0.8rem;">Carregando setores...</span></div>
+                        </div>
+                        <div class="step-actions">
+                            <button type="button" class="btn btn-secondary" onclick="irParaStep(1)">Voltar</button>
+                            <button type="button" class="btn btn-primary" onclick="irParaStep(3)">Próximo: Conferir</button>
+                        </div>
+                    </div>
+
+                    <div id="step-pane-3" class="step-pane">
+                        <div class="review-card">
+                            <div class="review-row"><span style="color:var(--text-muted);">Gestor:</span><strong id="rev-gestor" style="color:var(--funfarme-blue);">--</strong></div>
+                            <div class="review-row"><span style="color:var(--text-muted);">E-mail:</span><strong id="rev-email">--</strong></div>
+                            <div class="review-row"><span style="color:var(--text-muted);">Validade:</span><strong id="rev-validade">--</strong></div>
+                            <div class="review-row" style="flex-direction: column;"><span style="color:var(--text-muted);">Setores:</span><div id="rev-ccs-lista" class="review-chips"></div></div>
+                        </div>
+                        <div class="step-actions">
+                            <button type="button" class="btn btn-secondary" id="btn-voltar-step3" onclick="irParaStep(2)">Voltar</button>
+                            <button type="button" class="btn btn-success" id="btn-gerar-convite" onclick="submeterConviteStepper()">Gerar Hash & Enviar</button>
+                        </div>
+                    </div>
+
+                    <div id="step-pane-4" class="step-pane">
+                        <div id="step4-card" class="step4-status-card status-ok">
+                            <div class="step4-icon" id="step4-icon"></div>
+                            <h3 class="step4-title" id="step4-titulo">Hash Enviada com Sucesso!</h3>
+                            <p class="step4-desc" id="step4-descricao">--</p>
+                            <div class="step4-erro-detalhe" id="step4-erro-box" style="display:none;"></div>
+                            <div class="step4-hash-box">
+                                <span class="codigo-destaque" id="lbl-codigo-hash">--------</span>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="copiarCodigo()">Copiar Hash</button>
+                            </div>
+                        </div>
+                        <div class="step-actions" style="justify-content: flex-end;">
+                            <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoConvites()">Ver Histórico</button>
+                            <button type="button" class="btn btn-primary" onclick="resetarStepperConvite()">Novo Convite</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="aba-gestores" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Gestão de Perfis</h2>
+                        <div class="filters-row">
+                            <input type="text" id="filtro-perfis" class="input-control" placeholder="Buscar crachá, nome ou perfil..." oninput="filtrarTabelaPerfis()">
+                            <button type="button" class="btn btn-primary" onclick="carregarGestores()">Atualizar</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Crachá</th>
+                                    <th>Usuário</th>
+                                    <th style="width: 110px;">Perfil</th>
+                                    <th>Centros de Custo</th>
+                                    <th style="width: 120px;">Status</th>
+                                    <th style="width: 140px; text-align: right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-gestores">
+                                <tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando perfis...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="aba-etl" class="tab-content">
+                <div class="panel">
+                    <div class="panel-header"><h2 class="panel-title">Sincronização Senior Vetorh</h2></div>
+                    <div class="etl-grid">
+                        <div class="etl-card">
+                            <div><h4>Carga Diária (D-1)</h4><p style="margin-top:6px;">Importa ocorrências dos últimos 15 dias até ontem.</p></div>
+                            <button class="btn btn-primary" onclick="dispararETL('faltas', this)">Executar Carga Diária</button>
+                        </div>
+                        <div class="etl-card">
+                            <div><h4>Carga Semanal de Estrutura</h4><p style="margin-top:6px;">Atualiza unidades, centros de custo, cargos e colaboradores.</p></div>
+                            <button class="btn btn-warning" onclick="dispararETL('estrutura', this)">Executar Carga Semanal</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- MODAL DETALHES, MOVER CC & DESFAZER ANÁLISE -->
+    <div id="modal-detalhes-ocorrencia" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Detalhes da Ocorrência</h3>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalDetalhesOcorrencia()">Fechar</button>
+            </div>
+            <div class="detalhe-hero">
+                <div class="detalhe-hero-avatar" id="det-hero-avatar"></div>
+                <div style="min-width: 0; flex: 1;">
+                    <div style="font-size: 1rem; font-weight: 800;" id="det-nome">--</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;" id="det-cargo">--</div>
+                </div>
+                <div id="det-status-badge"></div>
+            </div>
+            <div class="detalhe-grid">
+                <div class="detalhe-item"><div class="detalhe-item-label">Crachá</div><div class="detalhe-item-val" id="det-cracha">--</div></div>
+                <div class="detalhe-item"><div class="detalhe-item-label">Data da Ocorrência</div><div class="detalhe-item-val" id="det-data">--</div></div>
+                <div class="detalhe-item" style="grid-column: 1 / -1;"><div class="detalhe-item-label">Centro de Custo Atual</div><div class="detalhe-item-val" id="det-cc">--</div></div>
+            </div>
+
+            <div id="det-auditoria-box" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:12px 14px; font-size:0.82rem; color:#065f46; line-height:1.45; margin-bottom: 12px;"></div>
+
+            <div id="det-desfazer-box" class="desfazer-motivo-box">
+                <label for="input-motivo-desfazer" style="display:block; font-size:0.82rem; font-weight:700; color:#b91c1c; margin-bottom:6px;">
+                    Qual o motivo de estar desfazendo esta análise? *
+                </label>
+                <textarea id="input-motivo-desfazer" class="textarea-control" style="min-height:70px; margin-bottom:10px;" placeholder="Ex: Lançamento incorreto, troca de informação do gestor..."></textarea>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDesfazerBox(false)">Cancelar</button>
+                    <button type="button" class="btn btn-danger btn-sm" id="btn-confirmar-desfazer" onclick="confirmarDesfazerAnalise()">Confirmar Desfazer</button>
+                </div>
+            </div>
+
+            <div id="det-acoes-analisada-bar" class="modal-actions" style="display:none; justify-content:flex-end;">
+                <button type="button" class="btn btn-danger" id="btn-abrir-desfazer" onclick="toggleDesfazerBox(true)">Desfazer</button>
+            </div>
+
+            <div id="det-mover-cc-box" class="mover-cc-box">
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--funfarme-blue); margin-bottom:8px;">Enviar ocorrência para qual Centro de Custo?</label>
+                <input type="text" id="input-busca-cc-destino" class="input-control" style="width: 100%; margin-bottom: 8px;" placeholder="Filtrar setor de destino..." oninput="filtrarSelectCCDestino()">
+                <select id="select-cc-destino" class="select-control" style="width: 100%; margin-bottom: 10px;"></select>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleMoverCCBox(false)">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-confirmar-mover-cc" onclick="confirmarMoverCentroCusto()">Confirmar Transferência</button>
+                </div>
+            </div>
+
+            <div id="det-acoes-bar" class="modal-actions">
+                <button type="button" class="btn btn-outline" id="btn-abrir-mover-cc" onclick="toggleMoverCCBox(true)">Mover Centro de Custo</button>
+                <button type="button" class="btn btn-primary" id="btn-iniciar-analise-det">Analisar Falta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BUSCAR EXTERNA -->
+    <div id="modal-puxar-colaborador" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div><h3>Buscar Colaborador de Outro Setor</h3><div class="modal-info">Traga uma ocorrência pendente de outro setor</div></div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalPuxarColaborador()">Fechar</button>
+            </div>
+            <div class="field-group" style="margin-bottom: 12px;">
+                <label for="input-busca-externa">Pesquisar por Crachá ou Nome *</label>
+                <input type="text" id="input-busca-externa" class="input-control" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarOcorrenciasExternasDebounced()">
+            </div>
+            <div id="lista-ocorrencias-externas" class="modal-body-scroll" style="max-height: 260px; display: flex; flex-direction: column; gap: 8px;"></div>
+            <div id="box-destino-puxar" class="mover-cc-box" style="margin-top: 14px;">
+                <div style="font-size:0.83rem; margin-bottom: 8px;" id="lbl-resumo-puxar">--</div>
+                <div class="field-group" style="margin-bottom: 10px;">
+                    <label for="select-meu-cc-destino">Alocar em qual Centro de Custo? *</label>
+                    <select id="select-meu-cc-destino" class="select-control"></select>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelarSelecaoPuxar()">Cancelar</button>
+                    <button type="button" class="btn btn-success btn-sm" id="btn-confirmar-puxar" onclick="confirmarPuxarColaborador()">Trazer para Meu Setor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if perfil == 'ROOT' %}
+    <div id="modal-editar-cc" class="modal-backdrop">
+        <div class="modal-card modal-md">
+            <div class="modal-header">
+                <div><h3>Editar Centros de Custo</h3><div class="modal-info" id="edit-cc-subtitulo">--</div></div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalEditarCC()">Fechar</button>
+            </div>
+            <input type="hidden" id="edit-cc-usuario-id">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                <span style="font-size:0.82rem; font-weight:700;">Vinculados: <strong id="edit-cc-contador" style="color:var(--funfarme-blue);">0</strong></span>
+                <div style="display:flex; gap:6px;">
+                    <input type="text" id="edit-cc-busca" class="input-control" style="padding:6px 10px; font-size:0.8rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesEditarCC()">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="limparCheckboxesEditarCC()">Limpar</button>
+                </div>
+            </div>
+            <div id="edit-cc-checklist" class="cc-checklist modal-body-scroll"></div>
+            <div class="modal-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEditarCC()">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-salvar-edit-cc" onclick="salvarEditarCC()">Salvar Setores</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-editar-privilegios" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header"><div><h3>Editar Privilégios</h3><div class="modal-info" id="edit-priv-subtitulo">--</div></div></div>
+            <input type="hidden" id="edit-priv-usuario-id">
+            <input type="hidden" id="edit-priv-role-selecionado">
+            <div class="role-option-grid">
+                <div class="role-option-card" id="card-role-GESTOR" onclick="selecionarRoleCard('GESTOR')">
+                    <div class="role-option-title"><span>GESTOR</span><span class="status-pill pill-gestor-badge">Operacional</span></div>
+                    <p class="role-option-desc">Visualiza e analisa apenas as ocorrências dos Centros de Custo vinculados.</p>
+                </div>
+                <div class="role-option-card" id="card-role-ROOT" onclick="selecionarRoleCard('ROOT')">
+                    <div class="role-option-title"><span>ROOT</span><span class="status-pill pill-utilizado">Admin Total</span></div>
+                    <p class="role-option-desc">Acesso global a todos os setores, convites, gestão de perfis e cargas ETL.</p>
+                </div>
+            </div>
+            <div class="modal-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEditarPrivilegios()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-edit-priv" onclick="salvarEditarPrivilegios()">Salvar Privilégio</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-editar-senha" class="modal-backdrop">
+        <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header"><div><h3>Alterar Senha</h3><div class="modal-info" id="edit-senha-subtitulo">--</div></div></div>
+            <form id="form-editar-senha">
+                <input type="hidden" id="edit-senha-usuario-id">
+                <div class="field-group" style="margin-bottom: 14px;"><label for="edit-nova-senha">Nova Senha *</label><input type="password" id="edit-nova-senha" class="input-control" required minlength="6"></div>
+                <div class="field-group"><label for="edit-confirma-senha">Confirmar Nova Senha *</label><input type="password" id="edit-confirma-senha" class="input-control" required minlength="6"></div>
+                <div class="modal-actions" style="justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalEditarSenha()">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btn-salvar-edit-senha">Salvar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-historico-convites" class="modal-backdrop">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3>Histórico de Convites</h3>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="filtro-hist-convites" class="input-control" style="padding:7px 11px; font-size:0.8rem;" placeholder="Buscar..." oninput="filtrarHistoricoConvites()">
+                    <button type="button" class="btn btn-secondary" style="padding:7px 12px;" onclick="fecharModalHistoricoConvites()">Fechar</button>
+                </div>
+            </div>
+            <div class="modal-body-scroll table-wrapper">
+                <table>
+                    <thead><tr><th>Crachá</th><th>Gestor</th><th>E-mail</th><th>Setores</th><th>Status</th><th>Expira em</th><th>Ações</th></tr></thead>
+                    <tbody id="tbody-convites"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- MODAL ANÁLISE OPERACIONAL -->
+    <div id="modal-analise" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div><h3>Análise Operacional</h3><div class="modal-info" id="modal-subtitulo">Colaborador • Data</div></div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalAnalise()">Fechar</button>
+            </div>
+            <div class="progress-container">
+                <div class="progress-header">
+                    <span class="progress-step-label" id="lbl-progresso-etapa">Etapa 1 de 4</span>
+                    <span class="progress-pct-badge" id="lbl-progresso-pct">25% concluído</span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" id="barra-progresso-fill" style="width: 25%;"></div></div>
+            </div>
+            <form id="form-analise-falta" class="modal-body-scroll">
+                <input type="hidden" id="analise-ocorrencia-id">
+                <input type="hidden" id="analise-faltante-id">
+                <input type="hidden" id="cobridor-colaborador-id">
+
+                <div id="an-step-pane-1" class="step-pane active">
+                    <div class="single-question-card">
+                        <div class="single-question-title">1. Ausência programada pelo supervisor?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card"><input type="radio" name="q_programada" value="1" onchange="atualizarAcaoStep1()"><span>Sim</span></label>
+                            <label class="choice-card"><input type="radio" name="q_programada" value="0" onchange="atualizarAcaoStep1()"><span>Não</span></label>
+                        </div>
+                    </div>
+                    <div class="modal-actions" style="justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="btn-analise-step1-next" onclick="avancarDoStep1()">Próximo</button>
+                        <button type="button" class="btn btn-success" id="btn-step1-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">Salvar e Finalizar</button>
+                    </div>
+                </div>
+
+                <div id="an-step-pane-2" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">2. A falta foi comunicada com 2h de antecedência?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card"><input type="radio" name="q_comunicada" value="1"><span>Sim</span></label>
+                            <label class="choice-card"><input type="radio" name="q_comunicada" value="0"><span>Não</span></label>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="irStepAnalise(1)">Voltar</button>
+                        <button type="button" class="btn btn-primary" onclick="avancarDoStep2()">Próximo</button>
+                    </div>
+                </div>
+
+                <div id="an-step-pane-3" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">3. Foi autorizado horas extras para a cobertura?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card"><input type="radio" name="q_aut_he" value="1" onchange="atualizarSubpergunta3a()"><span>Sim</span></label>
+                            <label class="choice-card"><input type="radio" name="q_aut_he" value="0" onchange="atualizarSubpergunta3a()"><span>Não</span></label>
+                        </div>
+                        <div id="bloco-pergunta-3a" class="sub-question-block">
+                            <div class="sub-question-title">3a. Quem autorizou?</div>
+                            <div class="field-group" style="margin-bottom: 16px;">
+                                <select id="select-autorizador-he" class="select-control" style="width: 100%;">
+                                    <option value="">Selecione o coordenador...</option>
+                                    <option value="Ana Paula Augusto Valverde">Ana Paula Augusto Valverde</option>
+                                    <option value="Débora Augusto Valverde">Débora Augusto Valverde</option>
+                                    <option value="Janaina Souza de Lima">Janaina Souza de Lima</option>
+                                    <option value="Kátia Luciana Franca Pereira">Kátia Luciana Franca Pereira</option>
+                                    <option value="Rafaela Marqui">Rafaela Marqui</option>
+                                    <option value="Suzilene Ribeiro">Suzilene Ribeiro</option>
+                                    <option value="Juliane Cristina Souza Ferraroni">Juliane Cristina Souza Ferraroni</option>
+                                </select>
+                            </div>
+                            <div class="sub-question-title" style="padding-top: 14px; border-top: 1px dashed #cbd5e1;">3b. Conseguiu cobertura para esta ausência?</div>
+                            <div class="choice-cards-grid">
+                                <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()"><span>Sim</span></label>
+                                <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()"><span>Não</span></label>
+                            </div>
+                            <div class="cobertura-box" id="box-origem-cobertura">
+                                <label class="cobertura-label" for="input-busca-cobridor">Informe o crachá ou nome de quem cobriu *</label>
+                                <div class="autocomplete-wrap">
+                                    <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
+                                    <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
+                                </div>
+                                <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
+                                    <div class="cobridor-selecionado-info"><strong id="lbl-cobridor-nome">--</strong><span id="lbl-cobridor-cc">--</span></div>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="irStepAnalise(2)">Voltar</button>
+                        <button type="button" class="btn btn-primary" id="btn-step3-next" onclick="avancarDoStep3()">Próximo</button>
+                        <button type="button" class="btn btn-success" id="btn-step3-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">Salvar e Finalizar Análise</button>
+                    </div>
+                </div>
+
+                <div id="an-step-pane-4" class="step-pane">
+                    <div class="single-question-card">
+                        <div class="single-question-title">4. A equipe foi redimensionada?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card"><input type="radio" name="q_redividiu" value="1" onchange="atualizarDetalhesStep4()"><span>Sim</span></label>
+                            <label class="choice-card"><input type="radio" name="q_redividiu" value="0" onchange="atualizarDetalhesStep4()"><span>Não</span></label>
+                        </div>
+                        <div id="box-redivisao-sim" class="redivisao-detalhes-box">
+                            <div class="redivisao-grid">
+                                <div class="field-group"><label for="input-qtd-pacientes">Número de Pacientes *</label><input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1"></div>
+                                <div class="field-group"><label for="input-qtd-colaboradores">Número de Colaboradores *</label><input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1"></div>
+                            </div>
+                        </div>
+                        <div id="box-redivisao-nao" class="redivisao-detalhes-box">
+                            <div class="field-group"><label for="input-justificativa-nao">Descreva o que foi feito *</label><textarea id="input-justificativa-nao" class="textarea-control"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="irStepAnalise(3)">Voltar</button>
+                        <button type="button" class="btn btn-success" id="btn-step4-salvar" onclick="salvarAnaliseCompleta()">Salvar e Finalizar Análise</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-confirmacao" class="modal-backdrop modal-top">
+        <div class="modal-card confirm-card">
+            <h3 class="confirm-title" id="confirm-titulo">Confirmar</h3>
+            <p class="confirm-desc" id="confirm-mensagem">Tem certeza?</p>
+            <div class="confirm-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalConfirmacao()">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-confirmar-acao">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-msg" class="toast"></div>
+
+    <!-- MODAL DE ALERTA DE SEGURANÇA E EXPIRAÇÃO DE SESSÃO COM CONTADOR DE 30S -->
+    <div id="modal-sessao-derrubada" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.90); backdrop-filter: blur(10px); z-index: 999999; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; border: 1px solid #ef4444; border-radius: 16px; padding: 32px 24px; max-width: 430px; width: 92%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);">
+            <div style="background: rgba(239, 68, 68, 0.15); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            
+            <h3 style="color: #ffffff; font-size: 1.25rem; margin-bottom: 10px; font-weight: 700;" id="titulo-modal-sessao">
+                Acesso Simultâneo Detectado
+            </h3>
+            
+            <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.5; margin-bottom: 18px;" id="msg-detalhe-sessao">
+                Detectamos um novo login com o seu usuário em outro dispositivo. Por segurança, esta sessão será desconectada.
+            </p>
+
+            <!-- Caixa de Contagem Regressiva de 30 Segundos -->
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 20px;">
+                <div style="color: #fca5a5; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">
+                    Desconectando automaticamente em <strong id="contador-segundos" style="font-size: 1rem; color: #ffffff;">30</strong> segundos...
+                </div>
+                <div style="width: 100%; height: 6px; background: #334155; border-radius: 4px; overflow: hidden;">
+                    <div id="barra-progresso-sessao" style="width: 100%; height: 100%; background: #ef4444; transition: width 1s linear;"></div>
+                </div>
+            </div>
+
+            <button type="button" onclick="redirecionarLoginImediato()" style="width: 100%; padding: 12px; background: #ef4444; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;">
+                Ir para o Login Agora
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let sessaoJaDerrubada = false;
+        let intervaloContagem = null;
+        let intervaloHeartbeat = null;
+        let motivoDesconexaoAtual = "outro_dispositivo";
+
+        function redirecionarLoginImediato() {
+            clearInterval(intervaloContagem);
+            window.location.href = `/login?motivo=${encodeURIComponent(motivoDesconexaoAtual)}`;
+        }
+
+        function exibirModalSessao(titulo, mensagem, motivo = "outro_dispositivo") {
+            if (sessaoJaDerrubada) return;
+            sessaoJaDerrubada = true;
+            motivoDesconexaoAtual = motivo;
+
+            clearInterval(intervaloHeartbeat);
+
+            const mainWrapper = document.querySelector(".main-wrapper");
+            const sidebar = document.getElementById("sidebar");
+            if (mainWrapper) {
+                mainWrapper.style.pointerEvents = "none";
+                mainWrapper.style.filter = "blur(4px)";
+            }
+            if (sidebar) {
+                sidebar.style.pointerEvents = "none";
+                sidebar.style.filter = "blur(4px)";
+            }
+
+            const modal = document.getElementById("modal-sessao-derrubada");
+            const elContador = document.getElementById("contador-segundos");
+            const elBarra = document.getElementById("barra-progresso-sessao");
+
+            document.getElementById("titulo-modal-sessao").innerText = titulo;
+            document.getElementById("msg-detalhe-sessao").innerText = mensagem;
+            modal.style.display = "flex";
+
+            let tempoRestante = 30;
+            elContador.innerText = tempoRestante;
+            elBarra.style.width = "100%";
+
+            intervaloContagem = setInterval(() => {
+                tempoRestante--;
+                elContador.innerText = tempoRestante;
+
+                const percentual = Math.max(0, (tempoRestante / 30) * 100);
+                elBarra.style.width = percentual + "%";
+
+                if (tempoRestante <= 0) {
+                    clearInterval(intervaloContagem);
+                    window.location.href = `/login?motivo=${encodeURIComponent(motivoDesconexaoAtual)}`;
+                }
+            }, 1000);
+        }
+
+        const _fetchOriginal = window.fetch;
+        window.fetch = async (...args) => {
+            const resp = await _fetchOriginal(...args);
+            if (resp.status === 401 && !sessaoJaDerrubada) {
+                const data = await resp.clone().json().catch(() => ({}));
+                if (data.sessao_expirada) {
+                    const ehInatividade = data.motivo === "inatividade";
+                    exibirModalSessao(
+                        ehInatividade ? "Sessão Expirada por Inatividade" : "Acesso Simultâneo Detectado",
+                        data.mensagem || "Detectamos que sua conta foi conectada em outro dispositivo. Esta sessão será desconectada.",
+                        data.motivo || "outro_dispositivo"
+                    );
+                }
+            }
+            return resp;
+        };
+
+        async function checarSessaoAtiva() {
+            if (sessaoJaDerrubada) return;
+            try {
+                await fetch("/api/verificar-sessao", { method: "GET", cache: "no-store" });
+            } catch (_) {}
+        }
+
+        intervaloHeartbeat = setInterval(checarSessaoAtiva, 7000);
+
+        (function () {
+            const TEMPO_INATIVIDADE_MS = 30 * 60 * 1000;
+            let timerInatividade;
+
+            function resetarTimerInatividade() {
+                if (sessaoJaDerrubada) return;
+                clearTimeout(timerInatividade);
+                timerInatividade = setTimeout(desconectarPorInatividade, TEMPO_INATIVIDADE_MS);
+            }
+
+            async function desconectarPorInatividade() {
+                if (sessaoJaDerrubada) return;
+                try {
+                    await _fetchOriginal("/api/logout", { method: "POST" });
+                } catch (_) {}
+
+                exibirModalSessao(
+                    "Sessão Expirada por Inatividade",
+                    "Sua sessão ficou inativa por 30 minutos sem atividade no sistema. Por medida de segurança, você será desconectado.",
+                    "inatividade"
+                );
+            }
+
+            ["mousemove", "mousedown", "keypress", "scroll", "touchstart", "click"].forEach(evento => {
+                window.addEventListener(evento, resetarTimerInatividade, true);
+            });
+
+            resetarTimerInatividade();
+        })();
+
+        const PERFIL_LOGADO = "{{ perfil }}";
+        let listaFaltasCache = [], listaConvitesCache = [], listaPerfisCache = [], listaCCsGlobal = [];
+        let listaGestoresGlobal = [], gestorSelecionadoGlobal = null;
+        let usuarioLogadoId = null, gestorValidadoAtual = null, cobridorSelecionadoObj = null;
+        let ocorrenciaDetalheAtual = null, ocorrenciaExternaSelecionada = null;
+        let timerBuscaCobridor = null, timerBuscaExterna = null;
+        let dataOcorrenciaAtual = "", faltanteCrachaAtual = "";
+
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".perfil-action-menu")) fecharTodosMenusPerfil();
+        });
+        window.addEventListener("scroll", fecharTodosMenusPerfil, true);
+        window.addEventListener("resize", fecharTodosMenusPerfil);
+
+        function toggleSidebarMobile() {
+            document.getElementById("sidebar").classList.toggle("open");
+            document.getElementById("sidebar-overlay").classList.toggle("open");
+        }
+
+        function mostrarToast(msg, erro = false) {
+            const t = document.getElementById("toast-msg");
+            t.innerText = msg;
+            t.style.background = erro ? "#dc2626" : "#059669";
+            t.style.display = "block";
+            setTimeout(() => { t.style.display = "none"; }, 5000);
+        }
+
+        function ocultarAlertaDuplicado() {
+            const box = document.getElementById("alerta-convite-duplicado");
+            if (box) box.style.display = "none";
+        }
+
+        function trocarAba(idAba, btn) {
+            fecharTodosMenusPerfil();
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll(".glass-nav-btn").forEach(el => el.classList.remove("active"));
+            document.getElementById(idAba).classList.add("active");
+            btn.classList.add("active");
+            const kpiGrid = document.getElementById("kpi-grid");
+            if (kpiGrid) kpiGrid.style.display = (idAba === "aba-faltas") ? "grid" : "none";
+            if (window.innerWidth <= 920) {
+                document.getElementById("sidebar").classList.remove("open");
+                document.getElementById("sidebar-overlay").classList.remove("open");
+            }
+            if (idAba === "aba-faltas") carregarFaltas();
+            else if (idAba === "aba-convites") carregarCentrosCusto();
+            else if (idAba === "aba-gestores") carregarGestores();
+        }
+
+        function abrirModalConfirmacao({ titulo, mensagem, textoBotao = "Confirmar", onConfirm }) {
+            const modal = document.getElementById("modal-confirmacao");
+            const btnConfirmar = document.getElementById("btn-confirmar-acao");
+            document.getElementById("confirm-titulo").innerText = titulo;
+            document.getElementById("confirm-mensagem").innerHTML = mensagem;
+            btnConfirmar.innerText = textoBotao;
+            btnConfirmar.disabled = false;
+            btnConfirmar.onclick = async () => {
+                btnConfirmar.disabled = true;
+                btnConfirmar.innerText = "Processando...";
+                await onConfirm();
+                fecharModalConfirmacao();
+            };
+            modal.style.display = "flex";
+        }
+        function fecharModalConfirmacao() { document.getElementById("modal-confirmacao").style.display = "none"; }
+
+        function atualizarVisibilidadeFiltrosRoot(exibir) {
+            if (PERFIL_LOGADO !== "ROOT") return;
+            const busca = document.getElementById("filtro-busca");
+            const status = document.getElementById("filtro-status");
+            if (busca) busca.classList.toggle("is-hidden", !exibir);
+            if (status) status.classList.toggle("is-hidden", !exibir);
+        }
+
+        function aoMudarFiltroStatus() {
+            if (PERFIL_LOGADO === "ROOT" && gestorSelecionadoGlobal) {
+                aplicarFiltroNoGestorSelecionado();
+                return;
+            }
+            if (PERFIL_LOGADO !== "ROOT") {
+                carregarFaltas();
+            }
+        }
+
+        function voltarListaGestoresGlobal() {
+            gestorSelecionadoGlobal = null;
+            atualizarVisibilidadeFiltrosRoot(false);
+            document.getElementById("banner-gestor-selecionado").style.display = "none";
+            document.getElementById("grid-faltas-bento").style.display = "none";
+            document.getElementById("grid-gestores-global").style.display = "grid";
+            renderizarGestoresVisaoGlobal(listaGestoresGlobal);
+        }
+
+        function selecionarGestorVisaoGlobal(gestorId) {
+            const g = listaGestoresGlobal.find(item => item.id === gestorId);
+            if (!g) return;
+            gestorSelecionadoGlobal = g;
+
+            atualizarVisibilidadeFiltrosRoot(true);
+            document.getElementById("grid-gestores-global").style.display = "none";
+            document.getElementById("banner-gestor-selecionado").style.display = "flex";
+            document.getElementById("lbl-vg-gestor-nome").innerText = `${g.nome} (Crachá ${g.cracha})`;
+            document.getElementById("lbl-vg-gestor-resumo").innerText =
+                `Análises feitas: ${g.analises_feitas} • Pendentes: ${g.pendentes}`;
+
+            document.getElementById("grid-faltas-bento").style.display = "grid";
+            aplicarFiltroNoGestorSelecionado();
+        }
+
+        function aplicarFiltroNoGestorSelecionado() {
+            if (!gestorSelecionadoGlobal) return;
+            const status = document.getElementById("filtro-status").value;
+            const termo = (document.getElementById("filtro-busca").value || "").toLowerCase().trim();
+
+            let itens = (gestorSelecionadoGlobal.ocorrencias || []).filter(o => o.status === status);
+            if (termo) {
+                itens = itens.filter(f =>
+                    f.colaborador_nome.toLowerCase().includes(termo) ||
+                    f.cracha.toLowerCase().includes(termo) ||
+                    f.data_ocorrencia.toLowerCase().includes(termo) ||
+                    (f.cargo || "").toLowerCase().includes(termo) ||
+                    f.centro_custo.toLowerCase().includes(termo)
+                );
+            }
+            listaFaltasCache = itens;
+            renderizarBentoFaltas(itens);
+        }
+
+        function renderizarGestoresVisaoGlobal(lista) {
+            const grid = document.getElementById("grid-gestores-global");
+            if (!lista.length) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px;">Nenhum gestor encontrado.</div>';
+                return;
+            }
+
+            grid.innerHTML = lista.map(g => `
+                <div class="gestor-global-card" onclick="selecionarGestorVisaoGlobal(${g.id})" title="Clique para ver análises e pendências deste gestor">
+                    <div>
+                        <div class="gestor-global-nome">${g.nome}</div>
+                        <div class="gestor-global-sub">Crachá: ${g.cracha}</div>
+                    </div>
+                    <div class="gestor-global-stats">
+                        <div class="gestor-stat-box gestor-stat-feitas">
+                            <span class="gestor-stat-num">${g.analises_feitas}</span>
+                            <span class="gestor-stat-lbl">Análises Feitas</span>
+                        </div>
+                        <div class="gestor-stat-box gestor-stat-pend">
+                            <span class="gestor-stat-num">${g.pendentes}</span>
+                            <span class="gestor-stat-lbl">Pendentes</span>
+                        </div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        async function carregarFaltas() {
+            if (PERFIL_LOGADO === "ROOT") {
+                const gridGestores = document.getElementById("grid-gestores-global");
+                const gridBento = document.getElementById("grid-faltas-bento");
+                gridGestores.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px;">Carregando gestores...</div>';
+                const res = await fetch("/api/visao-global/gestores");
+                const data = await res.json();
+                if (!data.sucesso) {
+                    gridGestores.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`;
+                    return;
+                }
+                listaGestoresGlobal = data.gestores || [];
+                if (gestorSelecionadoGlobal) {
+                    const atualizado = listaGestoresGlobal.find(x => x.id === gestorSelecionadoGlobal.id);
+                    if (atualizado) {
+                        selecionarGestorVisaoGlobal(atualizado.id);
+                        return;
+                    }
+                    gestorSelecionadoGlobal = null;
+                }
+                atualizarVisibilidadeFiltrosRoot(false);
+                document.getElementById("banner-gestor-selecionado").style.display = "none";
+                gridBento.style.display = "none";
+                gridGestores.style.display = "grid";
+                renderizarGestoresVisaoGlobal(listaGestoresGlobal);
+                return;
+            }
+
+            const status = document.getElementById("filtro-status").value;
+            const grid = document.getElementById("grid-faltas-bento");
+            const res = await fetch(`/api/faltas?status=${status}`);
+            const data = await res.json();
+            if (!data.sucesso) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`; return; }
+            listaFaltasCache = data.faltas;
+            if (data.kpis_gestor) { document.getElementById("kpi-pendentes").innerText = data.kpis_gestor.pendentes; document.getElementById("kpi-analisadas").innerText = data.kpis_gestor.analisadas; }
+            renderizarBentoFaltas(listaFaltasCache);
+        }
+
+        function filtrarTabelaFaltas() {
+            if (PERFIL_LOGADO === "ROOT") {
+                if (gestorSelecionadoGlobal) aplicarFiltroNoGestorSelecionado();
+                return;
+            }
+            const t = document.getElementById("filtro-busca").value.toLowerCase().trim();
+            renderizarBentoFaltas(t ? listaFaltasCache.filter(f => f.colaborador_nome.toLowerCase().includes(t) || f.cracha.toLowerCase().includes(t) || f.data_ocorrencia.toLowerCase().includes(t) || (f.cargo || "").toLowerCase().includes(t) || f.centro_custo.toLowerCase().includes(t)) : listaFaltasCache);
+        }
+
+        function toggleDesfazerBox(exibir) {
+            const box = document.getElementById("det-desfazer-box");
+            if (!exibir) {
+                box.style.display = "none";
+                document.getElementById("input-motivo-desfazer").value = "";
+                return;
+            }
+            box.style.display = "block";
+            document.getElementById("input-motivo-desfazer").focus();
+        }
+
+        async function confirmarDesfazerAnalise() {
+            if (!ocorrenciaDetalheAtual) return;
+            const motivo = document.getElementById("input-motivo-desfazer").value.trim();
+            if (!motivo) {
+                mostrarToast("Informe o motivo para desfazer a análise.", true);
+                document.getElementById("input-motivo-desfazer").focus();
+                return;
+            }
+
+            const btn = document.getElementById("btn-confirmar-desfazer");
+            btn.disabled = true;
+            btn.innerText = "Desfazendo...";
+
+            try {
+                const res = await fetch(`/api/faltas/${ocorrenciaDetalheAtual.id}/desfazer-analise`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ motivo })
+                });
+                const data = await res.json();
+                mostrarToast(data.mensagem, !data.sucesso);
+                if (data.sucesso) {
+                    fecharModalDetalhesOcorrencia();
+                    await carregarFaltas();
+                    await carregarMetricasRoot();
+                }
+            } catch (err) {
+                mostrarToast("Erro ao desfazer análise.", true);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirmar Desfazer";
+            }
+        }
+
+        async function validarEAvancarStep2() {
+            const crachaInput = document.getElementById("conv-cracha");
+            const emailInput = document.getElementById("conv-email");
+            const cracha = crachaInput.value.trim();
+            const email = emailInput.value.trim();
+            ocultarAlertaDuplicado();
+            if (!cracha) { mostrarToast("Informe o crachá do gestor.", true); crachaInput.focus(); return; }
+            const btnNext = document.getElementById("btn-step1-next");
+            btnNext.disabled = true;
+            try {
+                const res = await fetch(`/api/colaboradores/${encodeURIComponent(cracha)}`);
+                const data = await res.json();
+                if (!res.ok || !data.sucesso) {
+                    gestorValidadoAtual = null;
+                    if (data.convite_duplicado) {
+                        document.getElementById("lbl-alerta-duplicado").innerText = data.mensagem;
+                        document.getElementById("alerta-convite-duplicado").style.display = "flex";
+                    }
+                    mostrarToast(data.mensagem || "Crachá não encontrado.", true);
+                    return;
+                }
+                gestorValidadoAtual = data.colaborador;
+                if (!email && gestorValidadoAtual.email) emailInput.value = gestorValidadoAtual.email;
+                const emailFinal = emailInput.value.trim();
+                if (!emailFinal || !emailFinal.includes("@")) { mostrarToast("Informe um e-mail válido.", true); emailInput.focus(); return; }
+                document.getElementById("lbl-gestor-validado").innerText = `${gestorValidadoAtual.cracha} — ${gestorValidadoAtual.nome}`;
+                irParaStep(2);
+            } catch (e) { mostrarToast("Erro ao validar crachá.", true); }
+            finally { btnNext.disabled = false; }
+        }
+
+        function irParaStep(numeroStep) {
+            if (numeroStep === 3) {
+                const selecionados = Array.from(document.querySelectorAll('input[name="ccs_selecionados"]:checked'));
+                if (!selecionados.length) { mostrarToast("Selecione ao menos um Centro de Custo.", true); return; }
+                document.getElementById("rev-gestor").innerText = gestorValidadoAtual ? `${gestorValidadoAtual.cracha} — ${gestorValidadoAtual.nome}` : document.getElementById("conv-cracha").value.trim();
+                document.getElementById("rev-email").innerText = document.getElementById("conv-email").value.trim();
+                document.getElementById("rev-validade").innerText = `${document.getElementById("conv-validade").value} dias`;
+                document.getElementById("rev-ccs-lista").innerHTML = selecionados.map(cb => `<span class="review-chip">${cb.parentElement.querySelector("span").innerText}</span>`).join("");
+            }
+            [1, 2, 3, 4].forEach(idx => {
+                document.getElementById(`step-pane-${idx}`).classList.toggle("active", idx === numeroStep);
+                const ind = document.getElementById(`step-ind-${idx}`);
+                ind.classList.remove("active", "completed");
+                if (idx < numeroStep) ind.classList.add("completed");
+                else if (idx === numeroStep) ind.classList.add(numeroStep === 4 ? "completed" : "active");
+            });
+        }
+
+        function resetarStepperConvite() {
+            gestorValidadoAtual = null;
+            ocultarAlertaDuplicado();
+            document.getElementById("conv-cracha").value = "";
+            document.getElementById("conv-email").value = "";
+            document.getElementById("conv-validade").value = "7";
+            alternarTodosCCs(false);
+            irParaStep(1);
+        }
+
+        async function submeterConviteStepper() {
+            const cracha = document.getElementById("conv-cracha").value.trim();
+            const email_destino = document.getElementById("conv-email").value.trim();
+            const dias_validade = parseInt(document.getElementById("conv-validade").value);
+            const ccs = Array.from(document.querySelectorAll('input[name="ccs_selecionados"]:checked')).map(el => parseInt(el.value));
+            if (!cracha || !email_destino || !ccs.length) { mostrarToast("Verifique os dados.", true); return; }
+            const btn = document.getElementById("btn-gerar-convite");
+            btn.disabled = true;
+            try {
+                const res = await fetch("/api/convites", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cracha, email_destino, dias_validade, centros_custo_ids: ccs }) });
+                const data = await res.json();
+                if (res.ok && data.sucesso) {
+                    document.getElementById("lbl-codigo-hash").innerText = data.codigo_ativacao;
+                    document.getElementById("step4-card").className = `step4-status-card ${data.email_enviado ? "status-ok" : "status-warn"}`;
+                    document.getElementById("step4-titulo").innerText = data.email_enviado ? "Hash Gerada e Enviada!" : "Hash Gerada (Falha no E-mail)";
+                    document.getElementById("step4-descricao").innerHTML = `Convite de <strong>${data.colaborador}</strong> para <strong>${email_destino}</strong>.`;
+                    const erroBox = document.getElementById("step4-erro-box");
+                    erroBox.style.display = data.email_enviado ? "none" : "block";
+                    erroBox.innerText = data.erro_envio || "";
+                    irParaStep(4);
+                    carregarMetricasRoot();
+                } else mostrarToast(data.mensagem || "Erro ao gerar convite.", true);
+            } catch (e) { mostrarToast("Erro de comunicação.", true); }
+            finally { btn.disabled = false; }
+        }
+
+        function atualizarContadorCCs() { const lbl = document.getElementById("lbl-qtd-ccs"); if (lbl) lbl.innerText = document.querySelectorAll('input[name="ccs_selecionados"]:checked').length; }
+        function abrirModalHistoricoConvites(f = "") { const inp = document.getElementById("filtro-hist-convites"); if (inp) inp.value = f; document.getElementById("modal-historico-convites").style.display = "flex"; carregarConvites(); }
+        function fecharModalHistoricoConvites() { document.getElementById("modal-historico-convites").style.display = "none"; }
+
+        async function carregarConvites() {
+            const tbody = document.getElementById("tbody-convites");
+            if (!tbody) return;
+            const res = await fetch("/api/convites");
+            const data = await res.json();
+            if (data.sucesso) { listaConvitesCache = data.convites; filtrarHistoricoConvites(); }
+        }
+
+        function filtrarHistoricoConvites() {
+            const termo = document.getElementById("filtro-hist-convites").value.toLowerCase().trim();
+            renderizarHistoricoConvites(listaConvitesCache.filter(c => c.cracha.toLowerCase().includes(termo) || c.colaborador.toLowerCase().includes(termo) || c.status.toLowerCase().includes(termo)));
+        }
+
+        function renderizarHistoricoConvites(lista) {
+            const tbody = document.getElementById("tbody-convites");
+            if (!lista.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum convite encontrado.</td></tr>'; return; }
+            tbody.innerHTML = lista.map(c => {
+                const pill = c.status === "DISPONIVEL" ? "pill-disponivel" : (c.status === "UTILIZADO" ? "pill-utilizado" : "pill-expirado");
+                const acoes = c.status === "DISPONIVEL"
+                    ? `<div class="acoes-row"><button type="button" class="btn btn-primary btn-sm" onclick="reenviarConvite(${c.id}, this)">Reenviar</button><button type="button" class="btn btn-danger btn-sm" onclick="removerConvite(${c.id}, '${c.cracha}', this)">Remover</button></div>`
+                    : (c.status === "EXPIRADO" ? `<button type="button" class="btn btn-danger btn-sm" onclick="removerConvite(${c.id}, '${c.cracha}', this)">Remover</button>` : "—");
+                return `<tr><td><strong>${c.cracha}</strong></td><td>${c.colaborador}</td><td>${c.email_destino}</td><td>${c.centros_custo.join(", ")}</td><td><span class="status-pill ${pill}">${c.status}</span></td><td>${c.expira_em}</td><td>${acoes}</td></tr>`;
+            }).join("");
+        }
+
+        async function reenviarConvite(id, btn) { btn.disabled = true; const res = await fetch(`/api/convites/${id}/reenviar`, { method: "POST" }); const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); btn.disabled = false; if (d.sucesso) carregarConvites(); }
+        function removerConvite(id, cracha, btn) {
+            abrirModalConfirmacao({
+                titulo: "Remover Hash", mensagem: `Remover hash do crachá <strong>${cracha}</strong>?`, textoBotao: "Sim, Remover",
+                onConfirm: async () => { if (btn) btn.disabled = true; const res = await fetch(`/api/convites/${id}`, { method: "DELETE" }); const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) { ocultarAlertaDuplicado(); carregarConvites(); carregarMetricasRoot(); } }
+            });
+        }
+
+        async function garantirCCsCarregados() {
+            if (listaCCsGlobal.length > 0) return listaCCsGlobal;
+            try {
+                const res = await fetch("/api/centros-custo");
+                if (res.ok) { const d = await res.json(); if (d.sucesso && d.centros_custo) { listaCCsGlobal = d.centros_custo; return listaCCsGlobal; } }
+                const resT = await fetch("/api/centros-custo/transferencia");
+                if (resT.ok) { const dT = await resT.json(); listaCCsGlobal = dT.todos_centros_custo || dT.centros_custo || []; }
+            } catch (e) {}
+            return listaCCsGlobal;
+        }
+
+        async function carregarGestores() {
+            const tbody = document.getElementById("tbody-gestores");
+            if (!tbody) return;
+            const res = await fetch("/api/gestores");
+            const data = await res.json();
+            if (data.sucesso) { listaPerfisCache = data.gestores; usuarioLogadoId = data.usuario_logado_id; filtrarTabelaPerfis(); }
+        }
+
+        function filtrarTabelaPerfis() {
+            const termo = (document.getElementById("filtro-perfis")?.value || "").toLowerCase().trim();
+            renderizarTabelaPerfis(listaPerfisCache.filter(g => g.cracha.toLowerCase().includes(termo) || g.nome.toLowerCase().includes(termo) || g.role.toLowerCase().includes(termo) || g.centros_custo.join(" ").toLowerCase().includes(termo)));
+        }
+
+        function fecharTodosMenusPerfil() { document.querySelectorAll(".perfil-dropdown.open").forEach(el => el.classList.remove("open")); }
+
+        function toggleMenuPerfil(event, idUsuario) {
+            event.stopPropagation();
+            const botao = event.currentTarget;
+            const alvo = document.getElementById(`menu-perfil-${idUsuario}`);
+            const estavaAberto = alvo.classList.contains("open");
+            fecharTodosMenusPerfil();
+            if (estavaAberto) return;
+            alvo.classList.add("open");
+            const rect = botao.getBoundingClientRect();
+            const menuWidth = Math.max(alvo.offsetWidth || 215, 215);
+            const menuHeight = alvo.offsetHeight || 155;
+            let left = Math.min(Math.max(12, rect.right - menuWidth), window.innerWidth - menuWidth - 12);
+            let top = rect.bottom + 6;
+            if (top + menuHeight > window.innerHeight - 12) top = Math.max(12, rect.top - menuHeight - 6);
+            alvo.style.left = `${left}px`;
+            alvo.style.top = `${top}px`;
+        }
+
+        function renderizarTabelaPerfis(lista) {
+            const tbody = document.getElementById("tbody-gestores");
+            if (!lista.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum perfil encontrado.</td></tr>'; return; }
+            tbody.innerHTML = lista.map(g => {
+                const isRoot = g.role === "ROOT";
+                const isSelf = g.id === usuarioLogadoId;
+                const itemCC = isRoot ? "" : `<button type="button" class="dropdown-item" onclick="fecharTodosMenusPerfil(); abrirModalEditarCC(${g.id})">Editar Centros de Custo</button>`;
+                return `
+                    <tr>
+                        <td><strong>${g.cracha}</strong></td>
+                        <td>${g.nome}</td>
+                        <td><span class="status-pill ${isRoot ? "pill-utilizado" : "pill-gestor-badge"}">${g.role}</span></td>
+                        <td>${isRoot ? '<span style="color:#64748b; font-style:italic;">Acesso Global</span>' : (g.centros_custo.join(", ") || "Nenhum")}</td>
+                        <td><span class="status-pill ${g.ativo ? "pill-ativo" : "pill-inativo"}">${g.ativo ? "ATIVO" : "BLOQUEADO"}</span></td>
+                        <td style="text-align: right;">
+                            <div class="perfil-action-menu">
+                                <button type="button" class="btn-gerenciar-perfil" onclick="toggleMenuPerfil(event, ${g.id})"><span>Gerenciar</span> ▾</button>
+                                <div id="menu-perfil-${g.id}" class="perfil-dropdown">
+                                    ${itemCC}
+                                    <button type="button" class="dropdown-item" onclick="fecharTodosMenusPerfil(); abrirModalEditarPrivilegios(${g.id})" ${isSelf ? "disabled" : ""}>Editar Privilégios</button>
+                                    <button type="button" class="dropdown-item" onclick="fecharTodosMenusPerfil(); abrirModalEditarSenha(${g.id})">Alterar Senha</button>
+                                    <div class="dropdown-divider"></div>
+                                    <button type="button" class="dropdown-item ${g.ativo ? "item-danger" : "item-success"}" onclick="fecharTodosMenusPerfil(); alternarGestor(${g.id})" ${isSelf ? "disabled" : ""}>${g.ativo ? "Bloquear Acesso" : "Ativar Acesso"}</button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function abrirModalEditarCC(id) {
+            const u = listaPerfisCache.find(x => x.id === id); if (!u || u.role === "ROOT") return;
+            document.getElementById("edit-cc-usuario-id").value = u.id;
+            document.getElementById("edit-cc-subtitulo").innerText = `${u.cracha} — ${u.nome}`;
+            document.getElementById("edit-cc-busca").value = "";
+            document.getElementById("modal-editar-cc").style.display = "flex";
+            const ccs = await garantirCCsCarregados(); const setV = new Set(u.centros_custo_ids || []);
+            document.getElementById("edit-cc-checklist").innerHTML = ccs.map(cc => `<label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}"><input type="checkbox" name="edit_ccs_checks" value="${cc.id}" ${setV.has(cc.id) ? "checked" : ""} onchange="atualizarContadorEditarCC()"><span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span></label>`).join("");
+            atualizarContadorEditarCC();
+        }
+        function fecharModalEditarCC() { document.getElementById("modal-editar-cc").style.display = "none"; }
+        function filtrarCheckboxesEditarCC() { const t = document.getElementById("edit-cc-busca").value.toLowerCase().trim(); document.querySelectorAll("#edit-cc-checklist .cc-item").forEach(el => el.style.display = el.dataset.texto.includes(t) ? "flex" : "none"); }
+        function limparCheckboxesEditarCC() { document.querySelectorAll('input[name="edit_ccs_checks"]').forEach(cb => cb.checked = false); atualizarContadorEditarCC(); }
+        function atualizarContadorEditarCC() { document.getElementById("edit-cc-contador").innerText = document.querySelectorAll('input[name="edit_ccs_checks"]:checked').length; }
+        async function salvarEditarCC() {
+            const id = document.getElementById("edit-cc-usuario-id").value;
+            const ccsIds = Array.from(document.querySelectorAll('input[name="edit_ccs_checks"]:checked')).map(cb => parseInt(cb.value));
+            const res = await fetch(`/api/gestores/${id}/centros-custo`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centros_custo_ids: ccsIds }) });
+            const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) { fecharModalEditarCC(); carregarGestores(); }
+        }
+
+        function abrirModalEditarPrivilegios(id) { const u = listaPerfisCache.find(x => x.id === id); if (!u) return; document.getElementById("edit-priv-usuario-id").value = u.id; document.getElementById("edit-priv-subtitulo").innerText = `${u.cracha} — ${u.nome}`; selecionarRoleCard(u.role); document.getElementById("modal-editar-privilegios").style.display = "flex"; }
+        function fecharModalEditarPrivilegios() { document.getElementById("modal-editar-privilegios").style.display = "none"; }
+        function selecionarRoleCard(r) { document.getElementById("edit-priv-role-selecionado").value = r; document.getElementById("card-role-GESTOR").classList.toggle("selected", r === "GESTOR"); document.getElementById("card-role-ROOT").classList.toggle("selected", r === "ROOT"); }
+        async function salvarEditarPrivilegios() { const id = document.getElementById("edit-priv-usuario-id").value; const role = document.getElementById("edit-priv-role-selecionado").value; const res = await fetch(`/api/gestores/${id}/privilegios`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) }); const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) { fecharModalEditarPrivilegios(); carregarGestores(); carregarMetricasRoot(); } }
+
+        function abrirModalEditarSenha(id) { const u = listaPerfisCache.find(x => x.id === id); if (!u) return; document.getElementById("form-editar-senha").reset(); document.getElementById("edit-senha-usuario-id").value = u.id; document.getElementById("edit-senha-subtitulo").innerText = `${u.cracha} — ${u.nome}`; document.getElementById("modal-editar-senha").style.display = "flex"; }
+        function fecharModalEditarSenha() { document.getElementById("modal-editar-senha").style.display = "none"; }
+        document.getElementById("form-editar-senha")?.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const id = document.getElementById("edit-senha-usuario-id").value;
+            const nova_senha = document.getElementById("edit-nova-senha").value;
+            if (nova_senha !== document.getElementById("edit-confirma-senha").value) { mostrarToast("As senhas não conferem.", true); return; }
+            const res = await fetch(`/api/gestores/${id}/senha`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nova_senha }) });
+            const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) fecharModalEditarSenha();
+        });
+
+        async function alternarGestor(id) { const res = await fetch(`/api/gestores/${id}/alternar-status`, { method: "PUT" }); const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) { carregarGestores(); carregarMetricasRoot(); } }
+
+        async function carregarMetricasRoot() {
+            if (PERFIL_LOGADO !== "ROOT") return;
+            const res = await fetch("/api/dashboard/metricas"); const d = await res.json();
+            if (d.sucesso) { document.getElementById("kpi-pendentes").innerText = d.kpis.pendentes; document.getElementById("kpi-analisadas").innerText = d.kpis.analisadas; document.getElementById("kpi-gestores").innerText = d.kpis.gestores_ativos; document.getElementById("kpi-convites").innerText = d.kpis.convites_disponiveis; }
+        }
+
+        function obterClasseSexo(sexo) {
+            const s = (sexo || "").trim().toUpperCase();
+            if (s === "M" || s === "MASCULINO") return "avatar-masculino";
+            if (s === "F" || s === "FEMININO") return "avatar-feminino";
+            return "avatar-neutro";
+        }
+
+        function renderSvgBonequinho(sexo, size = 34) {
+            const s = (sexo || "").trim().toUpperCase();
+            if (s === "F" || s === "FEMININO") {
+                return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.8" r="3.3" fill="currentColor" fill-opacity="0.18"></circle><path d="M9.6 10.5h4.8l2.2 6.3H7.4l2.2-6.3z" fill="currentColor" fill-opacity="0.14"></path><line x1="10.2" y1="16.8" x2="10.2" y2="21"></line><line x1="13.8" y1="16.8" x2="13.8" y2="21"></line></svg>`;
+            }
+            return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.8" r="3.3" fill="currentColor" fill-opacity="0.18"></circle><path d="M7.5 15.5v-2.2a3.2 3.2 0 0 1 3.2-3.2h2.6a3.2 3.2 0 0 1 3.2 3.2v2.2h-9z" fill="currentColor" fill-opacity="0.14"></path><line x1="10.2" y1="15.5" x2="10.2" y2="21"></line><line x1="13.8" y1="15.5" x2="13.8" y2="21"></line></svg>`;
+        }
+
+        function renderIconesLinhaTempo(item) {
+            const i1 = item.status === "ANALISADA"
+                ? `<span class="tl-icon-badge tl-icon-3" title="Analisada"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`
+                : `<span class="tl-icon-badge tl-icon-2" title="Pendente"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>`;
+            const i2 = `<span class="tl-icon-badge tl-icon-1" title="Data: ${item.data_ocorrencia}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>`;
+            const i3 = `<span class="tl-icon-badge tl-icon-1" title="Setor: ${item.codigo_cc} - ${item.centro_custo}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></span>`;
+            return `${i1}${i2}${i3}`;
+        }
+
+        function agruparFaltasPorColaborador(lista) {
+            const mapa = new Map();
+            for (const f of lista) {
+                const k = f.colaborador_id || f.cracha;
+                if (!mapa.has(k)) mapa.set(k, { colaborador_id: f.colaborador_id, cracha: f.cracha, colaborador_nome: f.colaborador_nome, sexo: f.sexo, cargo: f.cargo, status: f.status, ocorrencias: [] });
+                mapa.get(k).ocorrencias.push(f);
+            }
+            return Array.from(mapa.values());
+        }
+
+        function renderizarBentoFaltas(lista) {
+            const grid = document.getElementById("grid-faltas-bento");
+            grid.style.display = "grid";
+            if (!lista.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:28px;">Nenhuma ocorrência encontrada.</div>'; return; }
+            grid.innerHTML = agruparFaltasPorColaborador(lista).map(g => {
+                const isPend = g.status === "PENDENTE";
+                const entries = g.ocorrencias.map(oc => `<div class="timeline-entry" onclick="event.stopPropagation(); abrirModalDetalhesOcorrencia(${oc.id})"><span class="timeline-date">${oc.data_ocorrencia}</span><span class="timeline-icons">${renderIconesLinhaTempo(oc)}</span></div>`).join("");
+                return `<div class="bento-person-card" onclick="abrirModalDetalhesOcorrencia(${g.ocorrencias[0].id})"><span class="bento-status-dot ${isPend ? "dot-pendente" : "dot-analisada"}"></span><div class="bento-avatar-circle ${obterClasseSexo(g.sexo)} ${!isPend ? "avatar-analisada" : ""}">${renderSvgBonequinho(g.sexo, 34)}</div><div class="bento-person-name">${g.colaborador_nome}</div><div class="bento-person-role">${g.cargo || "Cargo não informado"}</div><div class="bento-timeline">${entries}</div></div>`;
+            }).join("");
+        }
+
+        async function abrirModalDetalhesOcorrencia(id) {
+            const falta = listaFaltasCache.find(i => i.id === id); if (!falta) return;
+            ocorrenciaDetalheAtual = falta;
+            const av = document.getElementById("det-hero-avatar");
+            av.className = `detalhe-hero-avatar ${obterClasseSexo(falta.sexo)}`;
+            av.innerHTML = renderSvgBonequinho(falta.sexo, 28);
+            document.getElementById("det-nome").innerText = falta.colaborador_nome;
+            document.getElementById("det-cargo").innerText = falta.cargo || "---";
+            document.getElementById("det-cracha").innerText = falta.cracha;
+            document.getElementById("det-data").innerText = falta.data_ocorrencia;
+            document.getElementById("det-cc").innerText = `${falta.codigo_cc} - ${falta.centro_custo}`;
+            const isPend = falta.status === "PENDENTE";
+            document.getElementById("det-status-badge").innerHTML = isPend ? '<span class="status-pill pill-pendente">PENDENTE</span>' : '<span class="status-pill pill-analisada">ANALISADA</span>';
+            const aud = document.getElementById("det-auditoria-box");
+            if (!isPend && falta.analise) {
+                const l = [`<strong>Analisado por:</strong> ${falta.analise.avaliador} em ${falta.analise.respondido_em}`];
+                if (falta.analise.ausencia_programada) l.push("<strong>Motivo:</strong> Ausência programada");
+                else {
+                    if (falta.analise.autorizador_he_nome) l.push(`<strong>Autorizado por:</strong> ${falta.analise.autorizador_he_nome}`);
+                    if (falta.analise.cobridor) l.push(`<strong>Coberto por:</strong> ${falta.analise.cobridor}`);
+                    if (falta.analise.redividiu_equipe && falta.analise.qtd_pacientes) l.push(`<strong>Redimensionada:</strong> ${falta.analise.qtd_pacientes} pac / ${falta.analise.qtd_colaboradores} colab`);
+                    if (falta.analise.justificativa_nao_redimensionada) l.push(`<strong>Ação:</strong> ${falta.analise.justificativa_nao_redimensionada}`);
+                }
+                aud.innerHTML = l.join("<br>"); aud.style.display = "block";
+            } else aud.style.display = "none";
+
+            document.getElementById("det-acoes-bar").style.display = isPend ? "flex" : "none";
+            document.getElementById("det-acoes-analisada-bar").style.display = !isPend ? "flex" : "none";
+            toggleDesfazerBox(false);
+            toggleMoverCCBox(false);
+
+            document.getElementById("btn-iniciar-analise-det").onclick = () => { fecharModalDetalhesOcorrencia(); abrirModalAnalise(falta.id); };
+            document.getElementById("modal-detalhes-ocorrencia").style.display = "flex";
+        }
+        function fecharModalDetalhesOcorrencia() {
+            document.getElementById("modal-detalhes-ocorrencia").style.display = "none";
+            toggleMoverCCBox(false);
+            toggleDesfazerBox(false);
+        }
+
+        async function toggleMoverCCBox(exibir) {
+            const box = document.getElementById("det-mover-cc-box");
+            if (!exibir) { box.style.display = "none"; return; }
+            box.style.display = "block";
+            document.getElementById("input-busca-cc-destino").value = "";
+            const ccs = await garantirCCsCarregados();
+            renderizarOpcoesCCDestino(ccs);
+        }
+        function renderizarOpcoesCCDestino(lista) {
+            const atual = ocorrenciaDetalheAtual?.codigo_cc || "";
+            document.getElementById("select-cc-destino").innerHTML = '<option value="">Selecione o destino...</option>' + lista.filter(c => c.codigo_cc !== atual).map(c => `<option value="${c.id}">${c.codigo_cc} - ${c.nome}</option>`).join("");
+        }
+        function filtrarSelectCCDestino() {
+            const t = document.getElementById("input-busca-cc-destino").value.toLowerCase().trim();
+            renderizarOpcoesCCDestino(listaCCsGlobal.filter(c => c.codigo_cc.toLowerCase().includes(t) || c.nome.toLowerCase().includes(t)));
+        }
+        async function confirmarMoverCentroCusto() {
+            if (!ocorrenciaDetalheAtual) return;
+            const novoCcId = parseInt(document.getElementById("select-cc-destino").value, 10);
+            if (!novoCcId) { mostrarToast("Selecione o destino.", true); return; }
+            const res = await fetch(`/api/faltas/${ocorrenciaDetalheAtual.id}/mover-cc`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centro_custo_id: novoCcId, novo_centro_custo_id: novoCcId }) });
+            const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso);
+            if (d.sucesso) { fecharModalDetalhesOcorrencia(); await carregarFaltas(); await carregarMetricasRoot(); }
+        }
+
+        async function abrirModalPuxarColaborador() {
+            ocorrenciaExternaSelecionada = null;
+            document.getElementById("input-busca-externa").value = "";
+            document.getElementById("box-destino-puxar").style.display = "none";
+            document.getElementById("lista-ocorrencias-externas").innerHTML = '<div style="text-align:center;color:#64748b;padding:18px;">Digite ao menos 2 caracteres.</div>';
+            document.getElementById("modal-puxar-colaborador").style.display = "flex";
+        }
+        function fecharModalPuxarColaborador() { document.getElementById("modal-puxar-colaborador").style.display = "none"; }
+        function buscarOcorrenciasExternasDebounced() {
+            clearTimeout(timerBuscaExterna);
+            const t = document.getElementById("input-busca-externa").value.trim();
+            if (t.length < 2) return;
+            timerBuscaExterna = setTimeout(async () => {
+                const res = await fetch(`/api/ocorrencias/buscar-externa?q=${encodeURIComponent(t)}`);
+                const data = await res.json();
+                const itens = data.ocorrencias || data.faltas || [];
+                document.getElementById("lista-ocorrencias-externas").innerHTML = itens.length
+                    ? itens.map(f => `<div class="detalhe-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick='selecionarOcorrenciaExterna(${JSON.stringify(f)})'><div><strong>${f.cracha} - ${f.colaborador_nome}</strong><br><span style="font-size:0.75rem;color:#64748b;">${f.qtd_faltas} falta(s) (${f.qtd_pendentes} pendente(s), ${f.qtd_analisadas} analisada(s)) • ${f.codigo_cc} - ${f.centro_custo}</span></div><button type="button" class="btn btn-primary btn-sm">Selecionar</button></div>`).join("")
+                    : '<div style="text-align:center;color:#64748b;padding:16px;">Nenhuma ocorrência encontrada.</div>';
+            }, 250);
+        }
+        async function selecionarOcorrenciaExterna(f) {
+            ocorrenciaExternaSelecionada = f;
+            document.getElementById("lbl-resumo-puxar").innerHTML = `Trazer <strong>${f.cracha} - ${f.colaborador_nome}</strong> — ${f.qtd_faltas} falta(s) (${f.qtd_analisadas} analisada(s) serão desfeitas e voltarão para Pendente):`;
+            document.getElementById("box-destino-puxar").style.display = "block";
+            let ccs = [];
+            try { const r = await fetch("/api/centros-custo/transferencia"); if (r.ok) { const d = await r.json(); ccs = d.centros_custo || []; } } catch (e) {}
+            if (!ccs.length) ccs = await garantirCCsCarregados();
+            document.getElementById("select-meu-cc-destino").innerHTML = ccs.map(c => `<option value="${c.id}">${c.codigo_cc} - ${c.nome}</option>`).join("");
+        }
+        function cancelarSelecaoPuxar() { ocorrenciaExternaSelecionada = null; document.getElementById("box-destino-puxar").style.display = "none"; }
+        async function confirmarPuxarColaborador() {
+            if (!ocorrenciaExternaSelecionada) return;
+            const destinoId = parseInt(document.getElementById("select-meu-cc-destino").value, 10);
+            const res = await fetch(`/api/faltas/${ocorrenciaExternaSelecionada.id}/mover-cc`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centro_custo_id: destinoId, novo_centro_custo_id: destinoId }) });
+            const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso);
+            if (d.sucesso) { fecharModalPuxarColaborador(); await carregarFaltas(); await carregarMetricasRoot(); }
+        }
+
+        function abrirModalAnalise(id) {
+            const falta = listaFaltasCache.find(i => i.id === id); if (!falta) return;
+            document.getElementById("form-analise-falta").reset();
+            document.getElementById("analise-ocorrencia-id").value = falta.id;
+            document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
+            dataOcorrenciaAtual = falta.data_ocorrencia || ""; faltanteCrachaAtual = falta.cracha || "";
+            document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
+            limparCobridorSelecionado();
+            document.getElementById("bloco-pergunta-3a").style.display = "none";
+            document.getElementById("box-origem-cobertura").style.display = "none";
+            document.getElementById("box-redivisao-sim").style.display = "none";
+            document.getElementById("box-redivisao-nao").style.display = "none";
+            irStepAnalise(1);
+            document.getElementById("modal-analise").style.display = "flex";
+        }
+        function fecharModalAnalise() { document.getElementById("modal-analise").style.display = "none"; }
+
+        function atualizarBarraProgressoAnalise(step, pctCustom = null, labelCustom = null) {
+            const map = { 1: 25, 2: 50, 3: 75, 4: 100 };
+            const pct = pctCustom ?? map[step] ?? 25;
+            document.getElementById("lbl-progresso-etapa").innerText = labelCustom || `Etapa ${step} de 4`;
+            document.getElementById("lbl-progresso-pct").innerText = `${pct}% concluído`;
+            document.getElementById("barra-progresso-fill").style.width = `${pct}%`;
+        }
+
+        function irStepAnalise(step) {
+            [1, 2, 3, 4].forEach(i => document.getElementById(`an-step-pane-${i}`)?.classList.toggle("active", i === step));
+            if (step === 1) atualizarAcaoStep1();
+            else if (step === 3) atualizarSubpergunta3a();
+            else atualizarBarraProgressoAnalise(step);
+        }
+
+        function atualizarAcaoStep1() {
+            const q1 = document.querySelector('input[name="q_programada"]:checked');
+            const isSim = q1?.value === "1";
+            document.getElementById("btn-analise-step1-next").style.display = isSim ? "none" : "inline-flex";
+            document.getElementById("btn-step1-salvar").style.display = isSim ? "inline-flex" : "none";
+            atualizarBarraProgressoAnalise(1, isSim ? 100 : 25, isSim ? "Etapa 1 • Pronta para finalizar" : "Etapa 1 de 4");
+        }
+        function avancarDoStep1() { const q1 = document.querySelector('input[name="q_programada"]:checked'); if (!q1) { mostrarToast("Selecione Sim ou Não.", true); return; } if (q1.value === "1") { salvarAnaliseCompleta(); return; } irStepAnalise(2); }
+        function avancarDoStep2() { if (!document.querySelector('input[name="q_comunicada"]:checked')) { mostrarToast("Selecione Sim ou Não.", true); return; } irStepAnalise(3); }
+
+        function atualizarSubpergunta3a() {
+            const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+            const bloco = document.getElementById("bloco-pergunta-3a");
+            if (q3?.value === "1") { bloco.style.display = "block"; atualizarCampoCobridor3a(); }
+            else { bloco.style.display = "none"; limparCobridorSelecionado(); document.getElementById("btn-step3-next").style.display = "inline-flex"; document.getElementById("btn-step3-salvar").style.display = "none"; atualizarBarraProgressoAnalise(3, 75, "Etapa 3 de 4"); }
+        }
+        function atualizarCampoCobridor3a() {
+            const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+            const isSim = q3b?.value === "1";
+            if (!isSim) limparCobridorSelecionado();
+            document.getElementById("box-origem-cobertura").style.display = isSim ? "block" : "none";
+            document.getElementById("btn-step3-next").style.display = isSim ? "none" : "inline-flex";
+            document.getElementById("btn-step3-salvar").style.display = isSim ? "inline-flex" : "none";
+            atualizarBarraProgressoAnalise(3, isSim ? 100 : 75, isSim ? "Etapa 3 • Cobertura confirmada" : "Etapa 3 de 4");
+        }
+        function avancarDoStep3() {
+            const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+            if (!q3) { mostrarToast("Selecione Sim ou Não.", true); return; }
+            if (q3.value === "1") {
+                if (!document.getElementById("select-autorizador-he").value.trim()) { mostrarToast("Selecione o coordenador.", true); return; }
+                const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+                if (!q3b) { mostrarToast("Responda 3b.", true); return; }
+                if (q3b.value === "1") { salvarAnaliseCompleta(); return; }
+            }
+            irStepAnalise(4);
+        }
+        function atualizarDetalhesStep4() {
+            const q4 = document.querySelector('input[name="q_redividiu"]:checked');
+            document.getElementById("box-redivisao-sim").style.display = q4?.value === "1" ? "block" : "none";
+            document.getElementById("box-redivisao-nao").style.display = q4?.value === "0" ? "block" : "none";
+        }
+
+        function buscarCobridorDebounced() {
+            clearTimeout(timerBuscaCobridor);
+            const t = document.getElementById("input-busca-cobridor").value.trim();
+            const box = document.getElementById("lista-resultados-cobridor");
+            if (t.length < 2) { box.style.display = "none"; return; }
+            timerBuscaCobridor = setTimeout(async () => {
+                const res = await fetch(`/api/colaboradores/buscar?q=${encodeURIComponent(t)}&data=${encodeURIComponent(dataOcorrenciaAtual)}`);
+                const d = await res.json();
+                const fId = parseInt(document.getElementById("analise-faltante-id").value || "0", 10);
+                const list = (d.colaboradores || []).filter(c => c.id !== fId && c.cracha !== faltanteCrachaAtual);
+                box.innerHTML = list.length ? list.map(c => `<div class="autocomplete-item" onclick='selecionarCobridor(${JSON.stringify(c)})'><strong>${c.cracha} - ${c.nome}</strong><span>${c.codigo_cc} - ${c.centro_custo}</span></div>`).join("") : '<div class="autocomplete-item"><span>Nenhum encontrado.</span></div>';
+                box.style.display = "block";
+            }, 250);
+        }
+        function selecionarCobridor(c) {
+            cobridorSelecionadoObj = c;
+            document.getElementById("cobridor-colaborador-id").value = c.id;
+            document.getElementById("lbl-cobridor-nome").innerText = `${c.cracha} — ${c.nome}`;
+            document.getElementById("lbl-cobridor-cc").innerText = `${c.codigo_cc} - ${c.centro_custo}`;
+            document.getElementById("input-busca-cobridor").style.display = "none";
+            document.getElementById("lista-resultados-cobridor").style.display = "none";
+            document.getElementById("card-cobridor-selecionado").style.display = "flex";
+        }
+        function limparCobridorSelecionado() {
+            cobridorSelecionadoObj = null;
+            document.getElementById("cobridor-colaborador-id").value = "";
+            const inp = document.getElementById("input-busca-cobridor");
+            if (inp) { inp.value = ""; inp.style.display = "block"; }
+            document.getElementById("lista-resultados-cobridor").style.display = "none";
+            document.getElementById("card-cobridor-selecionado").style.display = "none";
+        }
+
+        async function salvarAnaliseCompleta() {
+            const q1 = document.querySelector('input[name="q_programada"]:checked');
+            if (!q1) { mostrarToast("Selecione Sim ou Não na pergunta 1.", true); return; }
+            const prog = q1.value === "1";
+            const payload = { ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value, 10), ausencia_programada: prog };
+            if (!prog) {
+                const q2 = document.querySelector('input[name="q_comunicada"]:checked');
+                const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+                if (!q2 || !q3) { mostrarToast("Responda todas as perguntas obrigatórias.", true); return; }
+                const autHe = q3.value === "1";
+                const autNome = autHe ? document.getElementById("select-autorizador-he").value.trim() : null;
+                const consHe = autHe ? document.querySelector('input[name="q_cons_he"]:checked')?.value === "1" : false;
+                if (autHe && !autNome) { mostrarToast("Selecione o coordenador.", true); return; }
+                if (autHe && consHe) {
+                    if (!cobridorSelecionadoObj) { mostrarToast("Selecione quem cobriu.", true); return; }
+                    Object.assign(payload, { comunicada_2h_antecedencia: q2.value === "1", autorizado_hora_extra: true, autorizador_he_nome: autNome, conseguiu_he_cobertura: true, cobridor_colaborador_id: cobridorSelecionadoObj.id });
+                } else {
+                    const q4 = document.querySelector('input[name="q_redividiu"]:checked');
+                    if (!q4) { mostrarToast("Responda a pergunta 4.", true); return; }
+                    const red = q4.value === "1";
+                    const qtdP = red ? parseInt(document.getElementById("input-qtd-pacientes").value, 10) : null;
+                    const qtdC = red ? parseInt(document.getElementById("input-qtd-colaboradores").value, 10) : null;
+                    const just = !red ? document.getElementById("input-justificativa-nao").value.trim() : null;
+                    if (red && (!qtdP || !qtdC)) { mostrarToast("Informe pacientes e colaboradores.", true); return; }
+                    if (!red && !just) { mostrarToast("Descreva o que foi feito.", true); return; }
+                    Object.assign(payload, { comunicada_2h_antecedencia: q2.value === "1", autorizado_hora_extra: autHe, autorizador_he_nome: autNome, conseguiu_he_cobertura: false, redividiu_equipe: red, qtd_pacientes: qtdP, qtd_colaboradores: qtdC, justificativa_nao_redimensionada: just });
+                }
+            }
+            const res = await fetch("/api/analisar-falta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            const d = await res.json();
+            if (res.ok && d.sucesso) { mostrarToast(d.mensagem); fecharModalAnalise(); await carregarFaltas(); await carregarMetricasRoot(); }
+            else mostrarToast(d.mensagem || "Erro ao salvar.", true);
+        }
+
+        document.getElementById("form-analise-falta").addEventListener("submit", (e) => { e.preventDefault(); salvarAnaliseCompleta(); });
+
+        async function carregarCentrosCusto() {
+            const box = document.getElementById("lista-ccs-checkbox");
+            if (!box || box.dataset.carregado === "1") return;
+            const ccs = await garantirCCsCarregados();
+            if (ccs.length) { box.dataset.carregado = "1"; box.innerHTML = ccs.map(cc => `<label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}"><input type="checkbox" name="ccs_selecionados" value="${cc.id}" onchange="atualizarContadorCCs()"><span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span></label>`).join(""); }
+        }
+        function filtrarCheckboxesCC() { const t = document.getElementById("busca-cc").value.toLowerCase().trim(); document.querySelectorAll("#lista-ccs-checkbox .cc-item").forEach(el => el.style.display = el.dataset.texto.includes(t) ? "flex" : "none"); }
+        function alternarTodosCCs(m) { document.querySelectorAll('input[name="ccs_selecionados"]').forEach(cb => cb.checked = m); atualizarContadorCCs(); }
+        function copiarCodigo() { navigator.clipboard.writeText(document.getElementById("lbl-codigo-hash").innerText); mostrarToast("Hash copiada!"); }
+        async function dispararETL(tipo, btn) {
+            btn.disabled = true;
+            const res = await fetch("/api/etl/executar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tipo }) });
+            const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); btn.disabled = false;
+            if (d.sucesso) { carregarFaltas(); carregarMetricasRoot(); }
+        }
+
+        carregarMetricasRoot();
+        carregarFaltas();
+    </script>
+</body>
+</html>

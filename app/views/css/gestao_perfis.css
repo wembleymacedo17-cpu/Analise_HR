@@ -1,0 +1,65 @@
+/* DROPDOWN E MODAIS DE GESTÃO DE PERFIS */
+.perfil-action-menu { position: relative; display: inline-flex; justify-content: flex-end; }
+.btn-gerenciar-perfil {
+    background: #ffffff;
+    color: var(--funfarme-blue);
+    border: 1px solid #cbd5e1;
+    padding: 7px 13px;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+}
+.btn-gerenciar-perfil:hover { background: #eff6ff; border-color: var(--funfarme-blue); }
+
+.perfil-dropdown {
+    position: fixed;
+    min-width: 215px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22);
+    padding: 6px;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    animation: fadeIn 0.14s ease;
+}
+.perfil-dropdown.open { display: flex; }
+
+.dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #0f172a;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.dropdown-item:hover:not(:disabled) { background: #eff6ff; color: var(--funfarme-blue); }
+.dropdown-item:disabled { color: #94a3b8; background: #f8fafc; cursor: not-allowed; }
+.dropdown-item.item-danger { color: #dc2626; }
+.dropdown-item.item-danger:hover:not(:disabled) { background: #fef2f2; color: #b91c1c; }
+.dropdown-item.item-success { color: #059669; }
+.dropdown-item.item-success:hover:not(:disabled) { background: #ecfdf5; color: #047857; }
+.dropdown-divider { height: 1px; background: #e2e8f0; margin: 4px 6px; }
+
+.role-option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+.role-option-card { border: 2px solid #cbd5e1; border-radius: 12px; padding: 16px; cursor: pointer; background: #f8fafc; display: flex; flex-direction: column; gap: 6px; }
+.role-option-card:hover { border-color: var(--funfarme-blue); background: #eff6ff; }
+.role-option-card.selected { border-color: var(--funfarme-blue); background: #eff6ff; }
+.role-option-title { font-size: 0.95rem; font-weight: 800; color: var(--funfarme-blue); display: flex; align-items: center; justify-content: space-between; }
+.role-option-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }

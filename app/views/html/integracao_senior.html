@@ -1,0 +1,38 @@
+<section id="aba-etl" class="tab-content">
+    <div class="panel">
+        <div class="panel-header"><h2 class="panel-title">Sincronização Senior Vetorh</h2></div>
+        <div class="etl-grid">
+            <div class="etl-card">
+                <div><h4>Carga Diária (D-1)</h4><p style="margin-top:6px;">Importa ocorrências dos últimos 15 dias até ontem.</p></div>
+                <button type="button" class="btn btn-primary" onclick="dispararETL('faltas', this)">Executar Carga Diária</button>
+            </div>
+            <div class="etl-card">
+                <div><h4>Carga Semanal de Estrutura</h4><p style="margin-top:6px;">Atualiza unidades, centros de custo, cargos e colaboradores.</p></div>
+                <button type="button" class="btn btn-warning" onclick="dispararETL('estrutura', this)">Executar Carga Semanal</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    async function dispararETL(tipo, btn) {
+        btn.disabled = true;
+        try {
+            const res = await fetch("/api/etl/executar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tipo })
+            });
+            const d = await res.json();
+            mostrarToast(d.mensagem, !d.sucesso);
+            if (d.sucesso) {
+                if (typeof carregarFaltas === "function") carregarFaltas();
+                carregarMetricasRoot();
+            }
+        } catch (e) {
+            mostrarToast("Erro ao comunicar com o servidor durante o ETL.", true);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+</script>

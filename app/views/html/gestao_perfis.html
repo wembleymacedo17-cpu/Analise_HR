@@ -1,0 +1,211 @@
+<section id="aba-gestores" class="tab-content">
+    <div class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Gestão de Perfis</h2>
+            <div class="filters-row">
+                <input type="text" id="filtro-perfis" class="input-control" placeholder="Buscar crachá, nome ou perfil..." oninput="filtrarTabelaPerfis()">
+                <button type="button" class="btn btn-primary" onclick="carregarGestores()">Atualizar</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Crachá</th>
+                        <th>Usuário</th>
+                        <th style="width: 110px;">Perfil</th>
+                        <th>Centros de Custo</th>
+                        <th style="width: 120px;">Status</th>
+                        <th style="width: 140px; text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-gestores">
+                    <tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando perfis...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL EDITAR CENTROS DE CUSTO -->
+<div id="modal-editar-cc" class="modal-backdrop">
+    <div class="modal-card modal-md">
+        <div class="modal-header">
+            <div><h3>Editar Centros de Custo</h3><div class="modal-info" id="edit-cc-subtitulo">--</div></div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalEditarCC()">Fechar</button>
+        </div>
+        <input type="hidden" id="edit-cc-usuario-id">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+            <span style="font-size:0.82rem; font-weight:700;">Vinculados: <strong id="edit-cc-contador" style="color:var(--funfarme-blue);">0</strong></span>
+            <div style="display:flex; gap:6px;">
+                <input type="text" id="edit-cc-busca" class="input-control" style="padding:6px 10px; font-size:0.8rem;" placeholder="Buscar setor..." oninput="filtrarCheckboxesEditarCC()">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="limparCheckboxesEditarCC()">Limpar</button>
+            </div>
+        </div>
+        <div id="edit-cc-checklist" class="cc-checklist modal-body-scroll"></div>
+        <div class="modal-actions" style="justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="fecharModalEditarCC()">Cancelar</button>
+            <button type="button" class="btn btn-success" id="btn-salvar-edit-cc" onclick="salvarEditarCC()">Salvar Setores</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR PRIVILÉGIOS -->
+<div id="modal-editar-privilegios" class="modal-backdrop">
+    <div class="modal-card">
+        <div class="modal-header"><div><h3>Editar Privilégios</h3><div class="modal-info" id="edit-priv-subtitulo">--</div></div></div>
+        <input type="hidden" id="edit-priv-usuario-id">
+        <input type="hidden" id="edit-priv-role-selecionado">
+        <div class="role-option-grid">
+            <div class="role-option-card" id="card-role-GESTOR" onclick="selecionarRoleCard('GESTOR')">
+                <div class="role-option-title"><span>GESTOR</span><span class="status-pill pill-gestor-badge">Operacional</span></div>
+                <p class="role-option-desc">Visualiza e analisa apenas as ocorrências dos Centros de Custo vinculados.</p>
+            </div>
+            <div class="role-option-card" id="card-role-ROOT" onclick="selecionarRoleCard('ROOT')">
+                <div class="role-option-title"><span>ROOT</span><span class="status-pill pill-utilizado">Admin Total</span></div>
+                <p class="role-option-desc">Acesso global a todos os setores, convites, gestão de perfis e cargas ETL.</p>
+            </div>
+        </div>
+        <div class="modal-actions" style="justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="fecharModalEditarPrivilegios()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="btn-salvar-edit-priv" onclick="salvarEditarPrivilegios()">Salvar Privilégio</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ALTERAR SENHA -->
+<div id="modal-editar-senha" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-header"><div><h3>Alterar Senha</h3><div class="modal-info" id="edit-senha-subtitulo">--</div></div></div>
+        <form id="form-editar-senha">
+            <input type="hidden" id="edit-senha-usuario-id">
+            <div class="field-group" style="margin-bottom: 14px;"><label for="edit-nova-senha">Nova Senha *</label><input type="password" id="edit-nova-senha" class="input-control" required minlength="6"></div>
+            <div class="field-group"><label for="edit-confirma-senha">Confirmar Nova Senha *</label><input type="password" id="edit-confirma-senha" class="input-control" required minlength="6"></div>
+            <div class="modal-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalEditarSenha()">Cancelar</button>
+                <button type="submit" class="btn btn-success" id="btn-salvar-edit-senha">Salvar Senha</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let listaPerfisCache = [];
+    let usuarioLogadoId = null;
+
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest(".perfil-action-menu")) fecharTodosMenusPerfil();
+    });
+    window.addEventListener("scroll", fecharTodosMenusPerfil, true);
+    window.addEventListener("resize", fecharTodosMenusPerfil);
+
+    async function carregarGestores() {
+        const tbody = document.getElementById("tbody-gestores");
+        if (!tbody) return;
+        const res = await fetch("/api/gestores");
+        const data = await res.json();
+        if (data.sucesso) { listaPerfisCache = data.gestores; usuarioLogadoId = data.usuario_logado_id; filtrarTabelaPerfis(); }
+    }
+
+    function filtrarTabelaPerfis() {
+        const termo = (document.getElementById("filtro-perfis")?.value || "").toLowerCase().trim();
+        renderizarTabelaPerfis(listaPerfisCache.filter(g => g.cracha.toLowerCase().includes(termo) || g.nome.toLowerCase().includes(termo) || g.role.toLowerCase().includes(termo) || g.centros_custo.join(" ").toLowerCase().includes(termo)));
+    }
+
+    function fecharTodosMenusPerfil() {
+        document.querySelectorAll(".perfil-dropdown.open").forEach(el => el.classList.remove("open"));
+    }
+
+    function toggleMenuPerfil(event, idUsuario) {
+        event.stopPropagation();
+        const botao = event.currentTarget;
+        const alvo = document.getElementById(`menu-perfil-${idUsuario}`);
+        const estavaAberto = alvo.classList.contains("open");
+        fecharTodosMenusPerfil();
+        if (estavaAberto) return;
+        alvo.classList.add("open");
+        const rect = botao.getBoundingClientRect();
+        const menuWidth = Math.max(alvo.offsetWidth || 215, 215);
+        const menuHeight = alvo.offsetHeight || 155;
+        let left = Math.min(Math.max(12, rect.right - menuWidth), window.innerWidth - menuWidth - 12);
+        let top = rect.bottom + 6;
+        if (top + menuHeight > window.innerHeight - 12) top = Math.max(12, rect.top - menuHeight - 6);
+        alvo.style.left = `${left}px`;
+        alvo.style.top = `${top}px`;
+    }
+
+    function renderizarTabelaPerfis(lista) {
+        const tbody = document.getElementById("tbody-gestores");
+        if (!lista.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum perfil encontrado.</td></tr>'; return; }
+        tbody.innerHTML = lista.map(g => {
+            const isRoot = g.role === "ROOT";
+            const isSelf = g.id === usuarioLogadoId;
+            const itemCC = isRoot ? "" : `<button type="button" class="dropdown-item" onclick="fecharTodosMenusPerfil(); abrirModalEditarCC(${g.id})">Editar Centros de Custo</button>`;
+            return `
+                <tr>
+                    <td><strong>${g.cracha}</strong></td>
+                    <td>${g.nome}</td>
+                    <td><span class="status-pill ${isRoot ? "pill-utilizado" : "pill-gestor-badge"}">${g.role}</span></td>
+                    <td>${isRoot ? '<span style="color:#64748b; font-style:italic;">Acesso Global</span>' : (g.centros_custo.join(", ") || "Nenhum")}</td>
+                    <td><span class="status-pill ${g.ativo ? "pill-ativo" : "pill-inativo"}">${g.ativo ? "ATIVO" : "BLOQUEADO"}</span></td>
+                    <td style="text-align: right;">
+                        <div class="perfil-action-menu">
+                            <button type="button" class="btn-gerenciar-perfil" onclick="toggleMenuPerfil(event, ${g.id})"><span>Gerenciar</span> ▾</button>
+                            <div id="menu-perfil-${g.id}" class="perfil-dropdown">
+                                ${itemCC}
+                                <button type="button" class="dropdown-item" onclick="fecharTodosMenusPerfil(); abrirModalEditarPrivilegios(${g.id})" ${isSelf ? "disabled" : ""}>Editar Privilégios</button>
+                                <button type="button" class="dropdown-item" onclick="fecharTodosMenusPerfil(); abrirModalEditarSenha(${g.id})">Alterar Senha</button>
+                                <div class="dropdown-divider"></div>
+                                <button type="button" class="dropdown-item ${g.ativo ? "item-danger" : "item-success"}" onclick="fecharTodosMenusPerfil(); alternarGestor(${g.id})" ${isSelf ? "disabled" : ""}>${g.ativo ? "Bloquear Acesso" : "Ativar Acesso"}</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    async function abrirModalEditarCC(id) {
+        const u = listaPerfisCache.find(x => x.id === id); if (!u || u.role === "ROOT") return;
+        document.getElementById("edit-cc-usuario-id").value = u.id;
+        document.getElementById("edit-cc-subtitulo").innerText = `${u.cracha} — ${u.nome}`;
+        document.getElementById("edit-cc-busca").value = "";
+        document.getElementById("modal-editar-cc").style.display = "flex";
+        const ccs = await garantirCCsCarregados(); const setV = new Set(u.centros_custo_ids || []);
+        document.getElementById("edit-cc-checklist").innerHTML = ccs.map(cc => `<label class="cc-item" data-texto="${cc.codigo_cc.toLowerCase()} ${cc.nome.toLowerCase()}"><input type="checkbox" name="edit_ccs_checks" value="${cc.id}" ${setV.has(cc.id) ? "checked" : ""} onchange="atualizarContadorEditarCC()"><span><strong>${cc.codigo_cc}</strong> - ${cc.nome}</span></label>`).join("");
+        atualizarContadorEditarCC();
+    }
+    function fecharModalEditarCC() { document.getElementById("modal-editar-cc").style.display = "none"; }
+    function filtrarCheckboxesEditarCC() { const t = document.getElementById("edit-cc-busca").value.toLowerCase().trim(); document.querySelectorAll("#edit-cc-checklist .cc-item").forEach(el => el.style.display = el.dataset.texto.includes(t) ? "flex" : "none"); }
+    function limparCheckboxesEditarCC() { document.querySelectorAll('input[name="edit_ccs_checks"]').forEach(cb => cb.checked = false); atualizarContadorEditarCC(); }
+    function atualizarContadorEditarCC() { document.getElementById("edit-cc-contador").innerText = document.querySelectorAll('input[name="edit_ccs_checks"]:checked').length; }
+    async function salvarEditarCC() {
+        const id = document.getElementById("edit-cc-usuario-id").value;
+        const ccsIds = Array.from(document.querySelectorAll('input[name="edit_ccs_checks"]:checked')).map(cb => parseInt(cb.value));
+        const res = await fetch(`/api/gestores/${id}/centros-custo`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centros_custo_ids: ccsIds }) });
+        const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) { fecharModalEditarCC(); carregarGestores(); }
+    }
+
+    function abrirModalEditarPrivilegios(id) { const u = listaPerfisCache.find(x => x.id === id); if (!u) return; document.getElementById("edit-priv-usuario-id").value = u.id; document.getElementById("edit-priv-subtitulo").innerText = `${u.cracha} — ${u.nome}`; selecionarRoleCard(u.role); document.getElementById("modal-editar-privilegios").style.display = "flex"; }
+    function fecharModalEditarPrivilegios() { document.getElementById("modal-editar-privilegios").style.display = "none"; }
+    function selecionarRoleCard(r) { document.getElementById("edit-priv-role-selecionado").value = r; document.getElementById("card-role-GESTOR").classList.toggle("selected", r === "GESTOR"); document.getElementById("card-role-ROOT").classList.toggle("selected", r === "ROOT"); }
+    async function salvarEditarPrivilegios() { const id = document.getElementById("edit-priv-usuario-id").value; const role = document.getElementById("edit-priv-role-selecionado").value; const res = await fetch(`/api/gestores/${id}/privilegios`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) }); const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) { fecharModalEditarPrivilegios(); carregarGestores(); carregarMetricasRoot(); } }
+
+    function abrirModalEditarSenha(id) { const u = listaPerfisCache.find(x => x.id === id); if (!u) return; document.getElementById("form-editar-senha").reset(); document.getElementById("edit-senha-usuario-id").value = u.id; document.getElementById("edit-senha-subtitulo").innerText = `${u.cracha} — ${u.nome}`; document.getElementById("modal-editar-senha").style.display = "flex"; }
+    function fecharModalEditarSenha() { document.getElementById("modal-editar-senha").style.display = "none"; }
+    document.getElementById("form-editar-senha")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("edit-senha-usuario-id").value;
+        const nova_senha = document.getElementById("edit-nova-senha").value;
+        if (nova_senha !== document.getElementById("edit-confirma-senha").value) { mostrarToast("As senhas não conferem.", true); return; }
+        const res = await fetch(`/api/gestores/${id}/senha`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nova_senha }) });
+        const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso); if (d.sucesso) fecharModalEditarSenha();
+    });
+
+    async function alternarGestor(id) {
+        const res = await fetch(`/api/gestores/${id}/alternar-status`, { method: "PUT" });
+        const d = await res.json();
+        mostrarToast(d.mensagem, !d.sucesso);
+        if (d.sucesso) { carregarGestores(); carregarMetricasRoot(); }
+    }
+</script>

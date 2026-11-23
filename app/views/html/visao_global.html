@@ -1,0 +1,715 @@
+<section id="aba-faltas" class="tab-content active">
+    <div class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title" id="titulo-aba-faltas">{{ 'Visão Global por Gestor' if perfil == 'ROOT' else 'Ocorrências' }}</h2>
+            <div class="filters-row">
+                <input type="text" id="filtro-busca" class="input-control {{ 'is-hidden' if perfil == 'ROOT' else '' }}" placeholder="Buscar nome, crachá ou cargo..." oninput="filtrarTabelaFaltas()">
+                <select id="filtro-status" class="select-control {{ 'is-hidden' if perfil == 'ROOT' else '' }}" onchange="aoMudarFiltroStatus()">
+                    <option value="PENDENTE" selected>Pendentes</option>
+                    <option value="ANALISADA">Analisadas</option>
+                </select>
+                <button type="button" class="btn btn-outline" onclick="abrirModalPuxarColaborador()">Buscar de Outro Setor</button>
+                <button type="button" class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
+            </div>
+        </div>
+
+        <div id="banner-gestor-selecionado" class="gestor-detalhe-banner">
+            <div>
+                <strong id="lbl-vg-gestor-nome" style="color:var(--funfarme-blue); font-size:0.95rem;">--</strong>
+                <div id="lbl-vg-gestor-resumo" style="font-size:0.78rem; color:#334155; margin-top:2px;">--</div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="voltarListaGestoresGlobal()">← Voltar para Gestores</button>
+        </div>
+
+        <div id="grid-gestores-global" class="gestores-global-grid" style="display:none;"></div>
+
+        <div id="grid-faltas-bento" class="bento-ocorrencias-grid">
+            <div style="grid-column: 1 / -1; text-align:center; color:#64748b; padding: 24px;">Carregando ocorrências...</div>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL DETALHES, MOVER CC & DESFAZER ANÁLISE -->
+<div id="modal-detalhes-ocorrencia" class="modal-backdrop">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Detalhes da Ocorrência</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalDetalhesOcorrencia()">Fechar</button>
+        </div>
+        <div class="detalhe-hero">
+            <div class="detalhe-hero-avatar" id="det-hero-avatar"></div>
+            <div style="min-width: 0; flex: 1;">
+                <div style="font-size: 1rem; font-weight: 800;" id="det-nome">--</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;" id="det-cargo">--</div>
+            </div>
+            <div id="det-status-badge"></div>
+        </div>
+        <div class="detalhe-grid">
+            <div class="detalhe-item"><div class="detalhe-item-label">Crachá</div><div class="detalhe-item-val" id="det-cracha">--</div></div>
+            <div class="detalhe-item"><div class="detalhe-item-label">Data da Ocorrência</div><div class="detalhe-item-val" id="det-data">--</div></div>
+            <div class="detalhe-item" style="grid-column: 1 / -1;"><div class="detalhe-item-label">Centro de Custo Atual</div><div class="detalhe-item-val" id="det-cc">--</div></div>
+        </div>
+
+        <div id="det-auditoria-box" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:12px 14px; font-size:0.82rem; color:#065f46; line-height:1.45; margin-bottom: 12px;"></div>
+
+        <div id="det-desfazer-box" class="desfazer-motivo-box">
+            <label for="input-motivo-desfazer" style="display:block; font-size:0.82rem; font-weight:700; color:#b91c1c; margin-bottom:6px;">
+                Qual o motivo de estar desfazendo esta análise? *
+            </label>
+            <textarea id="input-motivo-desfazer" class="textarea-control" style="min-height:70px; margin-bottom:10px;" placeholder="Ex: Lançamento incorreto, troca de informação do gestor..."></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDesfazerBox(false)">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm" id="btn-confirmar-desfazer" onclick="confirmarDesfazerAnalise()">Confirmar Desfazer</button>
+            </div>
+        </div>
+
+        <div id="det-acoes-analisada-bar" class="modal-actions" style="display:none; justify-content:flex-end;">
+            <button type="button" class="btn btn-danger" id="btn-abrir-desfazer" onclick="toggleDesfazerBox(true)">Desfazer</button>
+        </div>
+
+        <div id="det-mover-cc-box" class="mover-cc-box">
+            <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--funfarme-blue); margin-bottom:8px;">Enviar ocorrência para qual Centro de Custo?</label>
+            <input type="text" id="input-busca-cc-destino" class="input-control" style="width: 100%; margin-bottom: 8px;" placeholder="Filtrar setor de destino..." oninput="filtrarSelectCCDestino()">
+            <select id="select-cc-destino" class="select-control" style="width: 100%; margin-bottom: 10px;"></select>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleMoverCCBox(false)">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-confirmar-mover-cc" onclick="confirmarMoverCentroCusto()">Confirmar Transferência</button>
+            </div>
+        </div>
+
+        <div id="det-acoes-bar" class="modal-actions">
+            <button type="button" class="btn btn-outline" id="btn-abrir-mover-cc" onclick="toggleMoverCCBox(true)">Mover Centro de Custo</button>
+            <button type="button" class="btn btn-primary" id="btn-iniciar-analise-det">Analisar Falta</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL BUSCAR EXTERNA -->
+<div id="modal-puxar-colaborador" class="modal-backdrop">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div><h3>Buscar Colaborador de Outro Setor</h3><div class="modal-info">Traga uma ocorrência pendente de outro setor</div></div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalPuxarColaborador()">Fechar</button>
+        </div>
+        <div class="field-group" style="margin-bottom: 12px;">
+            <label for="input-busca-externa">Pesquisar por Crachá ou Nome *</label>
+            <input type="text" id="input-busca-externa" class="input-control" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarOcorrenciasExternasDebounced()">
+        </div>
+        <div id="lista-ocorrencias-externas" class="modal-body-scroll" style="max-height: 260px; display: flex; flex-direction: column; gap: 8px;"></div>
+        <div id="box-destino-puxar" class="mover-cc-box" style="margin-top: 14px;">
+            <div style="font-size:0.83rem; margin-bottom: 8px;" id="lbl-resumo-puxar">--</div>
+            <div class="field-group" style="margin-bottom: 10px;">
+                <label for="select-meu-cc-destino">Alocar em qual Centro de Custo? *</label>
+                <select id="select-meu-cc-destino" class="select-control"></select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="cancelarSelecaoPuxar()">Cancelar</button>
+                <button type="button" class="btn btn-success btn-sm" id="btn-confirmar-puxar" onclick="confirmarPuxarColaborador()">Trazer para Meu Setor</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ANÁLISE OPERACIONAL -->
+<div id="modal-analise" class="modal-backdrop">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div><h3>Análise Operacional</h3><div class="modal-info" id="modal-subtitulo">Colaborador • Data</div></div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalAnalise()">Fechar</button>
+        </div>
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-step-label" id="lbl-progresso-etapa">Etapa 1 de 4</span>
+                <span class="progress-pct-badge" id="lbl-progresso-pct">25% concluído</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="barra-progresso-fill" style="width: 25%;"></div></div>
+        </div>
+        <form id="form-analise-falta" class="modal-body-scroll">
+            <input type="hidden" id="analise-ocorrencia-id">
+            <input type="hidden" id="analise-faltante-id">
+            <input type="hidden" id="cobridor-colaborador-id">
+
+            <div id="an-step-pane-1" class="step-pane active">
+                <div class="single-question-card">
+                    <div class="single-question-title">1. Ausência programada pelo supervisor?</div>
+                    <div class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_programada" value="1" onchange="atualizarAcaoStep1()"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_programada" value="0" onchange="atualizarAcaoStep1()"><span>Não</span></label>
+                    </div>
+                </div>
+                <div class="modal-actions" style="justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalAnalise()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-analise-step1-next" onclick="avancarDoStep1()">Próximo</button>
+                    <button type="button" class="btn btn-success" id="btn-step1-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">Salvar e Finalizar</button>
+                </div>
+            </div>
+
+            <div id="an-step-pane-2" class="step-pane">
+                <div class="single-question-card">
+                    <div class="single-question-title">2. A falta foi comunicada com 2h de antecedência?</div>
+                    <div class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_comunicada" value="1"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_comunicada" value="0"><span>Não</span></label>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="irStepAnalise(1)">Voltar</button>
+                    <button type="button" class="btn btn-primary" onclick="avancarDoStep2()">Próximo</button>
+                </div>
+            </div>
+
+            <div id="an-step-pane-3" class="step-pane">
+                <div class="single-question-card">
+                    <div class="single-question-title">3. Foi autorizado horas extras para a cobertura?</div>
+                    <div class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_aut_he" value="1" onchange="atualizarSubpergunta3a()"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_aut_he" value="0" onchange="atualizarSubpergunta3a()"><span>Não</span></label>
+                    </div>
+                    <div id="bloco-pergunta-3a" class="sub-question-block">
+                        <div class="sub-question-title">3a. Quem autorizou?</div>
+                        <div class="field-group" style="margin-bottom: 16px;">
+                            <select id="select-autorizador-he" class="select-control" style="width: 100%;">
+                                <option value="">Selecione o coordenador...</option>
+                                <option value="Ana Paula Augusto Valverde">Ana Paula Augusto Valverde</option>
+                                <option value="Débora Augusto Valverde">Débora Augusto Valverde</option>
+                                <option value="Janaina Souza de Lima">Janaina Souza de Lima</option>
+                                <option value="Kátia Luciana Franca Pereira">Kátia Luciana Franca Pereira</option>
+                                <option value="Rafaela Marqui">Rafaela Marqui</option>
+                                <option value="Suzilene Ribeiro">Suzilene Ribeiro</option>
+                                <option value="Juliane Cristina Souza Ferraroni">Juliane Cristina Souza Ferraroni</option>
+                            </select>
+                        </div>
+                        <div class="sub-question-title" style="padding-top: 14px; border-top: 1px dashed #cbd5e1;">3b. Conseguiu cobertura para esta ausência?</div>
+                        <div class="choice-cards-grid">
+                            <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()"><span>Sim</span></label>
+                            <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()"><span>Não</span></label>
+                        </div>
+                        <div class="cobertura-box" id="box-origem-cobertura">
+                            <label class="cobertura-label" for="input-busca-cobridor">Informe o crachá ou nome de quem cobriu *</label>
+                            <div class="autocomplete-wrap">
+                                <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
+                                <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
+                            </div>
+                            <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
+                                <div class="cobridor-selecionado-info"><strong id="lbl-cobridor-nome">--</strong><span id="lbl-cobridor-cc">--</span></div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="irStepAnalise(2)">Voltar</button>
+                    <button type="button" class="btn btn-primary" id="btn-step3-next" onclick="avancarDoStep3()">Próximo</button>
+                    <button type="button" class="btn btn-success" id="btn-step3-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">Salvar e Finalizar Análise</button>
+                </div>
+            </div>
+
+            <div id="an-step-pane-4" class="step-pane">
+                <div class="single-question-card">
+                    <div class="single-question-title">4. A equipe foi redimensionada?</div>
+                    <div class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_redividiu" value="1" onchange="atualizarDetalhesStep4()"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_redividiu" value="0" onchange="atualizarDetalhesStep4()"><span>Não</span></label>
+                    </div>
+                    <div id="box-redivisao-sim" class="redivisao-detalhes-box">
+                        <div class="redivisao-grid">
+                            <div class="field-group"><label for="input-qtd-pacientes">Número de Pacientes *</label><input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1"></div>
+                            <div class="field-group"><label for="input-qtd-colaboradores">Número de Colaboradores *</label><input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1"></div>
+                        </div>
+                    </div>
+                    <div id="box-redivisao-nao" class="redivisao-detalhes-box">
+                        <div class="field-group"><label for="input-justificativa-nao">Descreva o que foi feito *</label><textarea id="input-justificativa-nao" class="textarea-control"></textarea></div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="irStepAnalise(3)">Voltar</button>
+                    <button type="button" class="btn btn-success" id="btn-step4-salvar" onclick="salvarAnaliseCompleta()">Salvar e Finalizar Análise</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let listaFaltasCache = [];
+    let listaGestoresGlobal = [], gestorSelecionadoGlobal = null;
+    let cobridorSelecionadoObj = null;
+    let ocorrenciaDetalheAtual = null, ocorrenciaExternaSelecionada = null;
+    let timerBuscaCobridor = null, timerBuscaExterna = null;
+    let dataOcorrenciaAtual = "", faltanteCrachaAtual = "";
+
+    function atualizarVisibilidadeFiltrosRoot(exibir) {
+        if (PERFIL_LOGADO !== "ROOT") return;
+        const busca = document.getElementById("filtro-busca");
+        const status = document.getElementById("filtro-status");
+        if (busca) busca.classList.toggle("is-hidden", !exibir);
+        if (status) status.classList.toggle("is-hidden", !exibir);
+    }
+
+    function aoMudarFiltroStatus() {
+        if (PERFIL_LOGADO === "ROOT" && gestorSelecionadoGlobal) {
+            aplicarFiltroNoGestorSelecionado();
+            return;
+        }
+        if (PERFIL_LOGADO !== "ROOT") {
+            carregarFaltas();
+        }
+    }
+
+    function voltarListaGestoresGlobal() {
+        gestorSelecionadoGlobal = null;
+        atualizarVisibilidadeFiltrosRoot(false);
+        document.getElementById("banner-gestor-selecionado").style.display = "none";
+        document.getElementById("grid-faltas-bento").style.display = "none";
+        document.getElementById("grid-gestores-global").style.display = "grid";
+        renderizarGestoresVisaoGlobal(listaGestoresGlobal);
+    }
+
+    function selecionarGestorVisaoGlobal(gestorId) {
+        const g = listaGestoresGlobal.find(item => item.id === gestorId);
+        if (!g) return;
+        gestorSelecionadoGlobal = g;
+
+        atualizarVisibilidadeFiltrosRoot(true);
+        document.getElementById("grid-gestores-global").style.display = "none";
+        document.getElementById("banner-gestor-selecionado").style.display = "flex";
+        document.getElementById("lbl-vg-gestor-nome").innerText = `${g.nome} (Crachá ${g.cracha})`;
+        document.getElementById("lbl-vg-gestor-resumo").innerText =
+            `Análises feitas: ${g.analises_feitas} • Pendentes: ${g.pendentes}`;
+
+        document.getElementById("grid-faltas-bento").style.display = "grid";
+        aplicarFiltroNoGestorSelecionado();
+    }
+
+    function aplicarFiltroNoGestorSelecionado() {
+        if (!gestorSelecionadoGlobal) return;
+        const status = document.getElementById("filtro-status").value;
+        const termo = (document.getElementById("filtro-busca").value || "").toLowerCase().trim();
+
+        let itens = (gestorSelecionadoGlobal.ocorrencias || []).filter(o => o.status === status);
+        if (termo) {
+            itens = itens.filter(f =>
+                f.colaborador_nome.toLowerCase().includes(termo) ||
+                f.cracha.toLowerCase().includes(termo) ||
+                f.data_ocorrencia.toLowerCase().includes(termo) ||
+                (f.cargo || "").toLowerCase().includes(termo) ||
+                f.centro_custo.toLowerCase().includes(termo)
+            );
+        }
+        listaFaltasCache = itens;
+        renderizarBentoFaltas(itens);
+    }
+
+    function renderizarGestoresVisaoGlobal(lista) {
+        const grid = document.getElementById("grid-gestores-global");
+        if (!lista.length) {
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px;">Nenhum gestor encontrado.</div>';
+            return;
+        }
+
+        grid.innerHTML = lista.map(g => `
+            <div class="gestor-global-card" onclick="selecionarGestorVisaoGlobal(${g.id})" title="Clique para ver análises e pendências deste gestor">
+                <div>
+                    <div class="gestor-global-nome">${g.nome}</div>
+                    <div class="gestor-global-sub">Crachá: ${g.cracha}</div>
+                </div>
+                <div class="gestor-global-stats">
+                    <div class="gestor-stat-box gestor-stat-feitas">
+                        <span class="gestor-stat-num">${g.analises_feitas}</span>
+                        <span class="gestor-stat-lbl">Análises Feitas</span>
+                    </div>
+                    <div class="gestor-stat-box gestor-stat-pend">
+                        <span class="gestor-stat-num">${g.pendentes}</span>
+                        <span class="gestor-stat-lbl">Pendentes</span>
+                    </div>
+                </div>
+            </div>
+        `).join("");
+    }
+
+    async function carregarFaltas() {
+        if (PERFIL_LOGADO === "ROOT") {
+            const gridGestores = document.getElementById("grid-gestores-global");
+            const gridBento = document.getElementById("grid-faltas-bento");
+            gridGestores.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px;">Carregando gestores...</div>';
+            const res = await fetch("/api/visao-global/gestores");
+            const data = await res.json();
+            if (!data.sucesso) {
+                gridGestores.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`;
+                return;
+            }
+            listaGestoresGlobal = data.gestores || [];
+            if (gestorSelecionadoGlobal) {
+                const atualizado = listaGestoresGlobal.find(x => x.id === gestorSelecionadoGlobal.id);
+                if (atualizado) {
+                    selecionarGestorVisaoGlobal(atualizado.id);
+                    return;
+                }
+                gestorSelecionadoGlobal = null;
+            }
+            atualizarVisibilidadeFiltrosRoot(false);
+            document.getElementById("banner-gestor-selecionado").style.display = "none";
+            gridBento.style.display = "none";
+            gridGestores.style.display = "grid";
+            renderizarGestoresVisaoGlobal(listaGestoresGlobal);
+            return;
+        }
+
+        const status = document.getElementById("filtro-status").value;
+        const grid = document.getElementById("grid-faltas-bento");
+        const res = await fetch(`/api/faltas?status=${status}`);
+        const data = await res.json();
+        if (!data.sucesso) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`; return; }
+        listaFaltasCache = data.faltas;
+        if (data.kpis_gestor) {
+            document.getElementById("kpi-pendentes").innerText = data.kpis_gestor.pendentes;
+            document.getElementById("kpi-analisadas").innerText = data.kpis_gestor.analisadas;
+        }
+        renderizarBentoFaltas(listaFaltasCache);
+    }
+
+    function filtrarTabelaFaltas() {
+        if (PERFIL_LOGADO === "ROOT") {
+            if (gestorSelecionadoGlobal) aplicarFiltroNoGestorSelecionado();
+            return;
+        }
+        const t = document.getElementById("filtro-busca").value.toLowerCase().trim();
+        renderizarBentoFaltas(t ? listaFaltasCache.filter(f => f.colaborador_nome.toLowerCase().includes(t) || f.cracha.toLowerCase().includes(t) || f.data_ocorrencia.toLowerCase().includes(t) || (f.cargo || "").toLowerCase().includes(t) || f.centro_custo.toLowerCase().includes(t)) : listaFaltasCache);
+    }
+
+    function toggleDesfazerBox(exibir) {
+        const box = document.getElementById("det-desfazer-box");
+        if (!exibir) {
+            box.style.display = "none";
+            document.getElementById("input-motivo-desfazer").value = "";
+            return;
+        }
+        box.style.display = "block";
+        document.getElementById("input-motivo-desfazer").focus();
+    }
+
+    async function confirmarDesfazerAnalise() {
+        if (!ocorrenciaDetalheAtual) return;
+        const motivo = document.getElementById("input-motivo-desfazer").value.trim();
+        if (!motivo) {
+            mostrarToast("Informe o motivo para desfazer a análise.", true);
+            document.getElementById("input-motivo-desfazer").focus();
+            return;
+        }
+
+        const btn = document.getElementById("btn-confirmar-desfazer");
+        btn.disabled = true;
+        btn.innerText = "Desfazendo...";
+
+        try {
+            const res = await fetch(`/api/faltas/${ocorrenciaDetalheAtual.id}/desfazer-analise`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ motivo })
+            });
+            const data = await res.json();
+            mostrarToast(data.mensagem, !data.sucesso);
+            if (data.sucesso) {
+                fecharModalDetalhesOcorrencia();
+                await carregarFaltas();
+                await carregarMetricasRoot();
+            }
+        } catch (err) {
+            mostrarToast("Erro ao desfazer análise.", true);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Confirmar Desfazer";
+        }
+    }
+
+    function obterClasseSexo(sexo) {
+        const s = (sexo || "").trim().toUpperCase();
+        if (s === "M" || s === "MASCULINO") return "avatar-masculino";
+        if (s === "F" || s === "FEMININO") return "avatar-feminino";
+        return "avatar-neutro";
+    }
+
+    function renderSvgBonequinho(sexo, size = 34) {
+        const s = (sexo || "").trim().toUpperCase();
+        if (s === "F" || s === "FEMININO") {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.8" r="3.3" fill="currentColor" fill-opacity="0.18"></circle><path d="M9.6 10.5h4.8l2.2 6.3H7.4l2.2-6.3z" fill="currentColor" fill-opacity="0.14"></path><line x1="10.2" y1="16.8" x2="10.2" y2="21"></line><line x1="13.8" y1="16.8" x2="13.8" y2="21"></line></svg>`;
+        }
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.8" r="3.3" fill="currentColor" fill-opacity="0.18"></circle><path d="M7.5 15.5v-2.2a3.2 3.2 0 0 1 3.2-3.2h2.6a3.2 3.2 0 0 1 3.2 3.2v2.2h-9z" fill="currentColor" fill-opacity="0.14"></path><line x1="10.2" y1="15.5" x2="10.2" y2="21"></line><line x1="13.8" y1="15.5" x2="13.8" y2="21"></line></svg>`;
+    }
+
+    function renderIconesLinhaTempo(item) {
+        const i1 = item.status === "ANALISADA"
+            ? `<span class="tl-icon-badge tl-icon-3" title="Analisada"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`
+            : `<span class="tl-icon-badge tl-icon-2" title="Pendente"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>`;
+        const i2 = `<span class="tl-icon-badge tl-icon-1" title="Data: ${item.data_ocorrencia}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>`;
+        const i3 = `<span class="tl-icon-badge tl-icon-1" title="Setor: ${item.codigo_cc} - ${item.centro_custo}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></span>`;
+        return `${i1}${i2}${i3}`;
+    }
+
+    function agruparFaltasPorColaborador(lista) {
+        const mapa = new Map();
+        for (const f of lista) {
+            const k = f.colaborador_id || f.cracha;
+            if (!mapa.has(k)) mapa.set(k, { colaborador_id: f.colaborador_id, cracha: f.cracha, colaborador_nome: f.colaborador_nome, sexo: f.sexo, cargo: f.cargo, status: f.status, ocorrencias: [] });
+            mapa.get(k).ocorrencias.push(f);
+        }
+        return Array.from(mapa.values());
+    }
+
+    function renderizarBentoFaltas(lista) {
+        const grid = document.getElementById("grid-faltas-bento");
+        grid.style.display = "grid";
+        if (!lista.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:28px;">Nenhuma ocorrência encontrada.</div>'; return; }
+        grid.innerHTML = agruparFaltasPorColaborador(lista).map(g => {
+            const isPend = g.status === "PENDENTE";
+            const entries = g.ocorrencias.map(oc => `<div class="timeline-entry" onclick="event.stopPropagation(); abrirModalDetalhesOcorrencia(${oc.id})"><span class="timeline-date">${oc.data_ocorrencia}</span><span class="timeline-icons">${renderIconesLinhaTempo(oc)}</span></div>`).join("");
+            return `<div class="bento-person-card" onclick="abrirModalDetalhesOcorrencia(${g.ocorrencias[0].id})"><span class="bento-status-dot ${isPend ? "dot-pendente" : "dot-analisada"}"></span><div class="bento-avatar-circle ${obterClasseSexo(g.sexo)} ${!isPend ? "avatar-analisada" : ""}">${renderSvgBonequinho(g.sexo, 34)}</div><div class="bento-person-name">${g.colaborador_nome}</div><div class="bento-person-role">${g.cargo || "Cargo não informado"}</div><div class="bento-timeline">${entries}</div></div>`;
+        }).join("");
+    }
+
+    async function abrirModalDetalhesOcorrencia(id) {
+        const falta = listaFaltasCache.find(i => i.id === id); if (!falta) return;
+        ocorrenciaDetalheAtual = falta;
+        const av = document.getElementById("det-hero-avatar");
+        av.className = `detalhe-hero-avatar ${obterClasseSexo(falta.sexo)}`;
+        av.innerHTML = renderSvgBonequinho(falta.sexo, 28);
+        document.getElementById("det-nome").innerText = falta.colaborador_nome;
+        document.getElementById("det-cargo").innerText = falta.cargo || "---";
+        document.getElementById("det-cracha").innerText = falta.cracha;
+        document.getElementById("det-data").innerText = falta.data_ocorrencia;
+        document.getElementById("det-cc").innerText = `${falta.codigo_cc} - ${falta.centro_custo}`;
+        const isPend = falta.status === "PENDENTE";
+        document.getElementById("det-status-badge").innerHTML = isPend ? '<span class="status-pill pill-pendente">PENDENTE</span>' : '<span class="status-pill pill-analisada">ANALISADA</span>';
+        const aud = document.getElementById("det-auditoria-box");
+        if (!isPend && falta.analise) {
+            const l = [`<strong>Analisado por:</strong> ${falta.analise.avaliador} em ${falta.analise.respondido_em}`];
+            if (falta.analise.ausencia_programada) l.push("<strong>Motivo:</strong> Ausência programada");
+            else {
+                if (falta.analise.autorizador_he_nome) l.push(`<strong>Autorizado por:</strong> ${falta.analise.autorizador_he_nome}`);
+                if (falta.analise.cobridor) l.push(`<strong>Coberto por:</strong> ${falta.analise.cobridor}`);
+                if (falta.analise.redividiu_equipe && falta.analise.qtd_pacientes) l.push(`<strong>Redimensionada:</strong> ${falta.analise.qtd_pacientes} pac / ${falta.analise.qtd_colaboradores} colab`);
+                if (falta.analise.justificativa_nao_redimensionada) l.push(`<strong>Ação:</strong> ${falta.analise.justificativa_nao_redimensionada}`);
+            }
+            aud.innerHTML = l.join("<br>"); aud.style.display = "block";
+        } else aud.style.display = "none";
+
+        document.getElementById("det-acoes-bar").style.display = isPend ? "flex" : "none";
+        document.getElementById("det-acoes-analisada-bar").style.display = !isPend ? "flex" : "none";
+        toggleDesfazerBox(false);
+        toggleMoverCCBox(false);
+
+        document.getElementById("btn-iniciar-analise-det").onclick = () => { fecharModalDetalhesOcorrencia(); abrirModalAnalise(falta.id); };
+        document.getElementById("modal-detalhes-ocorrencia").style.display = "flex";
+    }
+    function fecharModalDetalhesOcorrencia() {
+        document.getElementById("modal-detalhes-ocorrencia").style.display = "none";
+        toggleMoverCCBox(false);
+        toggleDesfazerBox(false);
+    }
+
+    async function toggleMoverCCBox(exibir) {
+        const box = document.getElementById("det-mover-cc-box");
+        if (!exibir) { box.style.display = "none"; return; }
+        box.style.display = "block";
+        document.getElementById("input-busca-cc-destino").value = "";
+        const ccs = await garantirCCsCarregados();
+        renderizarOpcoesCCDestino(ccs);
+    }
+    function renderizarOpcoesCCDestino(lista) {
+        const atual = ocorrenciaDetalheAtual?.codigo_cc || "";
+        document.getElementById("select-cc-destino").innerHTML = '<option value="">Selecione o destino...</option>' + lista.filter(c => c.codigo_cc !== atual).map(c => `<option value="${c.id}">${c.codigo_cc} - ${c.nome}</option>`).join("");
+    }
+    function filtrarSelectCCDestino() {
+        const t = document.getElementById("input-busca-cc-destino").value.toLowerCase().trim();
+        renderizarOpcoesCCDestino(listaCCsGlobal.filter(c => c.codigo_cc.toLowerCase().includes(t) || c.nome.toLowerCase().includes(t)));
+    }
+    async function confirmarMoverCentroCusto() {
+        if (!ocorrenciaDetalheAtual) return;
+        const novoCcId = parseInt(document.getElementById("select-cc-destino").value, 10);
+        if (!novoCcId) { mostrarToast("Selecione o destino.", true); return; }
+        const res = await fetch(`/api/faltas/${ocorrenciaDetalheAtual.id}/mover-cc`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centro_custo_id: novoCcId, novo_centro_custo_id: novoCcId }) });
+        const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso);
+        if (d.sucesso) { fecharModalDetalhesOcorrencia(); await carregarFaltas(); await carregarMetricasRoot(); }
+    }
+
+    async function abrirModalPuxarColaborador() {
+        ocorrenciaExternaSelecionada = null;
+        document.getElementById("input-busca-externa").value = "";
+        document.getElementById("box-destino-puxar").style.display = "none";
+        document.getElementById("lista-ocorrencias-externas").innerHTML = '<div style="text-align:center;color:#64748b;padding:18px;">Digite ao menos 2 caracteres.</div>';
+        document.getElementById("modal-puxar-colaborador").style.display = "flex";
+    }
+    function fecharModalPuxarColaborador() { document.getElementById("modal-puxar-colaborador").style.display = "none"; }
+    function buscarOcorrenciasExternasDebounced() {
+        clearTimeout(timerBuscaExterna);
+        const t = document.getElementById("input-busca-externa").value.trim();
+        if (t.length < 2) return;
+        timerBuscaExterna = setTimeout(async () => {
+            const res = await fetch(`/api/ocorrencias/buscar-externa?q=${encodeURIComponent(t)}`);
+            const data = await res.json();
+            const itens = data.ocorrencias || data.faltas || [];
+            document.getElementById("lista-ocorrencias-externas").innerHTML = itens.length
+                ? itens.map(f => `<div class="detalhe-item" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick='selecionarOcorrenciaExterna(${JSON.stringify(f)})'><div><strong>${f.cracha} - ${f.colaborador_nome}</strong><br><span style="font-size:0.75rem;color:#64748b;">${f.qtd_faltas} falta(s) (${f.qtd_pendentes} pendente(s), ${f.qtd_analisadas} analisada(s)) • ${f.codigo_cc} - ${f.centro_custo}</span></div><button type="button" class="btn btn-primary btn-sm">Selecionar</button></div>`).join("")
+                : '<div style="text-align:center;color:#64748b;padding:16px;">Nenhuma ocorrência encontrada.</div>';
+        }, 250);
+    }
+    async function selecionarOcorrenciaExterna(f) {
+        ocorrenciaExternaSelecionada = f;
+        document.getElementById("lbl-resumo-puxar").innerHTML = `Trazer <strong>${f.cracha} - ${f.colaborador_nome}</strong> — ${f.qtd_faltas} falta(s) (${f.qtd_analisadas} analisada(s) serão desfeitas e voltarão para Pendente):`;
+        document.getElementById("box-destino-puxar").style.display = "block";
+        let ccs = [];
+        try { const r = await fetch("/api/centros-custo/transferencia"); if (r.ok) { const d = await r.json(); ccs = d.centros_custo || []; } } catch (e) {}
+        if (!ccs.length) ccs = await garantirCCsCarregados();
+        document.getElementById("select-meu-cc-destino").innerHTML = ccs.map(c => `<option value="${c.id}">${c.codigo_cc} - ${c.nome}</option>`).join("");
+    }
+    function cancelarSelecaoPuxar() { ocorrenciaExternaSelecionada = null; document.getElementById("box-destino-puxar").style.display = "none"; }
+    async function confirmarPuxarColaborador() {
+        if (!ocorrenciaExternaSelecionada) return;
+        const destinoId = parseInt(document.getElementById("select-meu-cc-destino").value, 10);
+        const res = await fetch(`/api/faltas/${ocorrenciaExternaSelecionada.id}/mover-cc`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centro_custo_id: destinoId, novo_centro_custo_id: destinoId }) });
+        const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso);
+        if (d.sucesso) { fecharModalPuxarColaborador(); await carregarFaltas(); await carregarMetricasRoot(); }
+    }
+
+    function abrirModalAnalise(id) {
+        const falta = listaFaltasCache.find(i => i.id === id); if (!falta) return;
+        document.getElementById("form-analise-falta").reset();
+        document.getElementById("analise-ocorrencia-id").value = falta.id;
+        document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
+        dataOcorrenciaAtual = falta.data_ocorrencia || ""; faltanteCrachaAtual = falta.cracha || "";
+        document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
+        limparCobridorSelecionado();
+        document.getElementById("bloco-pergunta-3a").style.display = "none";
+        document.getElementById("box-origem-cobertura").style.display = "none";
+        document.getElementById("box-redivisao-sim").style.display = "none";
+        document.getElementById("box-redivisao-nao").style.display = "none";
+        irStepAnalise(1);
+        document.getElementById("modal-analise").style.display = "flex";
+    }
+    function fecharModalAnalise() { document.getElementById("modal-analise").style.display = "none"; }
+
+    function atualizarBarraProgressoAnalise(step, pctCustom = null, labelCustom = null) {
+        const map = { 1: 25, 2: 50, 3: 75, 4: 100 };
+        const pct = pctCustom ?? map[step] ?? 25;
+        document.getElementById("lbl-progresso-etapa").innerText = labelCustom || `Etapa ${step} de 4`;
+        document.getElementById("lbl-progresso-pct").innerText = `${pct}% concluído`;
+        document.getElementById("barra-progresso-fill").style.width = `${pct}%`;
+    }
+
+    function irStepAnalise(step) {
+        [1, 2, 3, 4].forEach(i => document.getElementById(`an-step-pane-${i}`)?.classList.toggle("active", i === step));
+        if (step === 1) atualizarAcaoStep1();
+        else if (step === 3) atualizarSubpergunta3a();
+        else atualizarBarraProgressoAnalise(step);
+    }
+
+    function atualizarAcaoStep1() {
+        const q1 = document.querySelector('input[name="q_programada"]:checked');
+        const isSim = q1?.value === "1";
+        document.getElementById("btn-analise-step1-next").style.display = isSim ? "none" : "inline-flex";
+        document.getElementById("btn-step1-salvar").style.display = isSim ? "inline-flex" : "none";
+        atualizarBarraProgressoAnalise(1, isSim ? 100 : 25, isSim ? "Etapa 1 • Pronta para finalizar" : "Etapa 1 de 4");
+    }
+    function avancarDoStep1() { const q1 = document.querySelector('input[name="q_programada"]:checked'); if (!q1) { mostrarToast("Selecione Sim ou Não.", true); return; } if (q1.value === "1") { salvarAnaliseCompleta(); return; } irStepAnalise(2); }
+    function avancarDoStep2() { if (!document.querySelector('input[name="q_comunicada"]:checked')) { mostrarToast("Selecione Sim ou Não.", true); return; } irStepAnalise(3); }
+
+    function atualizarSubpergunta3a() {
+        const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+        const bloco = document.getElementById("bloco-pergunta-3a");
+        if (q3?.value === "1") { bloco.style.display = "block"; atualizarCampoCobridor3a(); }
+        else { bloco.style.display = "none"; limparCobridorSelecionado(); document.getElementById("btn-step3-next").style.display = "inline-flex"; document.getElementById("btn-step3-salvar").style.display = "none"; atualizarBarraProgressoAnalise(3, 75, "Etapa 3 de 4"); }
+    }
+    function atualizarCampoCobridor3a() {
+        const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+        const isSim = q3b?.value === "1";
+        if (!isSim) limparCobridorSelecionado();
+        document.getElementById("box-origem-cobertura").style.display = isSim ? "block" : "none";
+        document.getElementById("btn-step3-next").style.display = isSim ? "none" : "inline-flex";
+        document.getElementById("btn-step3-salvar").style.display = isSim ? "inline-flex" : "none";
+        atualizarBarraProgressoAnalise(3, isSim ? 100 : 75, isSim ? "Etapa 3 • Cobertura confirmada" : "Etapa 3 de 4");
+    }
+    function avancarDoStep3() {
+        const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+        if (!q3) { mostrarToast("Selecione Sim ou Não.", true); return; }
+        if (q3.value === "1") {
+            if (!document.getElementById("select-autorizador-he").value.trim()) { mostrarToast("Selecione o coordenador.", true); return; }
+            const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+            if (!q3b) { mostrarToast("Responda 3b.", true); return; }
+            if (q3b.value === "1") { salvarAnaliseCompleta(); return; }
+        }
+        irStepAnalise(4);
+    }
+    function atualizarDetalhesStep4() {
+        const q4 = document.querySelector('input[name="q_redividiu"]:checked');
+        document.getElementById("box-redivisao-sim").style.display = q4?.value === "1" ? "block" : "none";
+        document.getElementById("box-redivisao-nao").style.display = q4?.value === "0" ? "block" : "none";
+    }
+
+    function buscarCobridorDebounced() {
+        clearTimeout(timerBuscaCobridor);
+        const t = document.getElementById("input-busca-cobridor").value.trim();
+        const box = document.getElementById("lista-resultados-cobridor");
+        if (t.length < 2) { box.style.display = "none"; return; }
+        timerBuscaCobridor = setTimeout(async () => {
+            const res = await fetch(`/api/colaboradores/buscar?q=${encodeURIComponent(t)}&data=${encodeURIComponent(dataOcorrenciaAtual)}`);
+            const d = await res.json();
+            const fId = parseInt(document.getElementById("analise-faltante-id").value || "0", 10);
+            const list = (d.colaboradores || []).filter(c => c.id !== fId && c.cracha !== faltanteCrachaAtual);
+            box.innerHTML = list.length ? list.map(c => `<div class="autocomplete-item" onclick='selecionarCobridor(${JSON.stringify(c)})'><strong>${c.cracha} - ${c.nome}</strong><span>${c.codigo_cc} - ${c.centro_custo}</span></div>`).join("") : '<div class="autocomplete-item"><span>Nenhum encontrado.</span></div>';
+            box.style.display = "block";
+        }, 250);
+    }
+    function selecionarCobridor(c) {
+        cobridorSelecionadoObj = c;
+        document.getElementById("cobridor-colaborador-id").value = c.id;
+        document.getElementById("lbl-cobridor-nome").innerText = `${c.cracha} — ${c.nome}`;
+        document.getElementById("lbl-cobridor-cc").innerText = `${c.codigo_cc} - ${c.centro_custo}`;
+        document.getElementById("input-busca-cobridor").style.display = "none";
+        document.getElementById("lista-resultados-cobridor").style.display = "none";
+        document.getElementById("card-cobridor-selecionado").style.display = "flex";
+    }
+    function limparCobridorSelecionado() {
+        cobridorSelecionadoObj = null;
+        document.getElementById("cobridor-colaborador-id").value = "";
+        const inp = document.getElementById("input-busca-cobridor");
+        if (inp) { inp.value = ""; inp.style.display = "block"; }
+        document.getElementById("lista-resultados-cobridor").style.display = "none";
+        document.getElementById("card-cobridor-selecionado").style.display = "none";
+    }
+
+    async function salvarAnaliseCompleta() {
+        const q1 = document.querySelector('input[name="q_programada"]:checked');
+        if (!q1) { mostrarToast("Selecione Sim ou Não na pergunta 1.", true); return; }
+        const prog = q1.value === "1";
+        const payload = { ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value, 10), ausencia_programada: prog };
+        if (!prog) {
+            const q2 = document.querySelector('input[name="q_comunicada"]:checked');
+            const q3 = document.querySelector('input[name="q_aut_he"]:checked');
+            if (!q2 || !q3) { mostrarToast("Responda todas as perguntas obrigatórias.", true); return; }
+            const autHe = q3.value === "1";
+            const autNome = autHe ? document.getElementById("select-autorizador-he").value.trim() : null;
+            const consHe = autHe ? document.querySelector('input[name="q_cons_he"]:checked')?.value === "1" : false;
+            if (autHe && !autNome) { mostrarToast("Selecione o coordenador.", true); return; }
+            if (autHe && consHe) {
+                if (!cobridorSelecionadoObj) { mostrarToast("Selecione quem cobriu.", true); return; }
+                Object.assign(payload, { comunicada_2h_antecedencia: q2.value === "1", autorizado_hora_extra: true, autorizador_he_nome: autNome, conseguiu_he_cobertura: true, cobridor_colaborador_id: cobridorSelecionadoObj.id });
+            } else {
+                const q4 = document.querySelector('input[name="q_redividiu"]:checked');
+                if (!q4) { mostrarToast("Responda a pergunta 4.", true); return; }
+                const red = q4.value === "1";
+                const qtdP = red ? parseInt(document.getElementById("input-qtd-pacientes").value, 10) : null;
+                const qtdC = red ? parseInt(document.getElementById("input-qtd-colaboradores").value, 10) : null;
+                const just = !red ? document.getElementById("input-justificativa-nao").value.trim() : null;
+                if (red && (!qtdP || !qtdC)) { mostrarToast("Informe pacientes e colaboradores.", true); return; }
+                if (!red && !just) { mostrarToast("Descreva o que foi feito.", true); return; }
+                Object.assign(payload, { comunicada_2h_antecedencia: q2.value === "1", autorizado_hora_extra: autHe, autorizador_he_nome: autNome, conseguiu_he_cobertura: false, redividiu_equipe: red, qtd_pacientes: qtdP, qtd_colaboradores: qtdC, justificativa_nao_redimensionada: just });
+            }
+        }
+        const res = await fetch("/api/analisar-falta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const d = await res.json();
+        if (res.ok && d.sucesso) { mostrarToast(d.mensagem); fecharModalAnalise(); await carregarFaltas(); await carregarMetricasRoot(); }
+        else mostrarToast(d.mensagem || "Erro ao salvar.", true);
+    }
+
+    document.getElementById("form-analise-falta")?.addEventListener("submit", (e) => { e.preventDefault(); salvarAnaliseCompleta(); });
+</script>
