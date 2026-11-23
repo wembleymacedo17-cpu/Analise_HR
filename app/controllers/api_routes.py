@@ -114,6 +114,24 @@ def logout_api():
     return resp, 200
 
 
+@api_bp.route('/verificar-sessao', methods=['GET'])
+def verificar_sessao_api():
+    if 'usuario_id' not in session:
+        return jsonify({'sucesso': False, 'sessao_expirada': True, 'motivo': 'expirada'}), 401
+
+    db = get_db()
+    valida, motivo, mensagem = CookieService.verificar_apenas_status(db)
+    if not valida:
+        return jsonify({
+            'sucesso': False,
+            'sessao_expirada': True,
+            'motivo': motivo,
+            'mensagem': mensagem,
+        }), 401
+
+    return jsonify({'sucesso': True}), 200
+
+
 @api_bp.route('/primeiro-acesso', methods=['POST'])
 def primeiro_acesso_api():
     data = request.json or {}

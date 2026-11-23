@@ -584,54 +584,152 @@
 
     <div id="toast-msg" class="toast"></div>
 
+    <!-- MODAL DE ALERTA DE SEGURANÇA E EXPIRAÇÃO DE SESSÃO COM CONTADOR DE 30S -->
+    <div id="modal-sessao-derrubada" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.90); backdrop-filter: blur(10px); z-index: 999999; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; border: 1px solid #ef4444; border-radius: 16px; padding: 32px 24px; max-width: 430px; width: 92%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);">
+            <div style="background: rgba(239, 68, 68, 0.15); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            
+            <h3 style="color: #ffffff; font-size: 1.25rem; margin-bottom: 10px; font-weight: 700;" id="titulo-modal-sessao">
+                Acesso Simultâneo Detectado
+            </h3>
+            
+            <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.5; margin-bottom: 18px;" id="msg-detalhe-sessao">
+                Detectamos um novo login com o seu usuário em outro dispositivo. Por segurança, esta sessão será desconectada.
+            </p>
+
+            <!-- Caixa de Contagem Regressiva de 30 Segundos -->
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 20px;">
+                <div style="color: #fca5a5; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">
+                    Desconectando automaticamente em <strong id="contador-segundos" style="font-size: 1rem; color: #ffffff;">30</strong> segundos...
+                </div>
+                <div style="width: 100%; height: 6px; background: #334155; border-radius: 4px; overflow: hidden;">
+                    <div id="barra-progresso-sessao" style="width: 100%; height: 100%; background: #ef4444; transition: width 1s linear;"></div>
+                </div>
+            </div>
+
+            <button type="button" onclick="redirecionarLoginImediato()" style="width: 100%; padding: 12px; background: #ef4444; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;">
+                Ir para o Login Agora
+            </button>
+        </div>
+    </div>
+
     <script>
-        // ======================================================================
-        // CONTROLE DE SESSÃO ÚNICA E EXPIRAÇÃO POR INATIVIDADE (30 MINUTOS)
-        // ======================================================================
-        const LIMITE_INATIVIDADE_MS = 30 * 60 * 1000;
-        let ultimaAtividadeLocal = Date.now();
-        let redirecionandoSessao = false;
+        let sessaoJaDerrubada = false;
+        let intervaloContagem = null;
+        let intervaloHeartbeat = null;
+        let motivoDesconexaoAtual = "outro_dispositivo";
 
-        function redirecionarPorSessaoEncerrada(motivo = "expirada") {
-            if (redirecionandoSessao) return;
-            redirecionandoSessao = true;
-            window.location.href = `/login?motivo=${encodeURIComponent(motivo)}`;
+        function redirecionarLoginImediato() {
+            clearInterval(intervaloContagem);
+            window.location.href = `/login?motivo=${encodeURIComponent(motivoDesconexaoAtual)}`;
         }
 
-        function registrarAtividadeLocal() {
-            ultimaAtividadeLocal = Date.now();
-        }
+        function exibirModalSessao(titulo, mensagem, motivo = "outro_dispositivo") {
+            if (sessaoJaDerrubada) return;
+            sessaoJaDerrubada = true;
+            motivoDesconexaoAtual = motivo;
 
-        ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(evt => {
-            window.addEventListener(evt, registrarAtividadeLocal, { passive: true });
-        });
+            clearInterval(intervaloHeartbeat);
 
-        setInterval(async () => {
-            if (Date.now() - ultimaAtividadeLocal >= LIMITE_INATIVIDADE_MS) {
-                try {
-                    await _fetchOriginal("/api/logout", { method: "POST" });
-                } catch (_) {}
-                redirecionarPorSessaoEncerrada("inatividade");
+            const mainWrapper = document.querySelector(".main-wrapper");
+            const sidebar = document.getElementById("sidebar");
+            if (mainWrapper) {
+                mainWrapper.style.pointerEvents = "none";
+                mainWrapper.style.filter = "blur(4px)";
             }
-        }, 15000);
+            if (sidebar) {
+                sidebar.style.pointerEvents = "none";
+                sidebar.style.filter = "blur(4px)";
+            }
+
+            const modal = document.getElementById("modal-sessao-derrubada");
+            const elContador = document.getElementById("contador-segundos");
+            const elBarra = document.getElementById("barra-progresso-sessao");
+
+            document.getElementById("titulo-modal-sessao").innerText = titulo;
+            document.getElementById("msg-detalhe-sessao").innerText = mensagem;
+            modal.style.display = "flex";
+
+            let tempoRestante = 30;
+            elContador.innerText = tempoRestante;
+            elBarra.style.width = "100%";
+
+            intervaloContagem = setInterval(() => {
+                tempoRestante--;
+                elContador.innerText = tempoRestante;
+
+                const percentual = Math.max(0, (tempoRestante / 30) * 100);
+                elBarra.style.width = percentual + "%";
+
+                if (tempoRestante <= 0) {
+                    clearInterval(intervaloContagem);
+                    window.location.href = `/login?motivo=${encodeURIComponent(motivoDesconexaoAtual)}`;
+                }
+            }, 1000);
+        }
 
         const _fetchOriginal = window.fetch;
         window.fetch = async (...args) => {
             const resp = await _fetchOriginal(...args);
-            if (resp.status === 401) {
-                try {
-                    const clone = await resp.clone().json();
-                    redirecionarPorSessaoEncerrada(clone.motivo || "expirada");
-                } catch (_) {
-                    redirecionarPorSessaoEncerrada("expirada");
+            if (resp.status === 401 && !sessaoJaDerrubada) {
+                const data = await resp.clone().json().catch(() => ({}));
+                if (data.sessao_expirada) {
+                    const ehInatividade = data.motivo === "inatividade";
+                    exibirModalSessao(
+                        ehInatividade ? "Sessão Expirada por Inatividade" : "Acesso Simultâneo Detectado",
+                        data.mensagem || "Detectamos que sua conta foi conectada em outro dispositivo. Esta sessão será desconectada.",
+                        data.motivo || "outro_dispositivo"
+                    );
                 }
             }
             return resp;
         };
 
-        // ======================================================================
-        // ESTADO GLOBAL E NAVEGAÇÃO
-        // ======================================================================
+        async function checarSessaoAtiva() {
+            if (sessaoJaDerrubada) return;
+            try {
+                await fetch("/api/verificar-sessao", { method: "GET", cache: "no-store" });
+            } catch (_) {}
+        }
+
+        intervaloHeartbeat = setInterval(checarSessaoAtiva, 7000);
+
+        (function () {
+            const TEMPO_INATIVIDADE_MS = 30 * 60 * 1000;
+            let timerInatividade;
+
+            function resetarTimerInatividade() {
+                if (sessaoJaDerrubada) return;
+                clearTimeout(timerInatividade);
+                timerInatividade = setTimeout(desconectarPorInatividade, TEMPO_INATIVIDADE_MS);
+            }
+
+            async function desconectarPorInatividade() {
+                if (sessaoJaDerrubada) return;
+                try {
+                    await _fetchOriginal("/api/logout", { method: "POST" });
+                } catch (_) {}
+
+                exibirModalSessao(
+                    "Sessão Expirada por Inatividade",
+                    "Sua sessão ficou inativa por 30 minutos sem atividade no sistema. Por medida de segurança, você será desconectado.",
+                    "inatividade"
+                );
+            }
+
+            ["mousemove", "mousedown", "keypress", "scroll", "touchstart", "click"].forEach(evento => {
+                window.addEventListener(evento, resetarTimerInatividade, true);
+            });
+
+            resetarTimerInatividade();
+        })();
+
         const PERFIL_LOGADO = "{{ perfil }}";
         let listaFaltasCache = [], listaConvitesCache = [], listaPerfisCache = [], listaCCsGlobal = [];
         let listaGestoresGlobal = [], gestorSelecionadoGlobal = null;

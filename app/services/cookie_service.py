@@ -134,3 +134,56 @@ class CookieService:
         if response:
             response.delete_cookie('session', path='/')
         return response
+    @staticmethod
+    def verificar_apenas_status(db) -> tuple[bool, str | None, str | None]:
+        """
+        Checa se a sessão continua válida (usado pelo heartbeat de 7s)
+        SEM renovar o timestamp de atividade do usuário.
+        """
+        from app.models.models import Usuario
+
+        usuario_id = session.get('usuario_id')
+        token_sessao = session.get('session_token')
+
+        if not usuario_id or not token_sessao:
+            session.clear()
+            return False, 'nao_autenticado', 'Sessão encerrada.'
+
+        row = (
+            db.query(Usuario.ativo, Usuario.session_token, Usuario.ultimo_acesso_em)
+            .filter(Usuario.id == usuario_id)
+            .first()
+        )
+
+        if not row or not row.ativo:
+            session.clear()
+            return False, 'bloqueado', 'Seu acesso foi desativado. Contate o RH.'
+
+        if not row.session_token or row.session_token != token_sessao:
+            session.clear()
+            return (
+                False,
+                'outro_dispositivo',
+                'Detectamos um novo login com o seu usuário em outro dispositivo. Por segurança, esta sessão será desconectada.',
+            )
+
+        agora = datetime.now(timezone.utc)
+        if row.ultimo_acesso_em:
+            ultimo = (
+                row.ultimo_acesso_em.replace(tzinfo=timezone.utc)
+                if row.ultimo_acesso_em.tzinfo is None
+                else row.ultimo_acesso_em
+            )
+            if agora - ultimo > timedelta(minutes=INATIVIDADE_MAXIMA_MINUTOS):
+                db.query(Usuario).filter(Usuario.id == usuario_id).update(
+                    {'session_token': None}, synchronize_session=False
+                )
+                db.commit()
+                session.clear()
+                return (
+                    False,
+                    'inatividade',
+                    'Sua sessão ficou inativa por 30 minutos sem atividade no sistema. Por medida de segurança, você será desconectado.',
+                )
+
+        return True, None, None

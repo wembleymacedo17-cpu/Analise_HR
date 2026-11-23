@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, session, redirect, url_for, request, g
+from flask import Flask, render_template, session, redirect, url_for, request, g, send_file
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import create_engine
@@ -49,7 +49,10 @@ def create_app():
 
     @app.before_request
     def verificar_seguranca_sessao():
-        rotas_publicas = {'/login', '/primeiro-acesso', '/api/login', '/api/primeiro-acesso'}
+        rotas_publicas = {
+            '/login', '/primeiro-acesso', '/api/login',
+            '/api/primeiro-acesso', '/api/verificar-sessao', '/logo-funfarme'
+        }
         if request.path.startswith('/static/') or request.path in rotas_publicas:
             return None
 
@@ -83,6 +86,15 @@ def create_app():
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
         return response
+
+    @app.route('/logo-funfarme')
+    def logo_funfarme():
+        img_dir = os.path.join(base_dir, 'views', 'img')
+        if os.path.isdir(img_dir):
+            for arquivo in os.listdir(img_dir):
+                if arquivo.lower().startswith('logo_funfarme'):
+                    return send_file(os.path.join(img_dir, arquivo))
+        return '', 404
 
     # ==========================================================================
     # ROTAS DE PÁGINAS (VIEWS HTML)
