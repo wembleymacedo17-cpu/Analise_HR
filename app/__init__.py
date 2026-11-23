@@ -1,10 +1,10 @@
 import os
-from datetime import timedelta
 from flask import Flask, render_template, session, redirect, url_for, request, g
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.services.cookie_service import CookieService
 
 raiz_projeto = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 env_path = os.path.join(raiz_projeto, '.env')
@@ -43,14 +43,32 @@ def create_app():
     static_dir = os.path.join(base_dir, 'views')
 
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-    app.secret_key = os.getenv('SECRET_KEY', 'chave_secreta_analise_hr_2026')
 
+    CookieService.configurar_seguranca_sessao(app)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['SESSION_COOKIE_SECURE'] = False
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+    @app.before_request
+    def verificar_seguranca_sessao():
+        rotas_publicas = {'/login', '/primeiro-acesso', '/api/login', '/api/primeiro-acesso'}
+        if request.path.startswith('/static/') or request.path in rotas_publicas:
+            return None
+
+        if 'usuario_id' not in session:
+            if request.path.startswith('/api/'):
+                return {'sucesso': False, 'sessao_expirada': True, 'mensagem': 'Sessão encerrada.'}, 401
+            return redirect(url_for('login_page'))
+
+        db = get_db()
+        valida, motivo, mensagem = CookieService.validar_sessao_unica_e_atividade(db)
+        if not valida:
+            if request.path.startswith('/api/'):
+                return {
+                    'sucesso': False,
+                    'sessao_expirada': True,
+                    'motivo': motivo,
+                    'mensagem': mensagem,
+                }, 401
+            return redirect(url_for('login_page', motivo=motivo))
 
     @app.teardown_appcontext
     def fechar_sessao_db(exception=None):
@@ -90,8 +108,9 @@ def create_app():
 
     @app.route('/logout')
     def logout():
-        session.clear()
-        return redirect(url_for('login_page'))
+        db = get_db()
+        resp = redirect(url_for('login_page'))
+        return CookieService.encerrar_sessao(db=db, response=resp)
 
     @app.route('/convites')
     def convites_page():
@@ -109,3 +128,5 @@ def create_app():
     app.register_blueprint(api_bp)
 
     return app
+
+    

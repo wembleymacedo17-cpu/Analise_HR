@@ -74,6 +74,8 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=True)
     role = Column(String(20), default="GESTOR", nullable=False)
     ativo = Column(Boolean, default=True, nullable=False)
+    session_token = Column(String(64), nullable=True, index=True)
+    ultimo_acesso_em = Column(DateTime(timezone=True), nullable=True)
     criado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     colaborador = relationship("Colaborador")

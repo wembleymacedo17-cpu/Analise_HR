@@ -60,8 +60,9 @@
         .btn-login { width: 100%; padding: 12px; background: #0284c7; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: background 0.2s, opacity 0.2s; margin-top: 8px; }
         .btn-login:hover { background: #0369a1; }
         .btn-login:disabled { background: #0369a1; opacity: 0.75; cursor: not-allowed; }
-        .alert { padding: 10px; border-radius: 6px; font-size: 0.82rem; text-align: center; margin-top: 14px; display: none; }
+        .alert { padding: 10px 12px; border-radius: 8px; font-size: 0.82rem; text-align: center; margin-top: 14px; display: none; line-height: 1.4; }
         .alert-danger { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
+        .alert-warning { background: #451a03; color: #fcd34d; border: 1px solid #92400e; margin-top: 0; margin-bottom: 16px; }
         .first-access-box { text-align: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.82rem; color: #94a3b8; }
         .first-access-box a { color: #38bdf8; text-decoration: none; font-weight: 600; }
         .first-access-box a:hover { text-decoration: underline; }
@@ -84,6 +85,8 @@
                 <h2>Análise de Faltas</h2>
                 <p>Informe seu crachá e senha para acessar</p>
             </div>
+
+            <div id="alert-session" class="alert alert-warning"></div>
 
             <form id="form-login">
                 <div class="form-group">
@@ -108,6 +111,26 @@
     </div>
 
     <script>
+        (function verificarMotivoDesconexao() {
+            const params = new URLSearchParams(window.location.search);
+            const motivo = params.get("motivo");
+            if (!motivo) return;
+
+            const mensagens = {
+                outro_dispositivo: "Sua conta foi conectada em outro dispositivo. Esta sessão foi encerrada por segurança.",
+                inatividade: "Sua sessão foi encerrada após 30 minutos de inatividade. Faça login novamente.",
+                bloqueado: "Seu acesso foi desativado. Contate o RH."
+            };
+
+            const box = document.getElementById("alert-session");
+            if (mensagens[motivo]) {
+                box.innerText = mensagens[motivo];
+                box.style.display = "block";
+            }
+
+            window.history.replaceState({}, document.title, window.location.pathname);
+        })();
+
         document.getElementById("form-login").addEventListener("submit", async (e) => {
             e.preventDefault();
             const btnSubmit = e.target.querySelector(".btn-login");
@@ -116,8 +139,10 @@
             const cracha = document.getElementById("cracha").value.trim();
             const senha = document.getElementById("senha").value;
             const alertBox = document.getElementById("alert-error");
+            const sessionBox = document.getElementById("alert-session");
 
             alertBox.style.display = "none";
+            sessionBox.style.display = "none";
             btnSubmit.disabled = true;
             btnSubmit.innerText = "Autenticando...";
 

@@ -15,6 +15,13 @@ from app.models.models import (
 from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
 from app.services.notificador_email import NotificadorEmail
+from app.services.cookie_service import CookieService
+
+
+
+
+
+
 
 COORDENADORES_AUTORIZADORES = {
     "Ana Paula Augusto Valverde",
@@ -85,12 +92,7 @@ def login_api():
     if not row or not row.ativo or not row.senha_hash or not check_password_hash(row.senha_hash, senha):
         return jsonify({'sucesso': False, 'mensagem': 'Crachá ou senha incorretos.'}), 401
 
-    session.clear()
-    session.permanent = True
-    session['usuario_id'] = row.id
-    session['usuario_nome'] = row.nome
-    session['cracha'] = row.cracha
-    session['usuario_perfil'] = (row.role or 'GESTOR').strip().upper()
+    CookieService.iniciar_sessao_usuario(db, row)
 
     return jsonify({
         'sucesso': True,
@@ -106,8 +108,10 @@ def login_api():
 
 @api_bp.route('/logout', methods=['POST', 'GET'])
 def logout_api():
-    session.clear()
-    return jsonify({'sucesso': True, 'mensagem': 'Sessão encerrada com sucesso.'}), 200
+    db = get_db()
+    resp = jsonify({'sucesso': True, 'mensagem': 'Sessão encerrada com sucesso.'})
+    CookieService.encerrar_sessao(db=db, response=resp)
+    return resp, 200
 
 
 @api_bp.route('/primeiro-acesso', methods=['POST'])

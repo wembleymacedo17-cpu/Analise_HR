@@ -585,6 +585,53 @@
     <div id="toast-msg" class="toast"></div>
 
     <script>
+        // ======================================================================
+        // CONTROLE DE SESSÃO ÚNICA E EXPIRAÇÃO POR INATIVIDADE (30 MINUTOS)
+        // ======================================================================
+        const LIMITE_INATIVIDADE_MS = 30 * 60 * 1000;
+        let ultimaAtividadeLocal = Date.now();
+        let redirecionandoSessao = false;
+
+        function redirecionarPorSessaoEncerrada(motivo = "expirada") {
+            if (redirecionandoSessao) return;
+            redirecionandoSessao = true;
+            window.location.href = `/login?motivo=${encodeURIComponent(motivo)}`;
+        }
+
+        function registrarAtividadeLocal() {
+            ultimaAtividadeLocal = Date.now();
+        }
+
+        ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(evt => {
+            window.addEventListener(evt, registrarAtividadeLocal, { passive: true });
+        });
+
+        setInterval(async () => {
+            if (Date.now() - ultimaAtividadeLocal >= LIMITE_INATIVIDADE_MS) {
+                try {
+                    await _fetchOriginal("/api/logout", { method: "POST" });
+                } catch (_) {}
+                redirecionarPorSessaoEncerrada("inatividade");
+            }
+        }, 15000);
+
+        const _fetchOriginal = window.fetch;
+        window.fetch = async (...args) => {
+            const resp = await _fetchOriginal(...args);
+            if (resp.status === 401) {
+                try {
+                    const clone = await resp.clone().json();
+                    redirecionarPorSessaoEncerrada(clone.motivo || "expirada");
+                } catch (_) {
+                    redirecionarPorSessaoEncerrada("expirada");
+                }
+            }
+            return resp;
+        };
+
+        // ======================================================================
+        // ESTADO GLOBAL E NAVEGAÇÃO
+        // ======================================================================
         const PERFIL_LOGADO = "{{ perfil }}";
         let listaFaltasCache = [], listaConvitesCache = [], listaPerfisCache = [], listaCCsGlobal = [];
         let listaGestoresGlobal = [], gestorSelecionadoGlobal = null;
