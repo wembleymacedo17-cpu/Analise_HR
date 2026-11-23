@@ -3,12 +3,6 @@
         <div class="panel-header">
             <h2 class="panel-title" id="titulo-aba-faltas">{{ 'Visão Global por Gestor' if perfil == 'ROOT' else 'Ocorrências' }}</h2>
             <div class="filters-row">
-                <input type="text" id="filtro-busca" class="input-control {{ 'is-hidden' if perfil == 'ROOT' else '' }}" placeholder="Buscar nome, crachá ou cargo..." oninput="filtrarTabelaFaltas()">
-                <select id="filtro-status" class="select-control {{ 'is-hidden' if perfil == 'ROOT' else '' }}" onchange="aoMudarFiltroStatus()">
-                    <option value="PENDENTE" selected>Pendentes</option>
-                    <option value="ANALISADA">Analisadas</option>
-                </select>
-                <button type="button" id="btn-buscar-outro-setor" class="btn btn-outline {{ 'is-hidden' if perfil == 'ROOT' else '' }}" onclick="abrirModalPuxarColaborador()">Buscar de Outro Setor</button>
                 <button type="button" class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
             </div>
         </div>
@@ -18,7 +12,32 @@
                 <strong id="lbl-vg-gestor-nome" style="color:var(--funfarme-blue); font-size:0.95rem;">--</strong>
                 <div id="lbl-vg-gestor-resumo" style="font-size:0.78rem; color:#334155; margin-top:2px;">--</div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="voltarListaGestoresGlobal()">← Voltar para Gestores</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="abrirModalHistoricoGestor()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Histórico
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="voltarListaGestoresGlobal()">← Voltar para Gestores</button>
+            </div>
+        </div>
+
+        <div id="barra-ferramentas-ocorrencias" class="ocorrencias-toolbar {{ 'is-hidden' if perfil == 'ROOT' else '' }}">
+            <div class="toolbar-group-filters">
+                <input type="text" id="filtro-busca" class="input-control" placeholder="Buscar nome, crachá ou cargo..." oninput="filtrarTabelaFaltas()">
+                <select id="filtro-status" class="select-control" onchange="aoMudarFiltroStatus()">
+                    <option value="PENDENTE" selected>Pendentes</option>
+                    <option value="ANALISADA">Analisadas</option>
+                </select>
+            </div>
+            <div class="toolbar-group-actions">
+                {% if perfil != 'ROOT' %}
+                <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoGestor()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Histórico
+                </button>
+                {% endif %}
+                <button type="button" id="btn-buscar-outro-setor" class="btn btn-outline" onclick="abrirModalPuxarColaborador()">Buscar de Outro Setor</button>
+            </div>
         </div>
 
         <div id="grid-gestores-global" class="gestores-global-grid" style="display:none;"></div>
@@ -29,7 +48,41 @@
     </div>
 </section>
 
-<!-- MODAL DETALHES, MOVER CC & DESFAZER ANÁLISE -->
+<!-- MODAL HISTÓRICO DE MOVIMENTAÇÕES (ROOT E GESTOR) -->
+<div id="modal-historico-gestor" class="modal-backdrop">
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <div>
+                <h3>Histórico de Movimentações</h3>
+                <div class="modal-info" id="hist-gestor-subtitulo">--</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="filtro-hist-gestor" class="input-control" style="padding:7px 11px; font-size:0.8rem;" placeholder="Filtrar colaborador, autor ou ação..." oninput="filtrarHistoricoGestor()">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalHistoricoGestor()">Fechar</button>
+            </div>
+        </div>
+        <div class="modal-body-scroll table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 135px;">Data / Hora</th>
+                        <th style="width: 155px;">Movimentação</th>
+                        <th>Colaborador</th>
+                        <th style="width: 105px;">Data Falta</th>
+                        <th>Setor</th>
+                        <th>Executado por</th>
+                        <th>Detalhe / Motivo</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-historico-gestor">
+                    <tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando histórico...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETALHES, MOVER CC, DEVOLVER CC & DESFAZER ANÁLISE -->
 <div id="modal-detalhes-ocorrencia" class="modal-backdrop">
     <div class="modal-card">
         <div class="modal-header">
@@ -48,6 +101,11 @@
             <div class="detalhe-item"><div class="detalhe-item-label">Crachá</div><div class="detalhe-item-val" id="det-cracha">--</div></div>
             <div class="detalhe-item"><div class="detalhe-item-label">Data da Ocorrência</div><div class="detalhe-item-val" id="det-data">--</div></div>
             <div class="detalhe-item" style="grid-column: 1 / -1;"><div class="detalhe-item-label">Centro de Custo Atual</div><div class="detalhe-item-val" id="det-cc">--</div></div>
+        </div>
+
+        <div id="det-movimentado-box" style="display:none; background:#eef2ff; border:1.5px solid #818cf8; border-radius:12px; padding:11px 14px; font-size:0.81rem; color:#312e81; font-weight:700; margin-bottom: 12px; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+            <span id="lbl-det-movimentado">--</span>
+            <button type="button" class="btn btn-warning btn-sm" id="btn-devolver-cc" onclick="solicitarDevolucaoCC()">Devolver CC</button>
         </div>
 
         <div id="det-auditoria-box" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:12px 14px; font-size:0.82rem; color:#065f46; line-height:1.45; margin-bottom: 12px;"></div>
@@ -233,6 +291,8 @@
 <script>
     let listaFaltasCache = [];
     let listaGestoresGlobal = [], gestorSelecionadoGlobal = null;
+    let usuarioProprioId = null;
+    let listaHistoricoGestorCache = [];
     let cobridorSelecionadoObj = null;
     let ocorrenciaDetalheAtual = null, ocorrenciaExternaSelecionada = null;
     let timerBuscaCobridor = null, timerBuscaExterna = null;
@@ -240,12 +300,8 @@
 
     function atualizarVisibilidadeFiltrosRoot(exibir) {
         if (PERFIL_LOGADO !== "ROOT") return;
-        const busca = document.getElementById("filtro-busca");
-        const status = document.getElementById("filtro-status");
-        const btnOutroSetor = document.getElementById("btn-buscar-outro-setor");
-        if (busca) busca.classList.toggle("is-hidden", !exibir);
-        if (status) status.classList.toggle("is-hidden", !exibir);
-        if (btnOutroSetor) btnOutroSetor.classList.toggle("is-hidden", !exibir);
+        const barra = document.getElementById("barra-ferramentas-ocorrencias");
+        if (barra) barra.classList.toggle("is-hidden", !exibir);
     }
 
     function aoMudarFiltroStatus() {
@@ -363,6 +419,7 @@
         const data = await res.json();
         if (!data.sucesso) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`; return; }
         listaFaltasCache = data.faltas;
+        usuarioProprioId = data.usuario_id || usuarioProprioId;
         if (data.kpis_gestor) {
             document.getElementById("kpi-pendentes").innerText = data.kpis_gestor.pendentes;
             document.getElementById("kpi-analisadas").innerText = data.kpis_gestor.analisadas;
@@ -377,6 +434,116 @@
         }
         const t = document.getElementById("filtro-busca").value.toLowerCase().trim();
         renderizarBentoFaltas(t ? listaFaltasCache.filter(f => f.colaborador_nome.toLowerCase().includes(t) || f.cracha.toLowerCase().includes(t) || f.data_ocorrencia.toLowerCase().includes(t) || (f.cargo || "").toLowerCase().includes(t) || f.centro_custo.toLowerCase().includes(t)) : listaFaltasCache);
+    }
+
+    // =========================================================================
+    // MODAL HISTÓRICO DE MOVIMENTAÇÕES (ROOT E GESTOR)
+    // =========================================================================
+    async function abrirModalHistoricoGestor() {
+        const targetId = PERFIL_LOGADO === "ROOT" ? gestorSelecionadoGlobal?.id : usuarioProprioId;
+        if (!targetId) {
+            mostrarToast("Não foi possível identificar o perfil para carregar o histórico.", true);
+            return;
+        }
+
+        const modal = document.getElementById("modal-historico-gestor");
+        const tbody = document.getElementById("tbody-historico-gestor");
+        const inp = document.getElementById("filtro-hist-gestor");
+        if (inp) inp.value = "";
+        document.getElementById("hist-gestor-subtitulo").innerText =
+            PERFIL_LOGADO === "ROOT" && gestorSelecionadoGlobal
+                ? `${gestorSelecionadoGlobal.nome} (Crachá ${gestorSelecionadoGlobal.cracha})`
+                : "Todas as movimentações dos meus Centros de Custo";
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Carregando movimentações...</td></tr>';
+        modal.style.display = "flex";
+
+        try {
+            const res = await fetch(`/api/visao-global/gestores/${targetId}/historico`);
+            const data = await res.json();
+            if (!data.sucesso) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#dc2626;">${data.mensagem}</td></tr>`;
+                return;
+            }
+            listaHistoricoGestorCache = data.movimentacoes || [];
+            renderizarHistoricoGestor(listaHistoricoGestorCache);
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc2626;">Erro ao carregar histórico.</td></tr>';
+        }
+    }
+
+    function fecharModalHistoricoGestor() {
+        const modal = document.getElementById("modal-historico-gestor");
+        if (modal) modal.style.display = "none";
+    }
+
+    function filtrarHistoricoGestor() {
+        const t = (document.getElementById("filtro-hist-gestor")?.value || "").toLowerCase().trim();
+        renderizarHistoricoGestor(
+            t ? listaHistoricoGestorCache.filter(m =>
+                m.colaborador.toLowerCase().includes(t) ||
+                m.setor.toLowerCase().includes(t) ||
+                m.tipo_label.toLowerCase().includes(t) ||
+                m.detalhe.toLowerCase().includes(t) ||
+                (m.executado_por || "").toLowerCase().includes(t) ||
+                m.data_falta.toLowerCase().includes(t)
+            ) : listaHistoricoGestorCache
+        );
+    }
+
+    function renderizarHistoricoGestor(lista) {
+        const tbody = document.getElementById("tbody-historico-gestor");
+        if (!tbody) return;
+        if (!lista.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Nenhuma movimentação registrada.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = lista.map(m => {
+            const pillClass = m.tipo === "ANALISE"
+                ? "pill-analisada"
+                : (m.tipo === "TRANSFERENCIA" ? "pill-utilizado" : (m.tipo === "DEVOLUCAO" ? "pill-pendente" : "pill-expirado"));
+
+            const autorHtml = m.outro_perfil
+                ? `<div><strong>${m.executado_por}</strong></div><span class="status-pill pill-pendente" style="margin-top:3px; font-size:0.65rem;">Feito por outro perfil</span>`
+                : `<span>${m.executado_por || "--"}</span>`;
+
+            return `
+                <tr ${m.outro_perfil ? 'style="background:#fffbeb;"' : ''}>
+                    <td>${m.data_hora}</td>
+                    <td><span class="status-pill ${pillClass}">${m.tipo_label}</span></td>
+                    <td><strong>${m.colaborador}</strong></td>
+                    <td>${m.data_falta}</td>
+                    <td>${m.setor}</td>
+                    <td>${autorHtml}</td>
+                    <td>${m.detalhe}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // =========================================================================
+    // DEVOLVER CENTRO DE CUSTO (DESFAZ MOVIMENTAÇÃO E ANÁLISES DO COLABORADOR)
+    // =========================================================================
+    function solicitarDevolucaoCC() {
+        if (!ocorrenciaDetalheAtual) return;
+        const destinoTxt = ocorrenciaDetalheAtual.cc_origem_nome || "setor de origem";
+        abrirModalConfirmacao({
+            titulo: "Devolver Centro de Custo",
+            mensagem: `Deseja devolver <strong>${ocorrenciaDetalheAtual.colaborador_nome}</strong> para <strong>${destinoTxt}</strong>? Todas as ocorrências e análises vinculadas a este colaborador serão desfeitas e voltarão para Pendente.`,
+            textoBotao: "Sim, Devolver CC",
+            onConfirm: async () => {
+                const res = await fetch(`/api/faltas/${ocorrenciaDetalheAtual.id}/devolver-cc`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+                const d = await res.json();
+                mostrarToast(d.mensagem, !d.sucesso);
+                if (d.sucesso) {
+                    fecharModalDetalhesOcorrencia();
+                    await carregarFaltas();
+                    await carregarMetricasRoot();
+                }
+            }
+        });
     }
 
     function toggleDesfazerBox(exibir) {
@@ -452,7 +619,23 @@
         const mapa = new Map();
         for (const f of lista) {
             const k = f.colaborador_id || f.cracha;
-            if (!mapa.has(k)) mapa.set(k, { colaborador_id: f.colaborador_id, cracha: f.cracha, colaborador_nome: f.colaborador_nome, sexo: f.sexo, cargo: f.cargo, status: f.status, ocorrencias: [] });
+            if (!mapa.has(k)) {
+                mapa.set(k, {
+                    colaborador_id: f.colaborador_id,
+                    cracha: f.cracha,
+                    colaborador_nome: f.colaborador_nome,
+                    sexo: f.sexo,
+                    cargo: f.cargo,
+                    status: f.status,
+                    movimentado_cc: Boolean(f.movimentado_cc),
+                    movimentado_detalhe: f.movimentado_detalhe || "",
+                    ocorrencias: []
+                });
+            }
+            if (f.movimentado_cc) {
+                mapa.get(k).movimentado_cc = true;
+                mapa.get(k).movimentado_detalhe = f.movimentado_detalhe || mapa.get(k).movimentado_detalhe;
+            }
             mapa.get(k).ocorrencias.push(f);
         }
         return Array.from(mapa.values());
@@ -464,8 +647,21 @@
         if (!lista.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:28px;">Nenhuma ocorrência encontrada.</div>'; return; }
         grid.innerHTML = agruparFaltasPorColaborador(lista).map(g => {
             const isPend = g.status === "PENDENTE";
+            const badgeMov = g.movimentado_cc
+                ? `<span class="bento-movimentado-badge" title="${g.movimentado_detalhe || 'Colaborador movimentado de outro Centro de Custo'}">
+                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                       Movimentado de Outro CC
+                   </span>`
+                : "";
             const entries = g.ocorrencias.map(oc => `<div class="timeline-entry" onclick="event.stopPropagation(); abrirModalDetalhesOcorrencia(${oc.id})"><span class="timeline-date">${oc.data_ocorrencia}</span><span class="timeline-icons">${renderIconesLinhaTempo(oc)}</span></div>`).join("");
-            return `<div class="bento-person-card" onclick="abrirModalDetalhesOcorrencia(${g.ocorrencias[0].id})"><span class="bento-status-dot ${isPend ? "dot-pendente" : "dot-analisada"}"></span><div class="bento-avatar-circle ${obterClasseSexo(g.sexo)} ${!isPend ? "avatar-analisada" : ""}">${renderSvgBonequinho(g.sexo, 34)}</div><div class="bento-person-name">${g.colaborador_nome}</div><div class="bento-person-role">${g.cargo || "Cargo não informado"}</div><div class="bento-timeline">${entries}</div></div>`;
+            return `<div class="bento-person-card ${g.movimentado_cc ? "card-movimentado" : ""}" onclick="abrirModalDetalhesOcorrencia(${g.ocorrencias[0].id})">
+                ${badgeMov}
+                <span class="bento-status-dot ${isPend ? "dot-pendente" : "dot-analisada"}"></span>
+                <div class="bento-avatar-circle ${obterClasseSexo(g.sexo)} ${!isPend ? "avatar-analisada" : ""}">${renderSvgBonequinho(g.sexo, 34)}</div>
+                <div class="bento-person-name">${g.colaborador_nome}</div>
+                <div class="bento-person-role">${g.cargo || "Cargo não informado"}</div>
+                <div class="bento-timeline">${entries}</div>
+            </div>`;
         }).join("");
     }
 
@@ -482,6 +678,15 @@
         document.getElementById("det-cc").innerText = `${falta.codigo_cc} - ${falta.centro_custo}`;
         const isPend = falta.status === "PENDENTE";
         document.getElementById("det-status-badge").innerHTML = isPend ? '<span class="status-pill pill-pendente">PENDENTE</span>' : '<span class="status-pill pill-analisada">ANALISADA</span>';
+
+        const movBox = document.getElementById("det-movimentado-box");
+        if (falta.movimentado_cc) {
+            document.getElementById("lbl-det-movimentado").innerText = `⇄ ${falta.movimentado_detalhe || "Movimentado de outro Centro de Custo"}`;
+            movBox.style.display = "flex";
+        } else {
+            movBox.style.display = "none";
+        }
+
         const aud = document.getElementById("det-auditoria-box");
         if (!isPend && falta.analise) {
             const l = [`<strong>Analisado por:</strong> ${falta.analise.avaliador} em ${falta.analise.respondido_em}`];

@@ -409,9 +409,43 @@ def buscar_ocorrencia_externa():
     }), 200
 
 
+
+def _mapa_colaboradores_movimentados(db, colaborador_ids: set[int]) -> dict[int, dict]:
+    """Identifica colaboradores que tiveram movimentação de Centro de Custo e guarda o CC de origem."""
+    if not colaborador_ids:
+        return {}
+    rows = (
+        db.query(
+            HistoricoAnaliseDesfeita.colaborador_id,
+            HistoricoAnaliseDesfeita.centro_custo_id,
+            HistoricoAnaliseDesfeita.motivo,
+            HistoricoAnaliseDesfeita.desfeito_em,
+            CentroCusto.codigo_cc,
+            CentroCusto.nome.label('cc_nome'),
+        )
+        .join(CentroCusto, HistoricoAnaliseDesfeita.centro_custo_id == CentroCusto.id)
+        .filter(
+            HistoricoAnaliseDesfeita.colaborador_id.in_(colaborador_ids),
+            HistoricoAnaliseDesfeita.motivo.ilike("Transferência de Centro de Custo%"),
+        )
+        .order_by(HistoricoAnaliseDesfeita.desfeito_em.desc())
+        .all()
+    )
+    mapa = {}
+    for r in rows:
+        if r.colaborador_id not in mapa:
+            dt_fmt = (r.desfeito_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if r.desfeito_em else ''
+            mapa[r.colaborador_id] = {
+                'detalhe': f"Origem: {r.codigo_cc} - {r.cc_nome} • {r.motivo} ({dt_fmt})",
+                'cc_origem_id': r.centro_custo_id,
+                'cc_origem_nome': f"{r.codigo_cc} - {r.cc_nome}",
+            }
+    return mapa
+
+
 @api_bp.route('/faltas/<int:ocorrencia_id>/mover-cc', methods=['PUT'])
 def mover_centro_custo_ocorrencia(ocorrencia_id):
-    """Move o colaborador e todas as faltas dele para o novo Centro de Custo; se houver falta ANALISADA, desfaz a análise para o novo setor."""
+    """Move o colaborador e todas as faltas dele para o novo Centro de Custo, registrando a movimentação e desfazendo análises se houver."""
     id_user = session.get('usuario_id')
     perfil = session.get('usuario_perfil')
     if not id_user:
@@ -458,7 +492,6 @@ def mover_centro_custo_ocorrencia(ocorrencia_id):
                     'mensagem': 'Você só pode transferir ocorrências saindo do seu setor ou puxando para o seu setor.'
                 }), 403
 
-        # Busca todas as faltas vinculadas ao colaborador para mover todas juntas
         faltas_colaborador = (
             db.query(OcorrenciaFalta)
             .filter(OcorrenciaFalta.colaborador_id == ocorrencia_ref.colaborador_id)
@@ -473,6 +506,7 @@ def mover_centro_custo_ocorrencia(ocorrencia_id):
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'O colaborador e suas faltas já pertencem a este Centro de Custo.'}), 400
 
+        cc_origem_id = ocorrencia_ref.centro_custo_id
         analises_desfeitas = 0
         for falta in faltas_colaborador:
             if falta.status == 'ANALISADA':
@@ -511,6 +545,18 @@ def mover_centro_custo_ocorrencia(ocorrencia_id):
 
             falta.centro_custo_id = novo_cc_id
 
+        # Garante registro da movimentação no histórico mesmo quando as faltas estavam pendentes
+        if analises_desfeitas == 0:
+            db.add(HistoricoAnaliseDesfeita(
+                ocorrencia_id=ocorrencia_ref.id,
+                colaborador_id=ocorrencia_ref.colaborador_id,
+                centro_custo_id=cc_origem_id,
+                data_ocorrencia=ocorrencia_ref.data_ocorrencia,
+                desfeito_por_id=id_user,
+                motivo=f"Transferência de Centro de Custo para {cc_destino.codigo_cc} - {cc_destino.nome}",
+                dados_analise_anterior=None,
+            ))
+
         if atualizar_cadastro_colab and colab_ref:
             colab_ref.centro_custo_id = novo_cc_id
 
@@ -531,9 +577,106 @@ def mover_centro_custo_ocorrencia(ocorrencia_id):
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao mover Centro de Custo: {str(e)}'}), 500
 
 
-# ==============================================================================
-# OPERACIONAL DE OCORRÊNCIAS (GESTOR & ROOT)
-# ==============================================================================
+@api_bp.route('/faltas/<int:ocorrencia_id>/devolver-cc', methods=['POST'])
+def devolver_centro_custo_ocorrencia(ocorrencia_id):
+    """Devolve o colaborador movimentado ao Centro de Custo de origem e desfaz todas as análises vinculadas a ele."""
+    id_user = session.get('usuario_id')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    db = get_db()
+    try:
+        ocorrencia_ref = (
+            db.query(OcorrenciaFalta)
+            .filter(OcorrenciaFalta.id == ocorrencia_id)
+            .with_for_update()
+            .first()
+        )
+        if not ocorrencia_ref:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Ocorrência não encontrada.'}), 404
+
+        ultima_transf = (
+            db.query(
+                HistoricoAnaliseDesfeita.centro_custo_id,
+                CentroCusto.codigo_cc,
+                CentroCusto.nome.label('cc_nome'),
+            )
+            .join(CentroCusto, HistoricoAnaliseDesfeita.centro_custo_id == CentroCusto.id)
+            .filter(
+                HistoricoAnaliseDesfeita.colaborador_id == ocorrencia_ref.colaborador_id,
+                HistoricoAnaliseDesfeita.motivo.ilike("Transferência de Centro de Custo%"),
+            )
+            .order_by(HistoricoAnaliseDesfeita.desfeito_em.desc())
+            .first()
+        )
+
+        if not ultima_transf:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Não foi encontrado um setor de origem registrado para devolução.'}), 400
+
+        cc_origem_id = ultima_transf.centro_custo_id
+        if cc_origem_id == ocorrencia_ref.centro_custo_id:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'O colaborador já se encontra no Centro de Custo de origem.'}), 400
+
+        faltas_colaborador = (
+            db.query(OcorrenciaFalta)
+            .filter(OcorrenciaFalta.colaborador_id == ocorrencia_ref.colaborador_id)
+            .with_for_update()
+            .all()
+        )
+
+        analises_desfeitas = 0
+        for falta in faltas_colaborador:
+            snapshot = None
+            if falta.status == 'ANALISADA':
+                analise_atual = db.query(AnaliseFalta).filter(AnaliseFalta.ocorrencia_id == falta.id).first()
+                if analise_atual:
+                    snapshot = json.dumps({
+                        'ausencia_programada': analise_atual.ausencia_programada,
+                        'comunicada_2h_antecedencia': analise_atual.comunicada_2h_antecedencia,
+                        'autorizado_hora_extra': analise_atual.autorizado_hora_extra,
+                        'autorizador_he_nome': analise_atual.autorizador_he_nome,
+                        'conseguiu_he_cobertura': analise_atual.conseguiu_he_cobertura,
+                        'cobridor_colaborador_id': analise_atual.cobridor_colaborador_id,
+                        'redividiu_equipe': analise_atual.redividiu_equipe,
+                        'qtd_pacientes': analise_atual.qtd_pacientes,
+                        'qtd_colaboradores': analise_atual.qtd_colaboradores,
+                        'justificativa_nao_redimensionada': analise_atual.justificativa_nao_redimensionada,
+                    }, default=str)
+
+                db.query(AnaliseFalta).filter(AnaliseFalta.ocorrencia_id == falta.id).delete(synchronize_session=False)
+                falta.status = 'PENDENTE'
+                analises_desfeitas += 1
+
+            db.add(HistoricoAnaliseDesfeita(
+                ocorrencia_id=falta.id,
+                colaborador_id=falta.colaborador_id,
+                centro_custo_id=falta.centro_custo_id,
+                data_ocorrencia=falta.data_ocorrencia,
+                desfeito_por_id=id_user,
+                motivo=f"Devolução de Centro de Custo para {ultima_transf.codigo_cc} - {ultima_transf.cc_nome}",
+                dados_analise_anterior=snapshot,
+            ))
+            falta.centro_custo_id = cc_origem_id
+
+        colab_ref = db.query(Colaborador).filter(Colaborador.id == ocorrencia_ref.colaborador_id).first()
+        if colab_ref:
+            colab_ref.centro_custo_id = cc_origem_id
+
+        db.commit()
+
+        extra_msg = f" e {analises_desfeitas} análise(s) desfeita(s)" if analises_desfeitas > 0 else ""
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Colaborador devolvido para {ultima_transf.codigo_cc} - {ultima_transf.cc_nome} ({len(faltas_colaborador)} ocorrência(s) restaurada(s){extra_msg})!'
+        }), 200
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao devolver Centro de Custo: {str(e)}'}), 500
+
 @api_bp.route('/faltas', methods=['GET'])
 def listar_faltas():
     id_user = session.get('usuario_id')
@@ -550,6 +693,7 @@ def listar_faltas():
         if not cc_ids:
             return jsonify({
                 'sucesso': True,
+                'usuario_id': id_user,
                 'faltas': [],
                 'kpis_gestor': {'pendentes': 0, 'analisadas': 0}
             }), 200
@@ -639,8 +783,14 @@ def listar_faltas():
                 'respondido_em': dt_resp
             }
 
-    lista = [
-        {
+    colab_ids = {r.colaborador_id for r in rows}
+    movimentados_map = _mapa_colaboradores_movimentados(db, colab_ids)
+
+    lista = []
+    for r in rows:
+        mov_obj = movimentados_map.get(r.colaborador_id)
+        foi_movimentado = bool(mov_obj and mov_obj['cc_origem_id'] != r.centro_custo_id)
+        lista.append({
             'id': r.id,
             'colaborador_id': r.colaborador_id,
             'centro_custo_id': r.centro_custo_id,
@@ -652,20 +802,21 @@ def listar_faltas():
             'centro_custo': r.centro_custo_nome,
             'data_ocorrencia': r.data_ocorrencia.strftime('%d/%m/%Y'),
             'status': r.status,
+            'movimentado_cc': foi_movimentado,
+            'movimentado_detalhe': mov_obj['detalhe'] if foi_movimentado else None,
+            'cc_origem_nome': mov_obj['cc_origem_nome'] if foi_movimentado else None,
             'analise': analises_map.get(r.id)
-        }
-        for r in rows
-    ]
+        })
 
     return jsonify({
         'sucesso': True,
+        'usuario_id': id_user,
         'faltas': lista,
         'kpis_gestor': {
             'pendentes': kpi_map.get('PENDENTE', 0),
             'analisadas': kpi_map.get('ANALISADA', 0)
         }
     }), 200
-
 
 @api_bp.route('/analisar-falta', methods=['POST'])
 def analisar_falta():
@@ -937,6 +1088,8 @@ def validar_cracha_colaborador(cracha):
         }
     }), 200
 
+
+
 @api_bp.route('/visao-global/gestores', methods=['GET'])
 def visao_global_gestores():
     """Retorna para o ROOT os gestores com contagem de análises feitas e pendentes, e as ocorrências de cada gestor."""
@@ -1013,6 +1166,9 @@ def visao_global_gestores():
             .all()
         )
 
+        colab_ids = {r.colaborador_id for r in rows}
+        movimentados_map = _mapa_colaboradores_movimentados(db, colab_ids)
+
         for r in rows:
             analise_obj = None
             if r.status == 'ANALISADA' and r.avaliador_nome:
@@ -1035,6 +1191,8 @@ def visao_global_gestores():
                     'respondido_em': dt_resp
                 }
 
+            mov_obj = movimentados_map.get(r.colaborador_id)
+            foi_movimentado = bool(mov_obj and mov_obj['cc_origem_id'] != r.centro_custo_id)
             ocorrencias_por_cc.setdefault(r.centro_custo_id, []).append({
                 'id': r.id,
                 'colaborador_id': r.colaborador_id,
@@ -1047,6 +1205,9 @@ def visao_global_gestores():
                 'centro_custo': r.centro_custo_nome,
                 'data_ocorrencia': r.data_ocorrencia.strftime('%d/%m/%Y'),
                 'status': r.status,
+                'movimentado_cc': foi_movimentado,
+                'movimentado_detalhe': mov_obj['detalhe'] if foi_movimentado else None,
+                'cc_origem_nome': mov_obj['cc_origem_nome'] if foi_movimentado else None,
                 'analise': analise_obj
             })
 
@@ -1081,6 +1242,166 @@ def visao_global_gestores():
         'gestores': gestores_payload
     }), 200
 
+
+@api_bp.route('/visao-global/gestores/<int:usuario_id>/historico', methods=['GET'])
+def historico_movimentacoes_gestor(usuario_id):
+    """
+    Retorna todas as movimentações ocorridas nos Centros de Custo do gestor
+    (incluindo ações feitas pelo próprio gestor ou por outro perfil como ROOT).
+    Acessível pelo ROOT ou pelo próprio GESTOR.
+    """
+    id_logado = session.get('usuario_id')
+    perfil_logado = session.get('usuario_perfil')
+    if not id_logado:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    if perfil_logado != 'ROOT' and int(id_logado) != int(usuario_id):
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    user = (
+        db.query(Usuario)
+        .options(
+            joinedload(Usuario.colaborador).load_only(Colaborador.cracha, Colaborador.nome),
+            selectinload(Usuario.centros_custo)
+        )
+        .filter(Usuario.id == usuario_id)
+        .first()
+    )
+    if not user:
+        return jsonify({'sucesso': False, 'mensagem': 'Perfil não encontrado.'}), 404
+
+    ccs_gestor = [uc.centro_custo_id for uc in user.centros_custo]
+    eventos = []
+
+    # 1. Análises registradas nos CCs do gestor OU feitas diretamente por ele
+    AutorUser = aliased(Usuario)
+    AutorColab = aliased(Colaborador)
+
+    q_analises = (
+        db.query(
+            AnaliseFalta.id,
+            AnaliseFalta.avaliador_id,
+            AnaliseFalta.respondido_em,
+            AnaliseFalta.ausencia_programada,
+            AnaliseFalta.autorizado_hora_extra,
+            AnaliseFalta.conseguiu_he_cobertura,
+            AnaliseFalta.redividiu_equipe,
+            OcorrenciaFalta.data_ocorrencia,
+            Colaborador.cracha,
+            Colaborador.nome.label('colab_nome'),
+            CentroCusto.codigo_cc,
+            CentroCusto.nome.label('cc_nome'),
+            AutorUser.role.label('autor_role'),
+            AutorColab.nome.label('autor_nome'),
+        )
+        .join(OcorrenciaFalta, AnaliseFalta.ocorrencia_id == OcorrenciaFalta.id)
+        .join(Colaborador, OcorrenciaFalta.colaborador_id == Colaborador.id)
+        .join(CentroCusto, OcorrenciaFalta.centro_custo_id == CentroCusto.id)
+        .join(AutorUser, AnaliseFalta.avaliador_id == AutorUser.id)
+        .join(AutorColab, AutorUser.colaborador_id == AutorColab.id)
+    )
+    if ccs_gestor:
+        q_analises = q_analises.filter(
+            or_(
+                OcorrenciaFalta.centro_custo_id.in_(ccs_gestor),
+                AnaliseFalta.avaliador_id == usuario_id,
+            )
+        )
+    else:
+        q_analises = q_analises.filter(AnaliseFalta.avaliador_id == usuario_id)
+
+    for a in q_analises.order_by(AnaliseFalta.respondido_em.desc()).limit(200).all():
+        if a.ausencia_programada:
+            resumo = "Ausência programada"
+        elif a.autorizado_hora_extra and a.conseguiu_he_cobertura:
+            resumo = "Cobertura com Hora Extra"
+        elif a.redividiu_equipe:
+            resumo = "Equipe redimensionada"
+        else:
+            resumo = "Sem redimensionamento (justificado)"
+
+        outro_perfil = int(a.avaliador_id) != int(usuario_id)
+        eventos.append({
+            'ts': a.respondido_em.isoformat() if a.respondido_em else '',
+            'data_hora': (a.respondido_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if a.respondido_em else '--',
+            'tipo': 'ANALISE',
+            'tipo_label': 'Análise Registrada',
+            'colaborador': f"{a.cracha} - {a.colab_nome}",
+            'data_falta': a.data_ocorrencia.strftime('%d/%m/%Y') if a.data_ocorrencia else '--',
+            'setor': f"{a.codigo_cc} - {a.cc_nome}",
+            'detalhe': resumo,
+            'executado_por': f"{a.autor_nome} ({a.autor_role})",
+            'outro_perfil': outro_perfil,
+        })
+
+    # 2. Análises desfeitas, transferências e devoluções de CC
+    q_hist = (
+        db.query(
+            HistoricoAnaliseDesfeita.id,
+            HistoricoAnaliseDesfeita.desfeito_por_id,
+            HistoricoAnaliseDesfeita.desfeito_em,
+            HistoricoAnaliseDesfeita.data_ocorrencia,
+            HistoricoAnaliseDesfeita.motivo,
+            Colaborador.cracha,
+            Colaborador.nome.label('colab_nome'),
+            CentroCusto.codigo_cc,
+            CentroCusto.nome.label('cc_nome'),
+            AutorUser.role.label('autor_role'),
+            AutorColab.nome.label('autor_nome'),
+        )
+        .join(Colaborador, HistoricoAnaliseDesfeita.colaborador_id == Colaborador.id)
+        .join(CentroCusto, HistoricoAnaliseDesfeita.centro_custo_id == CentroCusto.id)
+        .join(AutorUser, HistoricoAnaliseDesfeita.desfeito_por_id == AutorUser.id)
+        .join(AutorColab, AutorUser.colaborador_id == AutorColab.id)
+    )
+    if ccs_gestor:
+        q_hist = q_hist.filter(
+            or_(
+                HistoricoAnaliseDesfeita.centro_custo_id.in_(ccs_gestor),
+                HistoricoAnaliseDesfeita.desfeito_por_id == usuario_id,
+            )
+        )
+    else:
+        q_hist = q_hist.filter(HistoricoAnaliseDesfeita.desfeito_por_id == usuario_id)
+
+    for d in q_hist.order_by(HistoricoAnaliseDesfeita.desfeito_em.desc()).limit(200).all():
+        motivo_txt = d.motivo or ''
+        if motivo_txt.startswith('Transferência de Centro de Custo'):
+            tipo_cod = 'TRANSFERENCIA'
+            tipo_lbl = 'Transferência de Setor'
+        elif motivo_txt.startswith('Devolução de Centro de Custo'):
+            tipo_cod = 'DEVOLUCAO'
+            tipo_lbl = 'Devolução de Setor'
+        else:
+            tipo_cod = 'DESFEITA'
+            tipo_lbl = 'Análise Desfeita'
+
+        outro_perfil = int(d.desfeito_por_id) != int(usuario_id)
+        eventos.append({
+            'ts': d.desfeito_em.isoformat() if d.desfeito_em else '',
+            'data_hora': (d.desfeito_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if d.desfeito_em else '--',
+            'tipo': tipo_cod,
+            'tipo_label': tipo_lbl,
+            'colaborador': f"{d.cracha} - {d.colab_nome}",
+            'data_falta': d.data_ocorrencia.strftime('%d/%m/%Y') if d.data_ocorrencia else '--',
+            'setor': f"{d.codigo_cc} - {d.cc_nome}",
+            'detalhe': motivo_txt or '--',
+            'executado_por': f"{d.autor_nome} ({d.autor_role})",
+            'outro_perfil': outro_perfil,
+        })
+
+    eventos.sort(key=lambda x: x['ts'], reverse=True)
+
+    return jsonify({
+        'sucesso': True,
+        'gestor': {
+            'id': user.id,
+            'cracha': user.colaborador.cracha,
+            'nome': user.colaborador.nome,
+        },
+        'movimentacoes': eventos
+    }), 200
 
 
 @api_bp.route('/faltas/<int:ocorrencia_id>/desfazer-analise', methods=['POST'])

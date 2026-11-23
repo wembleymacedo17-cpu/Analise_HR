@@ -65,6 +65,8 @@
     font-weight: 700;
     text-transform: uppercase;
 }
+
+/* BANNER DO GESTOR SELECIONADO + BARRA DE FERRAMENTAS ORGANIZADA (UX) */
 .gestor-detalhe-banner {
     display: none;
     align-items: center;
@@ -75,7 +77,42 @@
     border: 1px solid #bfdbfe;
     border-radius: 12px;
     padding: 12px 16px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+}
+
+.ocorrencias-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+}
+
+.toolbar-group-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.toolbar-group-filters .input-control {
+    min-width: 240px;
+    max-width: 340px;
+    flex: 1;
+}
+
+.toolbar-group-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 /* BENTO GRID DE OCORRÊNCIAS */
@@ -100,6 +137,30 @@
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
 }
 .bento-person-card:hover { transform: translateY(-4px); border-color: var(--funfarme-blue); box-shadow: 0 12px 26px rgba(30, 58, 138, 0.12); }
+
+/* DESTAQUE VISUAL NÍTIDO PARA COLABORADOR MOVIMENTADO DE CENTRO DE CUSTO */
+.bento-person-card.card-movimentado {
+    border: 2px solid #4f46e5;
+    border-top: 5px solid #4f46e5;
+    background: linear-gradient(180deg, #e0e7ff 0%, #eef2ff 24%, #ffffff 55%);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.14);
+}
+.bento-movimentado-badge {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: #4f46e5;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
 
 .bento-status-dot { position: absolute; top: 13px; right: 13px; width: 10px; height: 10px; border-radius: 50%; }
 .dot-pendente { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
