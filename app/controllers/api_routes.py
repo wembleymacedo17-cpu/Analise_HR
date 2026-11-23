@@ -868,6 +868,23 @@ def validar_cracha_colaborador(cracha):
             'mensagem': f'Crachá "{cracha_limpo}" não encontrado ou colaborador inativo.'
         }), 404
 
+    usuario_existente = (
+        db.query(Usuario.id, Usuario.role, Usuario.ativo)
+        .filter(Usuario.colaborador_id == row.id)
+        .first()
+    )
+    if usuario_existente:
+        status_txt = "ATIVO" if usuario_existente.ativo else "BLOQUEADO"
+        return jsonify({
+            'sucesso': False,
+            'usuario_existente': True,
+            'mensagem': (
+                f'O crachá {cracha_limpo} ({row.nome}) já possui acesso liberado '
+                f'(Perfil: {usuario_existente.role} • {status_txt}). '
+                f'Para alterar setores ou senha, utilize a aba Gestão de Perfis.'
+            )
+        }), 409
+
     _expirar_convites_vencidos(db, row.id)
     db.commit()
 
@@ -1163,6 +1180,21 @@ def convites_api():
         )
         if not colab:
             return jsonify({'sucesso': False, 'mensagem': f'Crachá {cracha} não encontrado ou inativo.'}), 404
+
+        usuario_existente = (
+            db.query(Usuario.id, Usuario.role, Usuario.ativo)
+            .filter(Usuario.colaborador_id == colab.id)
+            .first()
+        )
+        if usuario_existente:
+            status_txt = "ATIVO" if usuario_existente.ativo else "BLOQUEADO"
+            return jsonify({
+                'sucesso': False,
+                'mensagem': (
+                    f'O crachá {cracha} ({colab.nome}) já possui acesso liberado '
+                    f'(Perfil: {usuario_existente.role} • {status_txt}). Gerencie o perfil na aba Gestão de Perfis.'
+                )
+            }), 409
 
         if not ccs_ids:
             return jsonify({'sucesso': False, 'mensagem': 'Selecione ao menos um Centro de Custo.'}), 400
