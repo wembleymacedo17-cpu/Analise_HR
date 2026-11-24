@@ -242,9 +242,8 @@
             if (sessaoJaDerrubada) return;
             try { await fetch("/api/verificar-sessao", { method: "GET", cache: "no-store" }); } catch (_) {}
         }
-        intervaloHeartbeat = setInterval(checarSessaoAtiva, 7000);
+        intervaloHeartbeat = setInterval(checarSessaoAtiva, 25000);
 
-        // Se o navegador restaurar a página do cache (bfcache) ao usar Voltar, revalida a sessão limpa
         window.addEventListener("pageshow", (event) => {
             if (event.persisted) {
                 checarSessaoAtiva();

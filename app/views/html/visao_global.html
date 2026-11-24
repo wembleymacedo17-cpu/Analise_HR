@@ -297,6 +297,7 @@
     let ocorrenciaDetalheAtual = null, ocorrenciaExternaSelecionada = null;
     let timerBuscaCobridor = null, timerBuscaExterna = null;
     let dataOcorrenciaAtual = "", faltanteCrachaAtual = "";
+    let _abortControllerFaltas = null;
 
     function atualizarVisibilidadeFiltrosRoot(exibir) {
         if (PERFIL_LOGADO !== "ROOT") return;
@@ -309,9 +310,7 @@
             aplicarFiltroNoGestorSelecionado();
             return;
         }
-        if (PERFIL_LOGADO !== "ROOT") {
-            carregarFaltas();
-        }
+        carregarFaltas();
     }
 
     function voltarListaGestoresGlobal() {
@@ -386,45 +385,70 @@
     }
 
     async function carregarFaltas() {
+        if (_abortControllerFaltas) {
+            _abortControllerFaltas.abort();
+        }
+        _abortControllerFaltas = new AbortController();
+        const signal = _abortControllerFaltas.signal;
+
         if (PERFIL_LOGADO === "ROOT") {
             const gridGestores = document.getElementById("grid-gestores-global");
             const gridBento = document.getElementById("grid-faltas-bento");
             gridGestores.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:24px;">Carregando gestores...</div>';
-            const res = await fetch("/api/visao-global/gestores");
-            const data = await res.json();
-            if (!data.sucesso) {
-                gridGestores.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`;
-                return;
-            }
-            listaGestoresGlobal = data.gestores || [];
-            if (gestorSelecionadoGlobal) {
-                const atualizado = listaGestoresGlobal.find(x => x.id === gestorSelecionadoGlobal.id);
-                if (atualizado) {
-                    selecionarGestorVisaoGlobal(atualizado.id);
+            try {
+                const res = await fetch("/api/visao-global/gestores", { signal, cache: "no-store" });
+                const data = await res.json();
+                if (!data.sucesso) {
+                    gridGestores.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`;
                     return;
                 }
-                gestorSelecionadoGlobal = null;
+                listaGestoresGlobal = data.gestores || [];
+                if (gestorSelecionadoGlobal) {
+                    const atualizado = listaGestoresGlobal.find(x => x.id === gestorSelecionadoGlobal.id);
+                    if (atualizado) {
+                        selecionarGestorVisaoGlobal(atualizado.id);
+                        return;
+                    }
+                    gestorSelecionadoGlobal = null;
+                }
+                atualizarVisibilidadeFiltrosRoot(false);
+                document.getElementById("banner-gestor-selecionado").style.display = "none";
+                gridBento.style.display = "none";
+                gridGestores.style.display = "grid";
+                renderizarGestoresVisaoGlobal(listaGestoresGlobal);
+            } catch (err) {
+                if (err.name !== "AbortError") {
+                    gridGestores.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#dc2626;">Erro ao carregar gestores.</div>';
+                }
             }
-            atualizarVisibilidadeFiltrosRoot(false);
-            document.getElementById("banner-gestor-selecionado").style.display = "none";
-            gridBento.style.display = "none";
-            gridGestores.style.display = "grid";
-            renderizarGestoresVisaoGlobal(listaGestoresGlobal);
             return;
         }
 
-        const status = document.getElementById("filtro-status").value;
+        const selectStatus = document.getElementById("filtro-status");
+        const status = (selectStatus ? selectStatus.value : "PENDENTE").toUpperCase();
         const grid = document.getElementById("grid-faltas-bento");
-        const res = await fetch(`/api/faltas?status=${status}`);
-        const data = await res.json();
-        if (!data.sucesso) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`; return; }
-        listaFaltasCache = data.faltas;
-        usuarioProprioId = data.usuario_id || usuarioProprioId;
-        if (data.kpis_gestor) {
-            document.getElementById("kpi-pendentes").innerText = data.kpis_gestor.pendentes;
-            document.getElementById("kpi-analisadas").innerText = data.kpis_gestor.analisadas;
+        grid.style.display = "grid";
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#64748b;padding:28px;">Carregando ocorrências (${status === "ANALISADA" ? "Analisadas" : "Pendentes"})...</div>`;
+
+        try {
+            const res = await fetch(`/api/faltas?status=${encodeURIComponent(status)}`, { signal, cache: "no-store" });
+            const data = await res.json();
+            if (!data.sucesso) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#dc2626;">${data.mensagem}</div>`;
+                return;
+            }
+            listaFaltasCache = data.faltas || [];
+            usuarioProprioId = data.usuario_id || usuarioProprioId;
+            if (data.kpis_gestor) {
+                document.getElementById("kpi-pendentes").innerText = data.kpis_gestor.pendentes;
+                document.getElementById("kpi-analisadas").innerText = data.kpis_gestor.analisadas;
+            }
+            filtrarTabelaFaltas();
+        } catch (err) {
+            if (err.name !== "AbortError") {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#dc2626;">Falha ao carregar ocorrências.</div>';
+            }
         }
-        renderizarBentoFaltas(listaFaltasCache);
     }
 
     function filtrarTabelaFaltas() {

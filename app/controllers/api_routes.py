@@ -699,7 +699,9 @@ def listar_faltas():
         return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
 
     db = get_db()
-    status_filtro = request.args.get('status', 'PENDENTE').upper()
+    status_filtro = str(request.args.get('status', 'PENDENTE')).strip().upper()
+    if status_filtro not in ('PENDENTE', 'ANALISADA'):
+        status_filtro = 'PENDENTE'
 
     cc_ids = None
     if perfil != 'ROOT':
@@ -777,7 +779,7 @@ def listar_faltas():
             .all()
         )
         for a in analises_rows:
-            dt_resp = (a.respondido_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
+            dt_resp = (a.respondido_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if a.respondido_em else ''
             analises_map[a.ocorrencia_id] = {
                 'ausencia_programada': a.ausencia_programada,
                 'comunicada_2h_antecedencia': a.comunicada_2h_antecedencia,

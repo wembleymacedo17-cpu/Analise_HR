@@ -1,14 +1,14 @@
 {
   "faltas": {
-    "ativo": true,
-    "intervalo_horas": 0.5,
-    "proxima_execucao": "2026-11-24T15:32:28.600495",
-    "ultima_execucao": "2026-11-24T15:02:28.600177"
+    "ativo": false,
+    "intervalo_horas": 2.0,
+    "proxima_execucao": null,
+    "ultima_execucao": "2026-11-24T15:08:55.466845"
   },
   "estrutura": {
-    "ativo": true,
-    "intervalo_horas": 0.1,
-    "proxima_execucao": "2026-11-24T15:17:47.853703",
-    "ultima_execucao": "2026-11-24T15:11:47.853313"
+    "ativo": false,
+    "intervalo_horas": 24.0,
+    "proxima_execucao": null,
+    "ultima_execucao": "2026-11-24T15:09:13.723887"
   }
 }
