@@ -244,6 +244,13 @@
         }
         intervaloHeartbeat = setInterval(checarSessaoAtiva, 7000);
 
+        // Se o navegador restaurar a página do cache (bfcache) ao usar Voltar, revalida a sessão limpa
+        window.addEventListener("pageshow", (event) => {
+            if (event.persisted) {
+                checarSessaoAtiva();
+            }
+        });
+
         (function () {
             const TEMPO_INATIVIDADE_MS = 30 * 60 * 1000;
             let timerInatividade;

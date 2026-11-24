@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
-# Aponta para a raiz Analise_Hr e carrega o .env de lá
+
+
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
@@ -45,9 +47,10 @@ class ETLEstruturaSenior:
         self.Session = sessionmaker(bind=engine_pg)
 
     def _garantir_usuario_root(self, session):
-        """Lê ROOT_CRACHA e ROOT_SENHA do .env e cria/atualiza o usuário ROOT."""
-        root_cracha = os.getenv("ROOT_CRACHA", "").strip()
-        root_senha = os.getenv("ROOT_SENHA", "").strip()
+        
+
+        root_cracha = os.getenv("ROOT_CRACHA", "").strip().strip("'\"")
+        root_senha = os.getenv("ROOT_SENHA", "").strip().strip("'\"")
 
         if not root_cracha or not root_senha:
             print("⚠️ [ROOT] Variáveis ROOT_CRACHA ou ROOT_SENHA não definidas no .env. Pulando criação.")
@@ -59,17 +62,20 @@ class ETLEstruturaSenior:
             return
 
         usuario_root = session.query(Usuario).filter_by(colaborador_id=colab_root.id).first()
-        senha_criptografada = generate_password_hash(root_senha)
 
         if usuario_root:
             usuario_root.role = "ROOT"
-            usuario_root.senha_hash = senha_criptografada
             usuario_root.ativo = True
-            print(f"🔑 [ROOT] Usuário ROOT atualizado para: {colab_root.nome} (Crachá: {root_cracha})")
+            # Só atualiza o hash se ainda não tiver senha ou se a senha atual não bater com o .env
+            if not usuario_root.senha_hash or not check_password_hash(usuario_root.senha_hash, root_senha):
+                usuario_root.senha_hash = generate_password_hash(root_senha)
+                print(f"🔑 [ROOT] Senha do usuário ROOT sincronizada com .env para: {colab_root.nome} (Crachá: {root_cracha})")
+            else:
+                print(f"🔑 [ROOT] Usuário ROOT verificado: {colab_root.nome} (Crachá: {root_cracha})")
         else:
             novo_root = Usuario(
                 colaborador_id=colab_root.id,
-                senha_hash=senha_criptografada,
+                senha_hash=generate_password_hash(root_senha),
                 role="ROOT",
                 ativo=True,
             )
@@ -145,7 +151,7 @@ class ETLEstruturaSenior:
                             map_ccs[cod_cc].unidade_id = unidade_obj.id
                 session.flush()
 
-                # 3. CARGOS (Upsert atômico via ON CONFLICT DO UPDATE)
+                # 3. CARGOS
                 cargos_upsert = {}
                 for _, row in df[["codigo_cargo_limpo", "titulo_cargo"]].dropna().iterrows():
                     cod_car = str(row["codigo_cargo_limpo"]).strip()
@@ -169,7 +175,7 @@ class ETLEstruturaSenior:
                     if c.codigo_cargo
                 }
 
-                # 4. COLABORADORES (Diff real: só atualiza quem realmente mudou)
+                # 4. COLABORADORES (Diff real)
                 todos_colabs = session.query(Colaborador).all()
                 colabs_por_cpf = {}
                 colabs_por_cracha = {}
@@ -256,7 +262,6 @@ class ETLEstruturaSenior:
                         colabs_por_cracha[cracha] = novo
                         inseridos += 1
 
-                # Inativa quem saiu da base ativa do Senior
                 inativados = 0
                 for cpf, colab in colabs_por_cpf.items():
                     if cpf not in cpfs_ativos_senior and colab.ativo:
@@ -265,7 +270,7 @@ class ETLEstruturaSenior:
 
                 session.flush()
 
-                # 5. GARANTE USUÁRIO ROOT DO .ENV
+                # 5. GARANTE USUÁRIO ROOT DO .ENV SEM SOBRESCREVER SENHA ALTERADA
                 self._garantir_usuario_root(session)
 
             session.commit()
