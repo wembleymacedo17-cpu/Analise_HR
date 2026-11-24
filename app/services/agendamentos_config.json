@@ -2,13 +2,13 @@
   "faltas": {
     "ativo": true,
     "intervalo_horas": 0.5,
-    "proxima_execucao": "2026-11-24T15:01:40.938314",
-    "ultima_execucao": "2026-11-24T14:31:40.938040"
+    "proxima_execucao": "2026-11-24T15:32:28.600495",
+    "ultima_execucao": "2026-11-24T15:02:28.600177"
   },
   "estrutura": {
     "ativo": true,
     "intervalo_horas": 0.1,
-    "proxima_execucao": "2026-11-24T14:46:37.972016",
-    "ultima_execucao": "2026-11-24T14:40:37.971781"
+    "proxima_execucao": "2026-11-24T15:17:47.853703",
+    "ultima_execucao": "2026-11-24T15:11:47.853313"
   }
 }

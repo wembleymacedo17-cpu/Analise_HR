@@ -18,8 +18,10 @@ TERMINAL_LOGS = deque(maxlen=400)
 _LOG_LOCK = threading.Lock()
 _LOG_SEQ = 0
 _SCHEDULER_INICIADO = False
+_LOCK_FD = None
 
-# Mutex global: impede que dois ETLs modifiquem o PostgreSQL simultaneamente
+# Locks de concorrência
+_STATE_LOCK = threading.RLock()
 _ETL_EXECUTION_LOCK = threading.Lock()
 
 _REAL_STDOUT = sys.__stdout__ if sys.__stdout__ is not None else sys.stdout
@@ -47,7 +49,7 @@ def registrar_log(mensagem: str, nivel: str = "INFO", origem: str = "SYSTEM"):
 
 
 class _ThreadStreamCaptor(io.TextIOBase):
-    """Captura prints apenas da thread do ETL em execução; outras threads (HTTP) passam direto."""
+    """Captura prints apenas da thread do ETL em execução; outras threads passam direto."""
     def __init__(self, origem: str, fallback_stream, target_thread_id: int):
         self.origem = origem
         self.fallback_stream = fallback_stream
@@ -101,7 +103,8 @@ def _executar_com_captura(task_key: str, label: str, fn):
             captor_out.flush()
             captor_err.flush()
             duracao = round((datetime.now() - inicio).total_seconds(), 2)
-            AGENDADORES[task_key]["ultima_execucao"] = datetime.now()
+            with _STATE_LOCK:
+                AGENDADORES[task_key]["ultima_execucao"] = datetime.now()
             registrar_log(f"{label} concluída com sucesso em {duracao}s.", nivel="SUCCESS", origem=task_key)
             return {"sucesso": True, "mensagem": f"{label} concluída em {duracao}s!"}
         except Exception as e:
@@ -161,22 +164,58 @@ AGENDADORES = {
 
 
 def salvar_agendamentos_disco():
-    dados = {}
-    for task, info in AGENDADORES.items():
-        dados[task] = {
-            "ativo": info["ativo"],
-            "intervalo_horas": info["intervalo_horas"],
-            "proxima_execucao": info["proxima_execucao"].isoformat() if info["proxima_execucao"] else None,
-            "ultima_execucao": info["ultima_execucao"].isoformat() if info["ultima_execucao"] else None,
-        }
-    try:
-        os.makedirs(os.path.dirname(CONFIG_FILE_PATH), exist_ok=True)
-        tmp_path = CONFIG_FILE_PATH + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(dados, f, indent=2, ensure_ascii=False)
-        os.replace(tmp_path, CONFIG_FILE_PATH)
-    except Exception as e:
-        registrar_log(f"Erro ao salvar agendamentos no disco: {e}", nivel="ERROR", origem="SCHEDULER")
+    """Grava o estado atual dos agendadores de forma atômica no JSON."""
+    with _STATE_LOCK:
+        dados = {}
+        for task, info in AGENDADORES.items():
+            ativo = bool(info["ativo"])
+            dados[task] = {
+                "ativo": ativo,
+                "intervalo_horas": float(info["intervalo_horas"]),
+                "proxima_execucao": (
+                    info["proxima_execucao"].isoformat()
+                    if (ativo and info["proxima_execucao"])
+                    else None
+                ),
+                "ultima_execucao": (
+                    info["ultima_execucao"].isoformat()
+                    if info["ultima_execucao"]
+                    else None
+                ),
+            }
+        try:
+            os.makedirs(os.path.dirname(CONFIG_FILE_PATH), exist_ok=True)
+            tmp_path = CONFIG_FILE_PATH + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(dados, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, CONFIG_FILE_PATH)
+        except Exception as e:
+            registrar_log(f"Erro ao salvar agendamentos no disco: {e}", nivel="ERROR", origem="SCHEDULER")
+
+
+def _agendar_proximo_ciclo_se_ativo(task_name: str):
+    """Atualiza proxima_execucao e salva no JSON SOMENTE se a tarefa não foi pausada durante a execução."""
+    with _STATE_LOCK:
+        if not AGENDADORES[task_name]["ativo"]:
+            AGENDADORES[task_name]["proxima_execucao"] = None
+            salvar_agendamentos_disco()
+            registrar_log(
+                f"Tarefa '{task_name}' foi pausada durante a execução. Novo ciclo cancelado.",
+                nivel="WARN",
+                origem="SCHEDULER"
+            )
+            return
+
+        nova_proxima = datetime.now() + timedelta(hours=AGENDADORES[task_name]["intervalo_horas"])
+        AGENDADORES[task_name]["proxima_execucao"] = nova_proxima
+        salvar_agendamentos_disco()
+        registrar_log(
+            f"Próxima execução de '{task_name}' em {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
+            nivel="INFO",
+            origem="SCHEDULER"
+        )
 
 
 def _loop_agendador_tarefa(task_name: str, recuperar_atrasada: bool = False):
@@ -191,32 +230,20 @@ def _loop_agendador_tarefa(task_name: str, recuperar_atrasada: bool = False):
             origem="SCHEDULER"
         )
         func_target()
-        agora_pos = datetime.now()
-        nova_proxima = agora_pos + timedelta(hours=AGENDADORES[task_name]["intervalo_horas"])
-        AGENDADORES[task_name]["proxima_execucao"] = nova_proxima
-        salvar_agendamentos_disco()
-        registrar_log(
-            f"Próxima execução de '{task_name}' reagendada para {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
-            nivel="INFO",
-            origem="SCHEDULER"
-        )
+        _agendar_proximo_ciclo_se_ativo(task_name)
 
-    while AGENDADORES[task_name]["ativo"]:
-        agora = datetime.now()
-        proxima = AGENDADORES[task_name]["proxima_execucao"]
+    while True:
+        with _STATE_LOCK:
+            ativo = AGENDADORES[task_name]["ativo"]
+            proxima = AGENDADORES[task_name]["proxima_execucao"]
 
-        if proxima and agora >= proxima:
+        if not ativo:
+            break
+
+        if proxima and datetime.now() >= proxima:
             registrar_log(f"Disparando rotina agendada '{task_name}'...", nivel="INFO", origem="SCHEDULER")
             func_target()
-            agora_pos = datetime.now()
-            nova_proxima = agora_pos + timedelta(hours=AGENDADORES[task_name]["intervalo_horas"])
-            AGENDADORES[task_name]["proxima_execucao"] = nova_proxima
-            salvar_agendamentos_disco()
-            registrar_log(
-                f"Próxima execução de '{task_name}' em {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
-                nivel="INFO",
-                origem="SCHEDULER"
-            )
+            _agendar_proximo_ciclo_se_ativo(task_name)
 
         time.sleep(1)
 
@@ -225,9 +252,11 @@ def iniciar_agendador_tarefa(task_name: str, intervalo_horas: float, proxima_exe
     if task_name not in AGENDADORES:
         return {"sucesso": False, "mensagem": f"Tarefa '{task_name}' desconhecida."}
 
-    if AGENDADORES[task_name]["ativo"]:
-        AGENDADORES[task_name]["ativo"] = False
-        time.sleep(0.3)
+    with _STATE_LOCK:
+        if AGENDADORES[task_name]["ativo"]:
+            AGENDADORES[task_name]["ativo"] = False
+
+    time.sleep(0.25)
 
     intervalo_num = float(intervalo_horas)
     if intervalo_num <= 0:
@@ -243,25 +272,26 @@ def iniciar_agendador_tarefa(task_name: str, intervalo_horas: float, proxima_exe
     else:
         proxima_dt = agora + timedelta(hours=intervalo_num)
 
-    AGENDADORES[task_name]["intervalo_horas"] = intervalo_num
-    AGENDADORES[task_name]["ativo"] = True
-    AGENDADORES[task_name]["proxima_execucao"] = proxima_dt
+    with _STATE_LOCK:
+        AGENDADORES[task_name]["intervalo_horas"] = intervalo_num
+        AGENDADORES[task_name]["ativo"] = True
+        AGENDADORES[task_name]["proxima_execucao"] = proxima_dt
 
-    t = threading.Thread(
-        target=_loop_agendador_tarefa,
-        args=(task_name, recuperar_atrasada),
-        daemon=True
-    )
-    AGENDADORES[task_name]["thread"] = t
-    t.start()
-
-    if persistir:
-        salvar_agendamentos_disco()
-        registrar_log(
-            f"Agendamento '{task_name}' ativado a cada {intervalo_num}h (próxima: {proxima_dt.strftime('%d/%m/%Y %H:%M:%S')}).",
-            nivel="SUCCESS",
-            origem="SCHEDULER"
+        t = threading.Thread(
+            target=_loop_agendador_tarefa,
+            args=(task_name, recuperar_atrasada),
+            daemon=True
         )
+        AGENDADORES[task_name]["thread"] = t
+        t.start()
+
+        if persistir:
+            salvar_agendamentos_disco()
+            registrar_log(
+                f"Agendamento '{task_name}' ativado a cada {intervalo_num}h (próxima: {proxima_dt.strftime('%d/%m/%Y %H:%M:%S')}).",
+                nivel="SUCCESS",
+                origem="SCHEDULER"
+            )
 
     return {
         "sucesso": True,
@@ -274,40 +304,43 @@ def parar_agendador_tarefa(task_name: str):
     if task_name not in AGENDADORES:
         return {"sucesso": False, "mensagem": "Tarefa não encontrada."}
 
-    AGENDADORES[task_name]["ativo"] = False
-    AGENDADORES[task_name]["proxima_execucao"] = None
-    salvar_agendamentos_disco()
-    registrar_log(f"Agendamento '{task_name}' pausado pelo administrador.", nivel="WARN", origem="SCHEDULER")
-    return {"sucesso": True, "mensagem": f"Agendamento de '{task_name}' desativado."}
+    with _STATE_LOCK:
+        AGENDADORES[task_name]["ativo"] = False
+        AGENDADORES[task_name]["proxima_execucao"] = None
+        salvar_agendamentos_disco()
+
+    registrar_log(f"Agendamento '{task_name}' pausado e salvo como inativo.", nivel="WARN", origem="SCHEDULER")
+    return {"sucesso": True, "mensagem": f"Agendamento de '{task_name}' pausado com sucesso."}
 
 
 def obter_status_agendadores():
     status = {}
     agora = datetime.now()
-    for task_name, info in AGENDADORES.items():
-        tempo_restante_seg = 0
-        executando_ha_seg = 0
-        proxima_str = None
-        ultima_str = info["ultima_execucao"].strftime("%d/%m/%Y %H:%M:%S") if info["ultima_execucao"] else None
+    with _STATE_LOCK:
+        for task_name, info in AGENDADORES.items():
+            tempo_restante_seg = 0
+            executando_ha_seg = 0
+            proxima_str = None
+            ultima_str = info["ultima_execucao"].strftime("%d/%m/%Y %H:%M:%S") if info["ultima_execucao"] else None
 
-        if info["executando"] and info.get("inicio_execucao"):
-            executando_ha_seg = max(0, int((agora - info["inicio_execucao"]).total_seconds()))
+            if info["executando"] and info.get("inicio_execucao"):
+                executando_ha_seg = max(0, int((agora - info["inicio_execucao"]).total_seconds()))
 
-        if info["ativo"] and info["proxima_execucao"]:
-            delta = (info["proxima_execucao"] - agora).total_seconds()
-            tempo_restante_seg = max(0, int(delta))
-            proxima_str = info["proxima_execucao"].strftime("%d/%m/%Y %H:%M:%S")
+            if info["ativo"] and info["proxima_execucao"]:
+                delta = (info["proxima_execucao"] - agora).total_seconds()
+                tempo_restante_seg = max(0, int(delta))
+                proxima_str = info["proxima_execucao"].strftime("%d/%m/%Y %H:%M:%S")
 
-        status[task_name] = {
-            "nome": info["nome"],
-            "ativo": info["ativo"],
-            "executando": info["executando"],
-            "executando_ha_segundos": executando_ha_seg,
-            "intervalo_horas": info["intervalo_horas"],
-            "proxima_execucao": proxima_str,
-            "ultima_execucao": ultima_str,
-            "tempo_restante_segundos": tempo_restante_seg,
-        }
+            status[task_name] = {
+                "nome": info["nome"],
+                "ativo": info["ativo"],
+                "executando": info["executando"],
+                "executando_ha_segundos": executando_ha_seg,
+                "intervalo_horas": info["intervalo_horas"],
+                "proxima_execucao": proxima_str,
+                "ultima_execucao": ultima_str,
+                "tempo_restante_segundos": tempo_restante_seg,
+            }
     return status
 
 
@@ -324,19 +357,35 @@ def limpar_logs_terminal():
     registrar_log("Terminal limpo pelo operador.", nivel="INFO", origem="SYSTEM")
 
 
+def _adquirir_lock_processo() -> bool:
+    """Garante apenas 1 instância do scheduler ativa no Windows (msvcrt) e Linux (fcntl)."""
+    global _LOCK_FD
+    try:
+        os.makedirs(os.path.dirname(LOCK_FILE_PATH), exist_ok=True)
+        fp = open(LOCK_FILE_PATH, "w")
+        try:
+            import fcntl
+            fcntl.flock(fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except ImportError:
+            import msvcrt
+            msvcrt.locking(fp.fileno(), msvcrt.LK_NBLCK, 1)
+        _LOCK_FD = fp
+        return True
+    except OSError:
+        return False
+
+
 def inicializar_scheduler_com_recuperacao():
     global _SCHEDULER_INICIADO
     if _SCHEDULER_INICIADO:
         return
     _SCHEDULER_INICIADO = True
 
-    try:
-        import fcntl
-        lock_fp = open(LOCK_FILE_PATH, "w")
-        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except ImportError:
-        pass
-    except OSError:
+    # No modo debug do Flask (Werkzeug reloader), ignora o processo pai monitor
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "false":
+        return
+
+    if not _adquirir_lock_processo():
         return
 
     registrar_log("Serviço de Agendamento & Recuperação inicializado.", nivel="INFO", origem="SCHEDULER")
@@ -353,14 +402,19 @@ def inicializar_scheduler_com_recuperacao():
             if task_name not in AGENDADORES:
                 continue
 
-            ultima_str = info.get("ultima_execucao")
-            if ultima_str:
-                try:
-                    AGENDADORES[task_name]["ultima_execucao"] = datetime.fromisoformat(ultima_str)
-                except Exception:
-                    pass
+            with _STATE_LOCK:
+                AGENDADORES[task_name]["intervalo_horas"] = float(
+                    info.get("intervalo_horas", AGENDADORES[task_name]["intervalo_horas"])
+                )
+                ultima_str = info.get("ultima_execucao")
+                if ultima_str:
+                    try:
+                        AGENDADORES[task_name]["ultima_execucao"] = datetime.fromisoformat(ultima_str)
+                    except Exception:
+                        pass
 
-            if info.get("ativo"):
+            # Só reativa se estiver explicitamente ativo == True no JSON
+            if info.get("ativo") is True:
                 intervalo = float(info.get("intervalo_horas", AGENDADORES[task_name]["intervalo_horas"]))
                 proxima_str = info.get("proxima_execucao")
                 proxima_dt = None
@@ -376,6 +430,12 @@ def inicializar_scheduler_com_recuperacao():
                     proxima_execucao_existente=proxima_dt,
                     persistir=False,
                 )
+            else:
+                with _STATE_LOCK:
+                    AGENDADORES[task_name]["ativo"] = False
+                    AGENDADORES[task_name]["proxima_execucao"] = None
+                registrar_log(f"Tarefa '{task_name}' carregada como PAUSADA.", nivel="INFO", origem="SCHEDULER")
+
     except Exception as e:
         registrar_log(f"Erro ao restaurar agendamentos do JSON: {e}", nivel="ERROR", origem="SCHEDULER")
 
