@@ -1,150 +1,267 @@
-<!-- DEPENDÊNCIAS CODEMIRROR (INTELLISENSE SQL + TEMA DRACULA/DARK) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 
 <section id="aba-etl" class="tab-content">
-    <div class="panel">
-        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div>
-                <h2 class="panel-title">Sincronização Senior Vetorh & Automação</h2>
-                <p style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
-                    Execução manual, agendamento persistente com recuperação automática pós-queda e consulta SQL.
-                </p>
+    <div class="panel etl-panel-full">
+        <!-- CABEÇALHO + SUB-NAVEGAÇÃO -->
+        <div class="etl-topbar">
+            <div class="etl-topbar-left">
+                <h2 class="panel-title">Integração Senior</h2>
+                <span class="etl-recovery-pill" title="Persistido em agendamentos_config.json">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <polyline points="9 12 11 14 15 10"></polyline>
+                    </svg>
+                    <span>Auto-Recovery</span>
+                </span>
             </div>
-            <span class="etl-recovery-pill" title="Persistido em agendamentos_config.json">
-                🛡️ Recuperação Automática Ativa
-            </span>
+
+            <div class="etl-subnav" role="tablist">
+                <button type="button" class="etl-subtab active" onclick="trocarSubAbaETL('sub-cargas', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>Cargas &amp; Terminal</span>
+                </button>
+
+                <button type="button" class="etl-subtab" onclick="trocarSubAbaETL('sub-sql', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                    </svg>
+                    <span>Console SQL</span>
+                </button>
+            </div>
         </div>
 
-        <!-- CARDS DE CARGA + AGENDAMENTO -->
-        <div class="etl-grid">
-            <!-- CARD 1: FALTAS -->
-            <div class="etl-card">
-                <div>
-                    <div class="etl-card-top">
-                        <h4>Carga Diária (Ocorrências D-1)</h4>
+        <!-- TELA 1: CARDS DE CARGA + TERMINAL AO VIVO -->
+        <div id="sub-cargas" class="etl-subview active">
+            <div class="etl-grid">
+                <!-- CARD 1: FALTAS -->
+                <div class="etl-card">
+                    <div class="etl-card-header">
+                        <div class="etl-card-title-wrap">
+                            <div class="etl-card-icon icon-blue">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Ocorrências (D-15)</h4>
+                                <span class="etl-card-sub">Sincronização de faltas</span>
+                            </div>
+                        </div>
                         <span id="badge-sched-faltas" class="sched-badge sched-off">MANUAL</span>
                     </div>
-                    <p style="margin-top:6px;">Importa ocorrências dos últimos 15 dias até ontem do Oracle Senior.</p>
-                </div>
 
-                <div class="sched-box">
-                    <label class="sched-label">Programar execução automática (horas):</label>
-                    <div class="sched-controls">
-                        <select id="intervalo-faltas" class="sched-select">
-                            <option value="0.5">A cada 30 min (0.5h)</option>
-                            <option value="1">A cada 1 hora</option>
-                            <option value="2" selected>A cada 2 horas</option>
-                            <option value="4">A cada 4 horas</option>
-                            <option value="6">A cada 6 horas</option>
-                            <option value="12">A cada 12 horas</option>
-                            <option value="24">A cada 24 horas</option>
-                        </select>
-                        <button type="button" id="btn-sched-faltas" class="btn btn-secondary btn-sm" onclick="alternarAgendamento('faltas')">
-                            Ativar Auto
+                    <div class="sched-box">
+                        <div class="sched-controls">
+                            <div class="input-unit-wrap">
+                                <input
+                                    type="number"
+                                    id="intervalo-faltas"
+                                    class="sched-input"
+                                    value="2"
+                                    min="0.1"
+                                    step="0.1"
+                                    placeholder="Ex: 2"
+                                >
+                                <span class="input-unit-suffix">horas</span>
+                            </div>
+                            <button type="button" id="btn-sched-faltas" class="btn-etl-sched btn-sched-activate" onclick="alternarAgendamento('faltas')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>Agendar</span>
+                            </button>
+                        </div>
+
+                        <!-- RELÓGIO DIGITAL CLEAN + BARRA DE PROGRESSO -->
+                        <div id="clock-panel-faltas" class="sched-clock-clean" style="display:none;">
+                            <div class="sched-clock-clean-top">
+                                <span class="sched-clock-clean-label">
+                                    <span id="clock-pulse-faltas" class="clock-live-dot"></span>
+                                    <span id="clock-label-faltas">PRÓXIMA EXECUÇÃO EM</span>
+                                </span>
+                                <span id="pct-rem-faltas" class="sched-rem-pill">Faltam 100%</span>
+                            </div>
+                            <div id="clock-digits-faltas" class="sched-clock-digits-clean">00:00:00</div>
+                            <div class="sched-progress-track">
+                                <div id="progress-bar-faltas" class="sched-progress-fill fill-blue" style="width: 0%;"></div>
+                            </div>
+                            <div id="pct-text-faltas" class="sched-pct-sub">Progresso: 0%</div>
+                        </div>
+
+                        <div id="info-sched-faltas" class="sched-meta">Execução manual</div>
+                    </div>
+
+                    <div class="etl-card-footer">
+                        <button type="button" class="btn-etl-run btn-run-primary" onclick="dispararETL('faltas', this)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                            <span>Executar Agora</span>
                         </button>
                     </div>
-                    <div id="info-sched-faltas" class="sched-meta">Sem agendamento ativo.</div>
                 </div>
 
-                <button type="button" class="btn btn-primary" onclick="dispararETL('faltas', this)">
-                    Executar Carga Diária Agora
-                </button>
-            </div>
-
-            <!-- CARD 2: ESTRUTURA -->
-            <div class="etl-card">
-                <div>
-                    <div class="etl-card-top">
-                        <h4>Carga Semanal de Estrutura</h4>
+                <!-- CARD 2: ESTRUTURA -->
+                <div class="etl-card">
+                    <div class="etl-card-header">
+                        <div class="etl-card-title-wrap">
+                            <div class="etl-card-icon icon-amber">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Estrutura &amp; Colaboradores</h4>
+                                <span class="etl-card-sub">Setores, cargos e ativos</span>
+                            </div>
+                        </div>
                         <span id="badge-sched-estrutura" class="sched-badge sched-off">MANUAL</span>
                     </div>
-                    <p style="margin-top:6px;">Atualiza unidades, centros de custo, cargos e colaboradores ativos.</p>
-                </div>
 
-                <div class="sched-box">
-                    <label class="sched-label">Programar execução automática (horas):</label>
-                    <div class="sched-controls">
-                        <select id="intervalo-estrutura" class="sched-select">
-                            <option value="6">A cada 6 horas</option>
-                            <option value="12">A cada 12 horas</option>
-                            <option value="24" selected>A cada 24 horas</option>
-                            <option value="48">A cada 48 horas</option>
-                            <option value="168">A cada 7 dias (168h)</option>
-                        </select>
-                        <button type="button" id="btn-sched-estrutura" class="btn btn-secondary btn-sm" onclick="alternarAgendamento('estrutura')">
-                            Ativar Auto
+                    <div class="sched-box">
+                        <div class="sched-controls">
+                            <div class="input-unit-wrap">
+                                <input
+                                    type="number"
+                                    id="intervalo-estrutura"
+                                    class="sched-input"
+                                    value="24"
+                                    min="0.1"
+                                    step="0.5"
+                                    placeholder="Ex: 24"
+                                >
+                                <span class="input-unit-suffix">horas</span>
+                            </div>
+                            <button type="button" id="btn-sched-estrutura" class="btn-etl-sched btn-sched-activate" onclick="alternarAgendamento('estrutura')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>Agendar</span>
+                            </button>
+                        </div>
+
+                        <!-- RELÓGIO DIGITAL CLEAN + BARRA DE PROGRESSO -->
+                        <div id="clock-panel-estrutura" class="sched-clock-clean" style="display:none;">
+                            <div class="sched-clock-clean-top">
+                                <span class="sched-clock-clean-label">
+                                    <span id="clock-pulse-estrutura" class="clock-live-dot dot-amber"></span>
+                                    <span id="clock-label-estrutura">PRÓXIMA EXECUÇÃO EM</span>
+                                </span>
+                                <span id="pct-rem-estrutura" class="sched-rem-pill pill-amber">Faltam 100%</span>
+                            </div>
+                            <div id="clock-digits-estrutura" class="sched-clock-digits-clean">00:00:00</div>
+                            <div class="sched-progress-track">
+                                <div id="progress-bar-estrutura" class="sched-progress-fill fill-amber" style="width: 0%;"></div>
+                            </div>
+                            <div id="pct-text-estrutura" class="sched-pct-sub">Progresso: 0%</div>
+                        </div>
+
+                        <div id="info-sched-estrutura" class="sched-meta">Execução manual</div>
+                    </div>
+
+                    <div class="etl-card-footer">
+                        <button type="button" class="btn-etl-run btn-run-amber" onclick="dispararETL('estrutura', this)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                            <span>Executar Agora</span>
                         </button>
                     </div>
-                    <div id="info-sched-estrutura" class="sched-meta">Sem agendamento ativo.</div>
-                </div>
-
-                <button type="button" class="btn btn-warning" onclick="dispararETL('estrutura', this)">
-                    Executar Carga de Estrutura Agora
-                </button>
-            </div>
-        </div>
-
-        <!-- TERMINAL DE EXECUÇÃO EM TEMPO REAL -->
-        <div class="dev-console-wrap">
-            <div class="dev-console-header">
-                <div class="dev-console-dots">
-                    <span class="dot-red"></span>
-                    <span class="dot-yellow"></span>
-                    <span class="dot-green"></span>
-                    <span class="dev-console-title">TERMINAL DE SERVIÇOS — ETL &amp; SCHEDULER</span>
-                </div>
-                <div class="dev-console-actions">
-                    <label class="term-autoscroll">
-                        <input type="checkbox" id="chk-terminal-autoscroll" checked> Auto-scroll
-                    </label>
-                    <button type="button" class="btn-term" onclick="limparTerminalWeb()">Limpar</button>
                 </div>
             </div>
-            <div id="terminal-output" class="dev-terminal-body">
-                <div class="term-line term-info">[SISTEMA] Aguardando logs de execução...</div>
-            </div>
-        </div>
 
-        <!-- CONSOLE SQL SOMENTE LEITURA COM INTELLISENSE -->
-        <div class="sql-console-wrap">
-            <div class="sql-console-header">
-                <div>
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <h4>Console SQL (Somente Leitura • PostgreSQL App)</h4>
-                        <span class="sql-readonly-badge">🔒 READ-ONLY (SELECT)</span>
+            <!-- TERMINAL DE EXECUÇÃO -->
+            <div class="dev-console-wrap" style="margin-top: 20px;">
+                <div class="dev-console-header">
+                    <div class="dev-console-dots">
+                        <span class="dot-red"></span>
+                        <span class="dot-yellow"></span>
+                        <span class="dot-green"></span>
+                        <span class="dev-console-title">ETL &amp; SCHEDULER LOGS</span>
                     </div>
-                    <p>Digite para ver sugestões de tabelas e colunas (ou pressione <strong>Ctrl + Espaço</strong>). Execute com <strong>Ctrl + Enter</strong>.</p>
+                    <div class="dev-console-actions">
+                        <label class="term-autoscroll">
+                            <input type="checkbox" id="chk-terminal-autoscroll" checked> Auto-scroll
+                        </label>
+                        <button type="button" class="btn-term" onclick="limparTerminalWeb()">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                            <span>Limpar</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="sql-toolbar">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="inserirExemploSQL()">Exemplo</button>
-                    <button type="button" id="btn-executar-sql" class="btn btn-primary btn-sm" onclick="executarComandoSQL()">
-                        ▶ Executar Consulta (Ctrl+Enter)
-                    </button>
+                <div id="terminal-output" class="dev-terminal-body" style="height: 260px;">
+                    <div class="term-line term-info">[SISTEMA] Aguardando logs...</div>
                 </div>
             </div>
+        </div>
 
-            <!-- PÍLULAS RÁPIDAS DAS TABELAS DO BANCO -->
-            <div id="sql-tables-pills" class="sql-tables-pills"></div>
+        <!-- TELA 2: CONSOLE SQL (SOMENTE LEITURA) -->
+        <div id="sub-sql" class="etl-subview">
+            <div class="sql-console-wrap">
+                <div class="sql-console-header">
+                    <div class="sql-header-left">
+                        <span class="sql-readonly-badge">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <span>SELECT ONLY</span>
+                        </span>
+                        <span class="sql-hint-tip">Ctrl+Espaço: Sugestões • Ctrl+Enter: Executar</span>
+                    </div>
+                    <div class="sql-toolbar">
+                        <button type="button" class="btn-etl-sched btn-sched-activate" onclick="inserirExemploSQL()">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="16 18 22 12 16 6"></polyline>
+                                <polyline points="8 6 2 12 8 18"></polyline>
+                            </svg>
+                            <span>Exemplo</span>
+                        </button>
+                        <button type="button" id="btn-executar-sql" class="btn-etl-run btn-run-primary" onclick="executarComandoSQL()">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                            <span>Executar</span>
+                        </button>
+                    </div>
+                </div>
 
-            <div class="sql-editor-box">
-                <textarea id="sql-editor"></textarea>
-            </div>
+                <div id="sql-tables-pills" class="sql-tables-pills"></div>
 
-            <div id="sql-feedback" class="sql-feedback" style="display:none;"></div>
+                <div class="sql-editor-box">
+                    <textarea id="sql-editor"></textarea>
+                </div>
 
-            <div id="sql-result-wrap" class="sql-result-wrap" style="display:none;">
-                <table class="sql-result-table">
-                    <thead id="sql-result-head"></thead>
-                    <tbody id="sql-result-body"></tbody>
-                </table>
+                <div id="sql-feedback" class="sql-feedback" style="display:none;"></div>
+
+                <div id="sql-result-wrap" class="sql-result-wrap" style="display:none;">
+                    <table class="sql-result-table">
+                        <thead id="sql-result-head"></thead>
+                        <tbody id="sql-result-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- SCRIPTS CODEMIRROR -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
@@ -152,17 +269,92 @@
 
 <script>
     let ultimoLogIdTerminal = 0;
-    let intervaloPollingTerminal = null;
+    let intervaloPollingBackend = null;
+    let intervaloTickRelogio = null;
     let estadoAgendamentosCache = {};
+    let sincroniaRelogioCliente = {};
     let sqlCodeMirrorEditor = null;
     let schemaTabelasCache = null;
 
-    function formatarSegundosRestantes(seg) {
-        if (!seg || seg <= 0) return "executando em instantes...";
-        const h = Math.floor(seg / 3600);
-        const m = Math.floor((seg % 3600) / 60);
-        const s = seg % 60;
-        return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+    const SVG_CLOCK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+    const SVG_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+
+    function trocarSubAbaETL(idSubAba, btn) {
+        document.querySelectorAll(".etl-subview").forEach(el => el.classList.remove("active"));
+        document.querySelectorAll(".etl-subtab").forEach(el => el.classList.remove("active"));
+
+        document.getElementById(idSubAba).classList.add("active");
+        btn.classList.add("active");
+
+        if (idSubAba === "sub-cargas") {
+            const term = document.getElementById("terminal-output");
+            if (term) term.scrollTop = term.scrollHeight;
+        } else if (idSubAba === "sub-sql") {
+            inicializarEditorSQLIntelliSense();
+        }
+    }
+
+    function formatarHHMMSS(totalSeg) {
+        const s = Math.max(0, Math.floor(totalSeg));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const seg = s % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(seg).padStart(2, "0")}`;
+    }
+
+    function atualizarTickVisualRelogios() {
+        const agoraMs = Date.now();
+
+        ["faltas", "estrutura"].forEach(task => {
+            const sync = sincroniaRelogioCliente[task];
+            const clockPanel = document.getElementById(`clock-panel-${task}`);
+            const digitsEl = document.getElementById(`clock-digits-${task}`);
+            const labelEl = document.getElementById(`clock-label-${task}`);
+            const pulseEl = document.getElementById(`clock-pulse-${task}`);
+            const progBar = document.getElementById(`progress-bar-${task}`);
+            const pctText = document.getElementById(`pct-text-${task}`);
+            const pctRem = document.getElementById(`pct-rem-${task}`);
+
+            if (!sync || (!sync.ativo && !sync.executando)) {
+                if (clockPanel) clockPanel.style.display = "none";
+                return;
+            }
+
+            if (clockPanel) clockPanel.style.display = "flex";
+
+            if (sync.executando) {
+                const decorridoExec = Math.max(0, Math.floor((agoraMs - sync.execInicioMs) / 1000));
+                if (labelEl) labelEl.innerText = "SINCRONIZANDO AGORA";
+                if (digitsEl) {
+                    digitsEl.innerText = formatarHHMMSS(decorridoExec);
+                    digitsEl.classList.add("digits-running");
+                }
+                if (pulseEl) pulseEl.classList.add("dot-running");
+                if (progBar) {
+                    progBar.style.width = "100%";
+                    progBar.classList.add("bar-indeterminate");
+                }
+                if (pctText) pctText.innerText = "Carga em andamento";
+                if (pctRem) pctRem.innerText = "Processando";
+                return;
+            }
+
+            if (digitsEl) digitsEl.classList.remove("digits-running");
+            if (pulseEl) pulseEl.classList.remove("dot-running");
+            if (progBar) progBar.classList.remove("bar-indeterminate");
+            if (labelEl) labelEl.innerText = "PRÓXIMA EXECUÇÃO EM";
+
+            const restanteSeg = Math.max(0, (sync.alvoMs - agoraMs) / 1000);
+            const totalSeg = Math.max(1, sync.intervaloHoras * 3600);
+            const decorridoSeg = Math.max(0, totalSeg - restanteSeg);
+            const pctConcluido = Math.min(100, Math.max(0, Math.round((decorridoSeg / totalSeg) * 100)));
+            const pctFaltando = Math.max(0, 100 - pctConcluido);
+
+            if (digitsEl) digitsEl.innerText = formatarHHMMSS(restanteSeg);
+            if (progBar) progBar.style.width = `${pctConcluido}%`;
+            if (pctText) pctText.innerText = `Progresso: ${pctConcluido}%`;
+            if (pctRem) pctRem.innerText = `Faltam ${pctFaltando}%`;
+        });
     }
 
     async function carregarStatusAgendamentos() {
@@ -172,6 +364,7 @@
             if (!d.sucesso || !d.agendamentos) return;
 
             estadoAgendamentosCache = d.agendamentos;
+            const agoraClienteMs = Date.now();
 
             ["faltas", "estrutura"].forEach(task => {
                 const info = d.agendamentos[task];
@@ -180,28 +373,42 @@
                 const badge = document.getElementById(`badge-sched-${task}`);
                 const btn = document.getElementById(`btn-sched-${task}`);
                 const meta = document.getElementById(`info-sched-${task}`);
-                const sel = document.getElementById(`intervalo-${task}`);
+                const inp = document.getElementById(`intervalo-${task}`);
+
+                sincroniaRelogioCliente[task] = {
+                    ativo: Boolean(info.ativo),
+                    executando: Boolean(info.executando),
+                    intervaloHoras: Number(info.intervalo_horas || 1),
+                    alvoMs: agoraClienteMs + (Number(info.tempo_restante_segundos || 0) * 1000),
+                    execInicioMs: agoraClienteMs - (Number(info.executando_ha_segundos || 0) * 1000),
+                };
 
                 if (info.ativo) {
                     badge.className = "sched-badge sched-on";
-                    badge.innerText = info.executando ? "EXECUTANDO..." : `AUTO (${info.intervalo_horas}h)`;
-                    btn.innerText = "Desativar";
-                    btn.className = "btn btn-danger btn-sm";
-                    if (sel && document.activeElement !== sel) {
-                        sel.value = String(info.intervalo_horas);
+                    badge.innerText = info.executando ? "RODANDO..." : `AUTO • ${info.intervalo_horas}h`;
+                    btn.innerHTML = `${SVG_PAUSE}<span>Pausar</span>`;
+                    btn.className = "btn-etl-sched btn-sched-stop";
+                    if (inp && document.activeElement !== inp) {
+                        inp.value = info.intervalo_horas;
                     }
-                    meta.innerHTML = `Próxima: <strong>${info.proxima_execucao || "--"}</strong> (${formatarSegundosRestantes(info.tempo_restante_segundos)})`
-                        + (info.ultima_execucao ? ` • Última: ${info.ultima_execucao}` : "");
+
+                    if (info.executando) {
+                        meta.innerHTML = `Executando rotina agendada...`
+                            + (info.ultima_execucao ? ` • Última: ${info.ultima_execucao}` : "");
+                    } else {
+                        meta.innerHTML = `Horário alvo: <strong>${info.proxima_execucao || "--"}</strong>`
+                            + (info.ultima_execucao ? ` • Última: ${info.ultima_execucao}` : "");
+                    }
                 } else {
                     badge.className = "sched-badge sched-off";
-                    badge.innerText = info.executando ? "EXECUTANDO..." : "MANUAL";
-                    btn.innerText = "Ativar Auto";
-                    btn.className = "btn btn-secondary btn-sm";
-                    meta.innerHTML = info.ultima_execucao
-                        ? `Agendamento desativado • Última execução: ${info.ultima_execucao}`
-                        : "Sem agendamento ativo.";
+                    badge.innerText = info.executando ? "RODANDO..." : "MANUAL";
+                    btn.innerHTML = `${SVG_CLOCK}<span>Agendar</span>`;
+                    btn.className = "btn-etl-sched btn-sched-activate";
+                    meta.innerHTML = info.ultima_execucao ? `Última execução: ${info.ultima_execucao}` : "Execução manual";
                 }
             });
+
+            atualizarTickVisualRelogios();
         } catch (_) {}
     }
 
@@ -214,11 +421,16 @@
             const d = await res.json();
             mostrarToast(d.mensagem, !d.sucesso);
         } else {
-            const intervalo = document.getElementById(`intervalo-${taskName}`).value;
+            const valorRaw = document.getElementById(`intervalo-${taskName}`).value;
+            const intervaloNum = parseFloat(String(valorRaw).replace(",", "."));
+            if (isNaN(intervaloNum) || intervaloNum <= 0) {
+                mostrarToast("Informe um intervalo válido em horas (ex: 0.5, 1, 2, 12).", true);
+                return;
+            }
             const res = await fetch(`/api/etl/agendamentos/${taskName}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ intervalo_horas: parseFloat(intervalo) })
+                body: JSON.stringify({ intervalo_horas: intervaloNum })
             });
             const d = await res.json();
             mostrarToast(d.mensagem, !d.sucesso);
@@ -291,17 +503,14 @@
                 }
             });
 
-            // Dispara autocomplete automaticamente ao digitar letras ou ponto (alias.coluna)
             sqlCodeMirrorEditor.on("inputRead", function (cm, change) {
                 if (change.origin !== "+input") return;
-                const ch = change.text[0];
-                if (/[a-zA-Z_.]/.test(ch)) {
+                if (/[a-zA-Z_.]/.test(change.text[0])) {
                     cm.showHint({ completeSingle: false });
                 }
             });
         }
 
-        // Busca o schema real (tabelas e colunas) do PostgreSQL
         if (!schemaTabelasCache) {
             try {
                 const res = await fetch("/api/etl/sql/schema", { cache: "no-store" });
@@ -327,8 +536,8 @@
     function renderizarPilulasTabelas(nomesTabelas) {
         const wrap = document.getElementById("sql-tables-pills");
         if (!wrap || !nomesTabelas.length) return;
-        wrap.innerHTML = `<span class="pills-label">Tabelas disponíveis:</span>` + nomesTabelas.map(tbl =>
-            `<button type="button" class="sql-table-pill" title="Clique para consultar ${tbl}" onclick="inserirSelectTabela('${tbl}')">${tbl}</button>`
+        wrap.innerHTML = nomesTabelas.map(tbl =>
+            `<button type="button" class="sql-table-pill" onclick="inserirSelectTabela('${tbl}')">${tbl}</button>`
         ).join("");
     }
 
@@ -345,9 +554,18 @@
     function iniciarMonitoramentoETL() {
         carregarStatusAgendamentos();
         atualizarLogsTerminal();
-        inicializarEditorSQLIntelliSense();
-        if (!intervaloPollingTerminal) {
-            intervaloPollingTerminal = setInterval(() => {
+
+        if (!intervaloTickRelogio) {
+            intervaloTickRelogio = setInterval(() => {
+                const abaEtl = document.getElementById("aba-etl");
+                if (abaEtl && abaEtl.classList.contains("active")) {
+                    atualizarTickVisualRelogios();
+                }
+            }, 1000);
+        }
+
+        if (!intervaloPollingBackend) {
+            intervaloPollingBackend = setInterval(() => {
                 const abaEtl = document.getElementById("aba-etl");
                 if (abaEtl && abaEtl.classList.contains("active")) {
                     carregarStatusAgendamentos();
@@ -359,8 +577,9 @@
 
     async function dispararETL(tipo, btn) {
         btn.disabled = true;
-        const textoOriginal = btn.innerText;
-        btn.innerText = "Executando...";
+        const htmlOriginal = btn.innerHTML;
+        btn.innerHTML = `<span>Executando...</span>`;
+
         try {
             const res = await fetch("/api/etl/executar", {
                 method: "POST",
@@ -379,12 +598,12 @@
             mostrarToast("Erro ao comunicar com o servidor durante o ETL.", true);
         } finally {
             btn.disabled = false;
-            btn.innerText = textoOriginal;
+            btn.innerHTML = htmlOriginal;
         }
     }
 
     function inserirExemploSQL() {
-        const exemplo = "SELECT status, COUNT(*) AS total\nFROM ocorrencias_falta\nGROUP BY status;";
+        const exemplo = "SELECT status, COUNT(*) AS total\nFROM ocorrencias_faltas\nGROUP BY status;";
         if (sqlCodeMirrorEditor) {
             sqlCodeMirrorEditor.setValue(exemplo);
             sqlCodeMirrorEditor.focus();
@@ -396,18 +615,19 @@
     async function executarComandoSQL() {
         const sql = (sqlCodeMirrorEditor ? sqlCodeMirrorEditor.getValue() : document.getElementById("sql-editor").value).trim();
         const btn = document.getElementById("btn-executar-sql");
+        const htmlOriginal = btn.innerHTML;
         const feedback = document.getElementById("sql-feedback");
         const resultWrap = document.getElementById("sql-result-wrap");
         const thead = document.getElementById("sql-result-head");
         const tbody = document.getElementById("sql-result-body");
 
         if (!sql) {
-            mostrarToast("Informe uma consulta SELECT para executar.", true);
+            mostrarToast("Informe uma consulta SELECT.", true);
             return;
         }
 
         btn.disabled = true;
-        btn.innerText = "Executando...";
+        btn.innerHTML = `<span>Executando...</span>`;
         feedback.style.display = "none";
         resultWrap.style.display = "none";
 
@@ -430,15 +650,13 @@
                 ).join("");
                 resultWrap.style.display = "block";
             }
-
-            await atualizarLogsTerminal();
         } catch (err) {
             feedback.style.display = "block";
             feedback.className = "sql-feedback sql-err";
-            feedback.innerText = "Falha de comunicação ao executar consulta SQL.";
+            feedback.innerText = "Falha de comunicação ao executar consulta.";
         } finally {
             btn.disabled = false;
-            btn.innerText = "▶ Executar Consulta (Ctrl+Enter)";
+            btn.innerHTML = htmlOriginal;
         }
     }
 </script>

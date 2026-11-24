@@ -5,6 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from werkzeug.security import generate_password_hash
 
 # Aponta para a raiz Analise_Hr e carrega o .env de lá
@@ -28,6 +29,13 @@ def _normalizar_sexo(valor) -> str | None:
     if s in ("F", "FEMININO", "2"):
         return "F"
     return s[:10] if s else None
+
+
+def _limpar_cpf(valor) -> str | None:
+    if valor is None or pd.isna(valor):
+        return None
+    digitos = "".join(filter(str.isdigit, str(valor)))
+    return digitos.zfill(11) if digitos else None
 
 
 class ETLEstruturaSenior:
@@ -85,7 +93,6 @@ class ETLEstruturaSenior:
         df.columns = [str(c).lower().strip() for c in df.columns]
         df["data_nascimento"] = pd.to_datetime(df["data_nascimento"], errors="coerce").dt.date
 
-        # Garantia adicional no DataFrame contra cargos legados rejeitados
         df["codigo_cargo_limpo"] = df["codigo_cargo"].astype(str).str.strip()
         df = df[~df["codigo_cargo_limpo"].isin(CARGOS_REJEITADOS_LEGADO)]
 
@@ -95,116 +102,179 @@ class ETLEstruturaSenior:
 
         session = self.Session()
         try:
-            # 1. UNIDADES
-            map_unidades = {u.codigo_unidade: u for u in session.query(Unidade).all()}
-            for _, row in df[["codigo_unidade", "nome_unidade"]].drop_duplicates().dropna().iterrows():
-                cod = str(row["codigo_unidade"]).strip()
-                nome = str(row["nome_unidade"]).strip()
-                if cod not in map_unidades:
-                    u = Unidade(codigo_unidade=cod, nome=nome, ativo=True)
-                    session.add(u)
-                    map_unidades[cod] = u
-                else:
-                    map_unidades[cod].nome = nome
-            session.flush()
+            with session.no_autoflush:
+                # 1. UNIDADES
+                map_unidades = {
+                    str(u.codigo_unidade).strip(): u
+                    for u in session.query(Unidade).all()
+                    if u.codigo_unidade
+                }
+                for _, row in df[["codigo_unidade", "nome_unidade"]].dropna().iterrows():
+                    cod = str(row["codigo_unidade"]).strip()
+                    nome = str(row["nome_unidade"]).strip()
+                    if not cod:
+                        continue
+                    if cod not in map_unidades:
+                        u = Unidade(codigo_unidade=cod, nome=nome, ativo=True)
+                        session.add(u)
+                        map_unidades[cod] = u
+                    elif map_unidades[cod].nome != nome:
+                        map_unidades[cod].nome = nome
+                session.flush()
 
-            # 2. CENTROS DE CUSTO
-            map_ccs = {cc.codigo_cc: cc for cc in session.query(CentroCusto).all()}
-            for _, row in df[["codigo_cc", "nome_cc", "codigo_unidade"]].drop_duplicates(subset=["codigo_cc"]).dropna().iterrows():
-                cod_cc = str(row["codigo_cc"]).strip()
-                nome_cc = str(row["nome_cc"]).strip()
-                unidade_obj = map_unidades.get(str(row["codigo_unidade"]).strip())
-                if not unidade_obj:
-                    continue
-                if cod_cc not in map_ccs:
-                    cc = CentroCusto(codigo_cc=cod_cc, nome=nome_cc, unidade_id=unidade_obj.id, ativo=True)
-                    session.add(cc)
-                    map_ccs[cod_cc] = cc
-                else:
-                    map_ccs[cod_cc].nome = nome_cc
-                    map_ccs[cod_cc].unidade_id = unidade_obj.id
-            session.flush()
+                # 2. CENTROS DE CUSTO
+                map_ccs = {
+                    str(cc.codigo_cc).strip(): cc
+                    for cc in session.query(CentroCusto).all()
+                    if cc.codigo_cc
+                }
+                for _, row in df[["codigo_cc", "nome_cc", "codigo_unidade"]].dropna().iterrows():
+                    cod_cc = str(row["codigo_cc"]).strip()
+                    nome_cc = str(row["nome_cc"]).strip()
+                    unidade_obj = map_unidades.get(str(row["codigo_unidade"]).strip())
+                    if not cod_cc or not unidade_obj:
+                        continue
+                    if cod_cc not in map_ccs:
+                        cc = CentroCusto(codigo_cc=cod_cc, nome=nome_cc, unidade_id=unidade_obj.id, ativo=True)
+                        session.add(cc)
+                        map_ccs[cod_cc] = cc
+                    else:
+                        if map_ccs[cod_cc].nome != nome_cc:
+                            map_ccs[cod_cc].nome = nome_cc
+                        if map_ccs[cod_cc].unidade_id != unidade_obj.id:
+                            map_ccs[cod_cc].unidade_id = unidade_obj.id
+                session.flush()
 
-            # 3. CARGOS
-            map_cargos = {c.codigo_cargo: c for c in session.query(Cargo).all()}
-            for _, row in df[["codigo_cargo_limpo", "titulo_cargo"]].drop_duplicates(subset=["codigo_cargo_limpo"]).dropna().iterrows():
-                cod_car = row["codigo_cargo_limpo"]
-                if cod_car in CARGOS_REJEITADOS_LEGADO:
-                    continue
-                titulo = str(row["titulo_cargo"]).strip()
-                if cod_car not in map_cargos:
-                    car = Cargo(codigo_cargo=cod_car, titulo=titulo)
-                    session.add(car)
-                    map_cargos[cod_car] = car
-                else:
-                    map_cargos[cod_car].titulo = titulo
-            session.flush()
+                # 3. CARGOS (Upsert atômico via ON CONFLICT DO UPDATE)
+                cargos_upsert = {}
+                for _, row in df[["codigo_cargo_limpo", "titulo_cargo"]].dropna().iterrows():
+                    cod_car = str(row["codigo_cargo_limpo"]).strip()
+                    if not cod_car or cod_car in CARGOS_REJEITADOS_LEGADO:
+                        continue
+                    cargos_upsert[cod_car] = str(row["titulo_cargo"]).strip()
 
-            # 4. COLABORADORES (Upsert por CPF)
-            colabs_banco = {c.cpf: c for c in session.query(Colaborador).all()}
-            cpfs_ativos_senior = set()
-            inseridos, atualizados = 0, 0
-
-            for _, row in df.drop_duplicates(subset=["cpf"]).iterrows():
-                cod_car = row["codigo_cargo_limpo"]
-                if cod_car in CARGOS_REJEITADOS_LEGADO:
-                    continue
-
-                cpf = str(row["cpf"]).strip().zfill(11) if pd.notna(row["cpf"]) else None
-                cracha = str(row["cracha"]).strip() if pd.notna(row["cracha"]) else None
-                dt_nasc = row["data_nascimento"]
-                cc_obj = map_ccs.get(str(row["codigo_cc"]).strip())
-                cargo_obj = map_cargos.get(cod_car)
-
-                if not cpf or not cracha or pd.isna(dt_nasc) or not cc_obj or not cargo_obj:
-                    continue
-
-                sexo_val = _normalizar_sexo(row["sexo"]) if "sexo" in row else None
-                email_val = str(row["email"]).strip().lower() if pd.notna(row["email"]) and str(row["email"]).strip() else None
-                nome_val = str(row["nome"]).strip()
-                cpfs_ativos_senior.add(cpf)
-
-                if cpf in colabs_banco:
-                    c = colabs_banco[cpf]
-                    c.cracha = cracha
-                    c.nome = nome_val
-                    c.sexo = sexo_val or c.sexo
-                    c.data_nascimento = dt_nasc
-                    c.email = email_val or c.email
-                    c.cargo_id = cargo_obj.id
-                    c.centro_custo_id = cc_obj.id
-                    c.ativo = True
-                    atualizados += 1
-                else:
-                    novo = Colaborador(
-                        cracha=cracha,
-                        nome=nome_val,
-                        sexo=sexo_val,
-                        cpf=cpf,
-                        data_nascimento=dt_nasc,
-                        email=email_val,
-                        cargo_id=cargo_obj.id,
-                        centro_custo_id=cc_obj.id,
-                        ativo=True,
+                if cargos_upsert:
+                    valores_cargos = [{"codigo_cargo": k, "titulo": v} for k, v in cargos_upsert.items()]
+                    stmt_cargo = pg_insert(Cargo.__table__).values(valores_cargos)
+                    stmt_cargo = stmt_cargo.on_conflict_do_update(
+                        index_elements=["codigo_cargo"],
+                        set_={"titulo": stmt_cargo.excluded.titulo},
                     )
-                    session.add(novo)
-                    inseridos += 1
+                    session.execute(stmt_cargo)
+                    session.flush()
 
-            # Inativa quem saiu da base ativa do Senior ou caiu em cargo rejeitado
-            inativados = 0
-            for cpf, colab in colabs_banco.items():
-                if cpf not in cpfs_ativos_senior and colab.ativo:
-                    colab.ativo = False
-                    inativados += 1
+                map_cargos = {
+                    str(c.codigo_cargo).strip(): c
+                    for c in session.query(Cargo).all()
+                    if c.codigo_cargo
+                }
 
-            session.flush()
+                # 4. COLABORADORES (Diff real: só atualiza quem realmente mudou)
+                todos_colabs = session.query(Colaborador).all()
+                colabs_por_cpf = {}
+                colabs_por_cracha = {}
+                for c in todos_colabs:
+                    cpf_norm = _limpar_cpf(c.cpf)
+                    if cpf_norm:
+                        colabs_por_cpf[cpf_norm] = c
+                    if c.cracha:
+                        colabs_por_cracha[str(c.cracha).strip()] = c
 
-            # 5. GARANTE USUÁRIO ROOT DO .ENV
-            self._garantir_usuario_root(session)
+                df["cpf_limpo"] = df["cpf"].apply(_limpar_cpf)
+                df_colabs = df.dropna(subset=["cpf_limpo"]).drop_duplicates(subset=["cpf_limpo"])
+
+                cpfs_ativos_senior = set()
+                inseridos, atualizados, inalterados = 0, 0, 0
+
+                for _, row in df_colabs.iterrows():
+                    cod_car = str(row["codigo_cargo_limpo"]).strip()
+                    if cod_car in CARGOS_REJEITADOS_LEGADO:
+                        continue
+
+                    cpf = row["cpf_limpo"]
+                    cracha = str(row["cracha"]).strip() if pd.notna(row["cracha"]) else None
+                    dt_nasc = row["data_nascimento"]
+                    cc_obj = map_ccs.get(str(row["codigo_cc"]).strip())
+                    cargo_obj = map_cargos.get(cod_car)
+
+                    if not cpf or not cracha or pd.isna(dt_nasc) or not cc_obj or not cargo_obj:
+                        continue
+
+                    sexo_val = _normalizar_sexo(row["sexo"]) if "sexo" in row else None
+                    email_val = str(row["email"]).strip().lower() if pd.notna(row["email"]) and str(row["email"]).strip() else None
+                    nome_val = str(row["nome"]).strip()
+                    cpfs_ativos_senior.add(cpf)
+
+                    colab_existente = colabs_por_cpf.get(cpf) or colabs_por_cracha.get(cracha)
+
+                    if colab_existente:
+                        novo_sexo = sexo_val or colab_existente.sexo
+                        novo_email = email_val or colab_existente.email
+
+                        mudou = (
+                            colab_existente.cpf != cpf
+                            or str(colab_existente.cracha).strip() != cracha
+                            or str(colab_existente.nome).strip() != nome_val
+                            or colab_existente.sexo != novo_sexo
+                            or colab_existente.data_nascimento != dt_nasc
+                            or (colab_existente.email or None) != novo_email
+                            or colab_existente.cargo_id != cargo_obj.id
+                            or colab_existente.centro_custo_id != cc_obj.id
+                            or colab_existente.ativo is not True
+                        )
+
+                        colabs_por_cpf[cpf] = colab_existente
+                        colabs_por_cracha[cracha] = colab_existente
+
+                        if mudou:
+                            colab_existente.cpf = cpf
+                            colab_existente.cracha = cracha
+                            colab_existente.nome = nome_val
+                            colab_existente.sexo = novo_sexo
+                            colab_existente.data_nascimento = dt_nasc
+                            colab_existente.email = novo_email
+                            colab_existente.cargo_id = cargo_obj.id
+                            colab_existente.centro_custo_id = cc_obj.id
+                            colab_existente.ativo = True
+                            atualizados += 1
+                        else:
+                            inalterados += 1
+                    else:
+                        novo = Colaborador(
+                            cracha=cracha,
+                            nome=nome_val,
+                            sexo=sexo_val,
+                            cpf=cpf,
+                            data_nascimento=dt_nasc,
+                            email=email_val,
+                            cargo_id=cargo_obj.id,
+                            centro_custo_id=cc_obj.id,
+                            ativo=True,
+                        )
+                        session.add(novo)
+                        colabs_por_cpf[cpf] = novo
+                        colabs_por_cracha[cracha] = novo
+                        inseridos += 1
+
+                # Inativa quem saiu da base ativa do Senior
+                inativados = 0
+                for cpf, colab in colabs_por_cpf.items():
+                    if cpf not in cpfs_ativos_senior and colab.ativo:
+                        colab.ativo = False
+                        inativados += 1
+
+                session.flush()
+
+                # 5. GARANTE USUÁRIO ROOT DO .ENV
+                self._garantir_usuario_root(session)
 
             session.commit()
             duracao = (datetime.now() - inicio).total_seconds()
-            print(f"✅ [ETL ESTRUTURA] Concluído em {duracao:.2f}s | Inseridos: {inseridos} | Atualizados: {atualizados} | Inativados: {inativados}")
+            print(
+                f"✅ [ETL ESTRUTURA] Concluído em {duracao:.2f}s | "
+                f"Inseridos: {inseridos} | Atualizados: {atualizados} | "
+                f"Inalterados: {inalterados} | Inativados: {inativados}"
+            )
 
         except Exception as e:
             session.rollback()

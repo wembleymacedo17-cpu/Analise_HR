@@ -6,9 +6,7 @@ import time
 import threading
 from collections import deque
 from datetime import datetime, timedelta
-from sqlalchemy import text
 
-from app import get_db
 from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
 
@@ -16,15 +14,19 @@ DIR_SERVICES = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE_PATH = os.path.join(DIR_SERVICES, "agendamentos_config.json")
 LOCK_FILE_PATH = os.path.join(DIR_SERVICES, ".scheduler.lock")
 
-# Buffer circular de logs para o terminal web (últimas 400 linhas)
 TERMINAL_LOGS = deque(maxlen=400)
 _LOG_LOCK = threading.Lock()
 _LOG_SEQ = 0
 _SCHEDULER_INICIADO = False
 
+# Mutex global: impede que dois ETLs modifiquem o PostgreSQL simultaneamente
+_ETL_EXECUTION_LOCK = threading.Lock()
+
+_REAL_STDOUT = sys.__stdout__ if sys.__stdout__ is not None else sys.stdout
+
 
 def registrar_log(mensagem: str, nivel: str = "INFO", origem: str = "SYSTEM"):
-    """Registra uma linha no terminal web e imprime no stdout."""
+    """Registra uma linha no terminal web e escreve direto no stdout físico (sem recursão)."""
     global _LOG_SEQ
     ts = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     texto = str(mensagem).rstrip()
@@ -39,68 +41,78 @@ def registrar_log(mensagem: str, nivel: str = "INFO", origem: str = "SYSTEM"):
             "origem": origem.upper(),
             "mensagem": texto,
         })
-    print(f"[{ts}] [{origem}] {texto}", flush=True)
+    if _REAL_STDOUT:
+        _REAL_STDOUT.write(f"[{ts}] [{origem.upper()}] {texto}\n")
+        _REAL_STDOUT.flush()
 
 
-class _StreamCaptor(io.TextIOBase):
-    """Captura prints/logs durante a execução de um ETL e envia em tempo real ao terminal web."""
-    def __init__(self, origem: str, original_stream):
+class _ThreadStreamCaptor(io.TextIOBase):
+    """Captura prints apenas da thread do ETL em execução; outras threads (HTTP) passam direto."""
+    def __init__(self, origem: str, fallback_stream, target_thread_id: int):
         self.origem = origem
-        self.original_stream = original_stream
+        self.fallback_stream = fallback_stream
+        self.target_thread_id = target_thread_id
         self._buffer = ""
 
     def write(self, s):
-        if self.original_stream:
-            self.original_stream.write(s)
+        if threading.get_ident() != self.target_thread_id:
+            if self.fallback_stream:
+                self.fallback_stream.write(s)
+            return len(s)
+
         self._buffer += s
         while "\n" in self._buffer:
             linha, self._buffer = self._buffer.split("\n", 1)
             if linha.strip():
-                nivel = "ERROR" if ("erro" in linha.lower() or "❌" in linha or "exception" in linha.lower()) else "INFO"
+                nivel = "ERROR" if ("erro" in linha.lower() or "exception" in linha.lower() or "falha" in linha.lower()) else "INFO"
                 registrar_log(linha, nivel=nivel, origem=self.origem)
         return len(s)
 
     def flush(self):
-        if self._buffer.strip():
+        if threading.get_ident() == self.target_thread_id and self._buffer.strip():
             registrar_log(self._buffer.strip(), nivel="INFO", origem=self.origem)
             self._buffer = ""
-        if self.original_stream:
-            self.original_stream.flush()
+        if self.fallback_stream:
+            self.fallback_stream.flush()
 
 
-# =========================================================================
-# TAREFAS DISPONÍVEIS NO ANALISE_HR
-# =========================================================================
 def _executar_com_captura(task_key: str, label: str, fn):
     if AGENDADORES[task_key]["executando"]:
-        registrar_log(f"Tarefa '{label}' já está em execução. Ignorando disparo duplicado.", nivel="WARN", origem=task_key)
+        registrar_log(f"Tarefa '{label}' já está em execução.", nivel="WARN", origem=task_key)
         return {"sucesso": False, "mensagem": f"{label} já está em execução."}
 
-    AGENDADORES[task_key]["executando"] = True
-    inicio = datetime.now()
-    registrar_log(f"🚀 Iniciando {label}...", nivel="INFO", origem=task_key)
+    if _ETL_EXECUTION_LOCK.locked():
+        registrar_log(f"Aguardando outro serviço finalizar antes de iniciar '{label}'...", nivel="WARN", origem=task_key)
 
-    old_stdout, old_stderr = sys.stdout, sys.stderr
-    captor_out = _StreamCaptor(task_key, old_stdout)
-    captor_err = _StreamCaptor(task_key, old_stderr)
-    sys.stdout, sys.stderr = captor_out, captor_err
+    with _ETL_EXECUTION_LOCK:
+        AGENDADORES[task_key]["executando"] = True
+        AGENDADORES[task_key]["inicio_execucao"] = datetime.now()
+        inicio = datetime.now()
+        registrar_log(f"Iniciando {label}...", nivel="INFO", origem=task_key)
 
-    try:
-        fn()
-        captor_out.flush()
-        captor_err.flush()
-        duracao = round((datetime.now() - inicio).total_seconds(), 2)
-        AGENDADORES[task_key]["ultima_execucao"] = datetime.now()
-        registrar_log(f"✅ {label} concluída com sucesso em {duracao}s.", nivel="SUCCESS", origem=task_key)
-        return {"sucesso": True, "mensagem": f"{label} concluída em {duracao}s!"}
-    except Exception as e:
-        captor_out.flush()
-        captor_err.flush()
-        registrar_log(f"❌ Falha em {label}: {str(e)}", nivel="ERROR", origem=task_key)
-        return {"sucesso": False, "mensagem": f"Erro em {label}: {str(e)}"}
-    finally:
-        sys.stdout, sys.stderr = old_stdout, old_stderr
-        AGENDADORES[task_key]["executando"] = False
+        tid = threading.get_ident()
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        captor_out = _ThreadStreamCaptor(task_key, old_stdout, tid)
+        captor_err = _ThreadStreamCaptor(task_key, old_stderr, tid)
+        sys.stdout, sys.stderr = captor_out, captor_err
+
+        try:
+            fn()
+            captor_out.flush()
+            captor_err.flush()
+            duracao = round((datetime.now() - inicio).total_seconds(), 2)
+            AGENDADORES[task_key]["ultima_execucao"] = datetime.now()
+            registrar_log(f"{label} concluída com sucesso em {duracao}s.", nivel="SUCCESS", origem=task_key)
+            return {"sucesso": True, "mensagem": f"{label} concluída em {duracao}s!"}
+        except Exception as e:
+            captor_out.flush()
+            captor_err.flush()
+            registrar_log(f"Falha em {label}: {str(e)}", nivel="ERROR", origem=task_key)
+            return {"sucesso": False, "mensagem": f"Erro em {label}: {str(e)}"}
+        finally:
+            sys.stdout, sys.stderr = old_stdout, old_stderr
+            AGENDADORES[task_key]["executando"] = False
+            AGENDADORES[task_key]["inicio_execucao"] = None
 
 
 def executar_task_faltas():
@@ -126,18 +138,20 @@ MAPA_FUNCOES = {
 
 AGENDADORES = {
     "faltas": {
-        "nome": "Carga Diária (Ocorrências D-1)",
+        "nome": "Carga Diária (Ocorrências D-15)",
         "ativo": False,
         "executando": False,
+        "inicio_execucao": None,
         "intervalo_horas": 2.0,
         "proxima_execucao": None,
         "ultima_execucao": None,
         "thread": None,
     },
     "estrutura": {
-        "nome": "Carga Semanal de Estrutura",
+        "nome": "Carga de Estrutura e Colaboradores",
         "ativo": False,
         "executando": False,
+        "inicio_execucao": None,
         "intervalo_horas": 24.0,
         "proxima_execucao": None,
         "ultima_execucao": None,
@@ -146,9 +160,6 @@ AGENDADORES = {
 }
 
 
-# =========================================================================
-# PERSISTÊNCIA EM JSON + RECUPERAÇÃO AUTOMÁTICA PÓS-QUEDA (CATCH-UP)
-# =========================================================================
 def salvar_agendamentos_disco():
     dados = {}
     for task, info in AGENDADORES.items():
@@ -173,10 +184,9 @@ def _loop_agendador_tarefa(task_name: str, recuperar_atrasada: bool = False):
     if not func_target:
         return
 
-    # Se a aplicação caiu e o horário agendado passou durante a queda, executa imediatamente!
     if recuperar_atrasada and AGENDADORES[task_name]["ativo"]:
         registrar_log(
-            f"🔄 [RECUPERAÇÃO AUTOMÁTICA] Horário vencido detectado para '{task_name}'. Executando agora...",
+            f"[RECUPERAÇÃO AUTOMÁTICA] Horário vencido detectado para '{task_name}'. Executando agora...",
             nivel="WARN",
             origem="SCHEDULER"
         )
@@ -186,7 +196,7 @@ def _loop_agendador_tarefa(task_name: str, recuperar_atrasada: bool = False):
         AGENDADORES[task_name]["proxima_execucao"] = nova_proxima
         salvar_agendamentos_disco()
         registrar_log(
-            f"📅 Próxima execução de '{task_name}' reagendada para {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
+            f"Próxima execução de '{task_name}' reagendada para {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
             nivel="INFO",
             origem="SCHEDULER"
         )
@@ -196,14 +206,14 @@ def _loop_agendador_tarefa(task_name: str, recuperar_atrasada: bool = False):
         proxima = AGENDADORES[task_name]["proxima_execucao"]
 
         if proxima and agora >= proxima:
-            registrar_log(f"⏰ Disparando rotina agendada '{task_name}'...", nivel="INFO", origem="SCHEDULER")
+            registrar_log(f"Disparando rotina agendada '{task_name}'...", nivel="INFO", origem="SCHEDULER")
             func_target()
             agora_pos = datetime.now()
             nova_proxima = agora_pos + timedelta(hours=AGENDADORES[task_name]["intervalo_horas"])
             AGENDADORES[task_name]["proxima_execucao"] = nova_proxima
             salvar_agendamentos_disco()
             registrar_log(
-                f"📅 Próxima execução de '{task_name}' em {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
+                f"Próxima execução de '{task_name}' em {nova_proxima.strftime('%d/%m/%Y %H:%M:%S')}.",
                 nivel="INFO",
                 origem="SCHEDULER"
             )
@@ -248,7 +258,7 @@ def iniciar_agendador_tarefa(task_name: str, intervalo_horas: float, proxima_exe
     if persistir:
         salvar_agendamentos_disco()
         registrar_log(
-            f"🟢 Agendamento '{task_name}' ativado a cada {intervalo_num}h (próxima: {proxima_dt.strftime('%d/%m/%Y %H:%M:%S')}).",
+            f"Agendamento '{task_name}' ativado a cada {intervalo_num}h (próxima: {proxima_dt.strftime('%d/%m/%Y %H:%M:%S')}).",
             nivel="SUCCESS",
             origem="SCHEDULER"
         )
@@ -267,7 +277,7 @@ def parar_agendador_tarefa(task_name: str):
     AGENDADORES[task_name]["ativo"] = False
     AGENDADORES[task_name]["proxima_execucao"] = None
     salvar_agendamentos_disco()
-    registrar_log(f"⏸️ Agendamento '{task_name}' pausado pelo administrador.", nivel="WARN", origem="SCHEDULER")
+    registrar_log(f"Agendamento '{task_name}' pausado pelo administrador.", nivel="WARN", origem="SCHEDULER")
     return {"sucesso": True, "mensagem": f"Agendamento de '{task_name}' desativado."}
 
 
@@ -276,8 +286,12 @@ def obter_status_agendadores():
     agora = datetime.now()
     for task_name, info in AGENDADORES.items():
         tempo_restante_seg = 0
+        executando_ha_seg = 0
         proxima_str = None
         ultima_str = info["ultima_execucao"].strftime("%d/%m/%Y %H:%M:%S") if info["ultima_execucao"] else None
+
+        if info["executando"] and info.get("inicio_execucao"):
+            executando_ha_seg = max(0, int((agora - info["inicio_execucao"]).total_seconds()))
 
         if info["ativo"] and info["proxima_execucao"]:
             delta = (info["proxima_execucao"] - agora).total_seconds()
@@ -288,6 +302,7 @@ def obter_status_agendadores():
             "nome": info["nome"],
             "ativo": info["ativo"],
             "executando": info["executando"],
+            "executando_ha_segundos": executando_ha_seg,
             "intervalo_horas": info["intervalo_horas"],
             "proxima_execucao": proxima_str,
             "ultima_execucao": ultima_str,
@@ -306,29 +321,25 @@ def obter_logs_terminal(after_id: int = 0):
 def limpar_logs_terminal():
     with _LOG_LOCK:
         TERMINAL_LOGS.clear()
-    registrar_log("🧹 Terminal limpo pelo operador.", nivel="INFO", origem="SYSTEM")
+    registrar_log("Terminal limpo pelo operador.", nivel="INFO", origem="SYSTEM")
 
 
 def inicializar_scheduler_com_recuperacao():
-    """Inicializa uma única vez (com proteção contra múltiplos workers Gunicorn) e recupera tarefas vencidas."""
     global _SCHEDULER_INICIADO
     if _SCHEDULER_INICIADO:
         return
     _SCHEDULER_INICIADO = True
 
-    # Evita que 2+ workers Gunicorn disparem agendadores duplicados no mesmo container
     try:
         import fcntl
         lock_fp = open(LOCK_FILE_PATH, "w")
         fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except ImportError:
-        # Windows local: prossegue normalmente
         pass
     except OSError:
-        # Outro worker já detém o lock do scheduler
         return
 
-    registrar_log("🖥️ Serviço de Agendamento & Recuperação inicializado.", nivel="INFO", origem="SCHEDULER")
+    registrar_log("Serviço de Agendamento & Recuperação inicializado.", nivel="INFO", origem="SCHEDULER")
 
     if not os.path.exists(CONFIG_FILE_PATH):
         salvar_agendamentos_disco()
@@ -369,5 +380,4 @@ def inicializar_scheduler_com_recuperacao():
         registrar_log(f"Erro ao restaurar agendamentos do JSON: {e}", nivel="ERROR", origem="SCHEDULER")
 
 
-# Dispara a restauração e recuperação automática ao carregar o módulo
 inicializar_scheduler_com_recuperacao()
