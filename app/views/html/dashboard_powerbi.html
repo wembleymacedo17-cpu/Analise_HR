@@ -1,0 +1,85 @@
+<section id="aba-dashboard" class="tab-content">
+    <div class="dashboard-pbi-card">
+        <div class="dashboard-pbi-header">
+            <div class="dashboard-pbi-title-group">
+                <h2>Dashboard Executivo — Análise de Hora Extra</h2>
+                <p>Indicadores consolidados de ausências, coberturas de hora extra e redimensionamento de equipes.</p>
+            </div>
+
+            <div class="dashboard-pbi-actions">
+                <button type="button" class="btn-pbi-primary" onclick="redirecionarPowerBI(false)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    <span>Abrir no Power BI (Nova Aba)</span>
+                </button>
+
+                <button type="button" class="btn-pbi-secondary" onclick="redirecionarPowerBI(true)">
+                    <span>Ir Direto (Mesma Aba)</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-pbi-frame-wrap">
+            <iframe
+                id="iframe-powerbi-he"
+                title="Dashboard Power BI - Análise de Hora Extra"
+                src=""
+                frameborder="0"
+                allowFullScreen="true">
+            </iframe>
+        </div>
+    </div>
+</section>
+
+<script>
+    let _cacheUrlPowerBI = null;
+
+    async function _obterUrlPowerBISegura() {
+        if (_cacheUrlPowerBI) return _cacheUrlPowerBI;
+
+        const resp = await fetch("/api/dashboard/powerbi-url", {
+            method: "GET",
+            cache: "no-store"
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.sucesso || !data.url) {
+            throw new Error(data.mensagem || "Acesso negado ao Dashboard Power BI.");
+        }
+
+        _cacheUrlPowerBI = data.url;
+        return _cacheUrlPowerBI;
+    }
+
+    async function inicializarAbaDashboard() {
+        const iframe = document.getElementById("iframe-powerbi-he");
+        if (!iframe || iframe.getAttribute("src")) return;
+
+        try {
+            const url = await _obterUrlPowerBISegura();
+            iframe.setAttribute("src", url);
+        } catch (err) {
+            if (typeof mostrarToast === "function") {
+                mostrarToast(err.message, true);
+            }
+        }
+    }
+
+    async function redirecionarPowerBI(mesmaAba = false) {
+        try {
+            const url = await _obterUrlPowerBISegura();
+            if (mesmaAba) {
+                window.location.href = url;
+            } else {
+                window.open(url, "_blank", "noopener,noreferrer");
+            }
+        } catch (err) {
+            if (typeof mostrarToast === "function") {
+                mostrarToast(err.message, true);
+            }
+        }
+    }
+</script>

@@ -1953,3 +1953,13 @@ def dashboard_metricas():
             'convites_disponiveis': convites_ativos
         }
     }), 200
+
+@api_bp.route('/dashboard/powerbi-url', methods=['GET'])
+def obter_url_powerbi():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    return jsonify({
+        'sucesso': True,
+        'url': 'https://app.powerbi.com/view?r=eyJrIjoiMjAwNDc1ZTEtYzQ3OC00MTUyLWI4NjMtOTJhZDEwNDczNDdjIiwidCI6ImNlMDNjMzhjLTgxYjYtNDdmNC1hMTZmLTk4MWZmMWQzMjU3MCJ9'
+    }), 200
