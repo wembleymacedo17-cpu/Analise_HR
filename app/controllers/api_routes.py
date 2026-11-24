@@ -16,11 +16,25 @@ from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
 from app.services.notificador_email import NotificadorEmail
 from app.services.cookie_service import CookieService
+import re
+from sqlalchemy import func, or_, text
+from app.services.scheduler_service import (
+    executar_task_faltas,
+    executar_task_estrutura,
+    iniciar_agendador_tarefa,
+    parar_agendador_tarefa,
+    obter_status_agendadores,
+    obter_logs_terminal,
+    limpar_logs_terminal,
+    registrar_log,
+)
 
 
 
-
-
+PALAVRAS_PROIBIDAS_SQL = re.compile(
+    r'\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|COPY|VACUUM|CALL|DO|EXECUTE|MERGE)\b',
+    re.IGNORECASE
+)
 
 
 COORDENADORES_AUTORIZADORES = {
@@ -1909,15 +1923,151 @@ def executar_etl():
     data = request.json or {}
     tipo = data.get('tipo', 'faltas')
 
+    if tipo == 'estrutura':
+        res = executar_task_estrutura()
+    else:
+        res = executar_task_faltas()
+
+    status_code = 200 if res.get('sucesso') else 500
+    return jsonify(res), status_code
+
+
+@api_bp.route('/etl/agendamentos', methods=['GET'])
+def listar_agendamentos_etl():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    return jsonify({
+        'sucesso': True,
+        'agendamentos': obter_status_agendadores()
+    }), 200
+
+
+@api_bp.route('/etl/agendamentos/<string:task_name>', methods=['POST', 'DELETE'])
+def configurar_agendamento_etl(task_name):
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    if request.method == 'DELETE':
+        res = parar_agendador_tarefa(task_name)
+        return jsonify(res), (200 if res['sucesso'] else 400)
+
+    data = request.json or {}
     try:
-        if tipo == 'estrutura':
-            ETLEstruturaSenior().executar()
-            return jsonify({'sucesso': True, 'mensagem': 'Carga de estrutura e colaboradores concluída!'}), 200
-        else:
-            ETLFaltasDiario(dias_retroativos=15).executar()
-            return jsonify({'sucesso': True, 'mensagem': 'Carga diária (D-1) concluída!'}), 200
+        intervalo_horas = float(data.get('intervalo_horas', 2.0))
+    except (TypeError, ValueError):
+        return jsonify({'sucesso': False, 'mensagem': 'Intervalo inválido.'}), 400
+
+    res = iniciar_agendador_tarefa(task_name=task_name, intervalo_horas=intervalo_horas)
+    return jsonify(res), (200 if res['sucesso'] else 400)
+
+
+@api_bp.route('/etl/terminal/logs', methods=['GET', 'DELETE'])
+def terminal_logs_etl():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    if request.method == 'DELETE':
+        limpar_logs_terminal()
+        return jsonify({'sucesso': True}), 200
+
+    after_id = request.args.get('after_id', 0, type=int)
+    dados = obter_logs_terminal(after_id=after_id)
+    return jsonify({'sucesso': True, **dados}), 200
+
+
+
+
+@api_bp.route('/etl/sql/schema', methods=['GET'])
+def obter_schema_sql_autocomplete():
+    """Retorna tabelas e colunas do PostgreSQL (public) para o IntelliSense do Console SQL."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    rows = db.execute(text("""
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        ORDER BY table_name, ordinal_position
+    """)).fetchall()
+
+    schema_map = {}
+    for table_name, column_name in rows:
+        schema_map.setdefault(table_name, []).append(column_name)
+
+    return jsonify({
+        'sucesso': True,
+        'tables': schema_map
+    }), 200
+
+
+@api_bp.route('/etl/sql/executar', methods=['POST'])
+def executar_sql_console():
+    """Executa exclusivamente consultas de leitura (SELECT / WITH) no PostgreSQL da aplicação."""
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    data = request.json or {}
+    sql_raw = str(data.get('sql') or '').strip()
+
+    if not sql_raw:
+        return jsonify({'sucesso': False, 'mensagem': 'Digite uma consulta SELECT antes de executar.'}), 400
+
+    # Remove comentários SQL (-- e /* */) apenas para validar comandos ocultos
+    sql_sem_comentarios = re.sub(r'--.*?$|/\*.*?\*/', '', sql_raw, flags=re.MULTILINE | re.DOTALL).strip()
+    sql_limpo = sql_sem_comentarios.rstrip(';').strip()
+
+    # Bloqueia múltiplas queries encadeadas com ';'
+    if ';' in sql_limpo:
+        return jsonify({
+            'sucesso': False,
+            'mensagem': 'Por segurança, execute apenas uma consulta SELECT por vez.'
+        }), 400
+
+    primeira_palavra = sql_limpo.split()[0].upper() if sql_limpo.split() else ''
+    if primeira_palavra not in ('SELECT', 'WITH'):
+        return jsonify({
+            'sucesso': False,
+            'mensagem': 'Console restrito a consultas de leitura (SELECT / WITH).'
+        }), 403
+
+    if PALAVRAS_PROIBIDAS_SQL.search(sql_limpo):
+        return jsonify({
+            'sucesso': False,
+            'mensagem': 'Comando bloqueado: operações de escrita ou alteração de estrutura não são permitidas.'
+        }), 403
+
+    usuario_nome = session.get('usuario_nome', 'ROOT')
+    registrar_log(f"🔎 [READ-ONLY] SQL executado por {usuario_nome}: {sql_limpo[:140]}", nivel="INFO", origem="SQL")
+
+    db = get_db()
+    try:
+        # Garante transação estritamente somente-leitura no PostgreSQL
+        db.execute(text("SET TRANSACTION READ ONLY"))
+        result = db.execute(text(sql_limpo))
+
+        colunas = list(result.keys()) if result.returns_rows else []
+        rows_raw = result.fetchmany(200) if result.returns_rows else []
+        db.rollback()
+
+        linhas = [
+            [val.isoformat() if hasattr(val, 'isoformat') else (str(val) if val is not None else None) for val in r]
+            for r in rows_raw
+        ]
+        registrar_log(f"✅ [SQL] Retornadas {len(linhas)} linha(s).", nivel="SUCCESS", origem="SQL")
+        return jsonify({
+            'sucesso': True,
+            'colunas': colunas,
+            'linhas': linhas,
+            'total': len(linhas),
+            'mensagem': f'{len(linhas)} registro(s) retornado(s) (modo somente leitura • limite 200).'
+        }), 200
+
     except Exception as e:
-        return jsonify({'sucesso': False, 'mensagem': f'Erro ao executar ETL: {str(e)}'}), 500
+        db.rollback()
+        registrar_log(f"❌ [SQL] Erro: {str(e)}", nivel="ERROR", origem="SQL")
+        return jsonify({'sucesso': False, 'mensagem': f'Erro SQL: {str(e)}'}), 400
 
 
 @api_bp.route('/dashboard/metricas', methods=['GET'])

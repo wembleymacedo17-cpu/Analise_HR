@@ -1,22 +1,366 @@
+<!-- DEPENDÊNCIAS CODEMIRROR (INTELLISENSE SQL + TEMA DRACULA/DARK) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+
 <section id="aba-etl" class="tab-content">
     <div class="panel">
-        <div class="panel-header"><h2 class="panel-title">Sincronização Senior Vetorh</h2></div>
-        <div class="etl-grid">
-            <div class="etl-card">
-                <div><h4>Carga Diária (D-1)</h4><p style="margin-top:6px;">Importa ocorrências dos últimos 15 dias até ontem.</p></div>
-                <button type="button" class="btn btn-primary" onclick="dispararETL('faltas', this)">Executar Carga Diária</button>
+        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+                <h2 class="panel-title">Sincronização Senior Vetorh & Automação</h2>
+                <p style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+                    Execução manual, agendamento persistente com recuperação automática pós-queda e consulta SQL.
+                </p>
             </div>
+            <span class="etl-recovery-pill" title="Persistido em agendamentos_config.json">
+                🛡️ Recuperação Automática Ativa
+            </span>
+        </div>
+
+        <!-- CARDS DE CARGA + AGENDAMENTO -->
+        <div class="etl-grid">
+            <!-- CARD 1: FALTAS -->
             <div class="etl-card">
-                <div><h4>Carga Semanal de Estrutura</h4><p style="margin-top:6px;">Atualiza unidades, centros de custo, cargos e colaboradores.</p></div>
-                <button type="button" class="btn btn-warning" onclick="dispararETL('estrutura', this)">Executar Carga Semanal</button>
+                <div>
+                    <div class="etl-card-top">
+                        <h4>Carga Diária (Ocorrências D-1)</h4>
+                        <span id="badge-sched-faltas" class="sched-badge sched-off">MANUAL</span>
+                    </div>
+                    <p style="margin-top:6px;">Importa ocorrências dos últimos 15 dias até ontem do Oracle Senior.</p>
+                </div>
+
+                <div class="sched-box">
+                    <label class="sched-label">Programar execução automática (horas):</label>
+                    <div class="sched-controls">
+                        <select id="intervalo-faltas" class="sched-select">
+                            <option value="0.5">A cada 30 min (0.5h)</option>
+                            <option value="1">A cada 1 hora</option>
+                            <option value="2" selected>A cada 2 horas</option>
+                            <option value="4">A cada 4 horas</option>
+                            <option value="6">A cada 6 horas</option>
+                            <option value="12">A cada 12 horas</option>
+                            <option value="24">A cada 24 horas</option>
+                        </select>
+                        <button type="button" id="btn-sched-faltas" class="btn btn-secondary btn-sm" onclick="alternarAgendamento('faltas')">
+                            Ativar Auto
+                        </button>
+                    </div>
+                    <div id="info-sched-faltas" class="sched-meta">Sem agendamento ativo.</div>
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="dispararETL('faltas', this)">
+                    Executar Carga Diária Agora
+                </button>
+            </div>
+
+            <!-- CARD 2: ESTRUTURA -->
+            <div class="etl-card">
+                <div>
+                    <div class="etl-card-top">
+                        <h4>Carga Semanal de Estrutura</h4>
+                        <span id="badge-sched-estrutura" class="sched-badge sched-off">MANUAL</span>
+                    </div>
+                    <p style="margin-top:6px;">Atualiza unidades, centros de custo, cargos e colaboradores ativos.</p>
+                </div>
+
+                <div class="sched-box">
+                    <label class="sched-label">Programar execução automática (horas):</label>
+                    <div class="sched-controls">
+                        <select id="intervalo-estrutura" class="sched-select">
+                            <option value="6">A cada 6 horas</option>
+                            <option value="12">A cada 12 horas</option>
+                            <option value="24" selected>A cada 24 horas</option>
+                            <option value="48">A cada 48 horas</option>
+                            <option value="168">A cada 7 dias (168h)</option>
+                        </select>
+                        <button type="button" id="btn-sched-estrutura" class="btn btn-secondary btn-sm" onclick="alternarAgendamento('estrutura')">
+                            Ativar Auto
+                        </button>
+                    </div>
+                    <div id="info-sched-estrutura" class="sched-meta">Sem agendamento ativo.</div>
+                </div>
+
+                <button type="button" class="btn btn-warning" onclick="dispararETL('estrutura', this)">
+                    Executar Carga de Estrutura Agora
+                </button>
+            </div>
+        </div>
+
+        <!-- TERMINAL DE EXECUÇÃO EM TEMPO REAL -->
+        <div class="dev-console-wrap">
+            <div class="dev-console-header">
+                <div class="dev-console-dots">
+                    <span class="dot-red"></span>
+                    <span class="dot-yellow"></span>
+                    <span class="dot-green"></span>
+                    <span class="dev-console-title">TERMINAL DE SERVIÇOS — ETL &amp; SCHEDULER</span>
+                </div>
+                <div class="dev-console-actions">
+                    <label class="term-autoscroll">
+                        <input type="checkbox" id="chk-terminal-autoscroll" checked> Auto-scroll
+                    </label>
+                    <button type="button" class="btn-term" onclick="limparTerminalWeb()">Limpar</button>
+                </div>
+            </div>
+            <div id="terminal-output" class="dev-terminal-body">
+                <div class="term-line term-info">[SISTEMA] Aguardando logs de execução...</div>
+            </div>
+        </div>
+
+        <!-- CONSOLE SQL SOMENTE LEITURA COM INTELLISENSE -->
+        <div class="sql-console-wrap">
+            <div class="sql-console-header">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <h4>Console SQL (Somente Leitura • PostgreSQL App)</h4>
+                        <span class="sql-readonly-badge">🔒 READ-ONLY (SELECT)</span>
+                    </div>
+                    <p>Digite para ver sugestões de tabelas e colunas (ou pressione <strong>Ctrl + Espaço</strong>). Execute com <strong>Ctrl + Enter</strong>.</p>
+                </div>
+                <div class="sql-toolbar">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="inserirExemploSQL()">Exemplo</button>
+                    <button type="button" id="btn-executar-sql" class="btn btn-primary btn-sm" onclick="executarComandoSQL()">
+                        ▶ Executar Consulta (Ctrl+Enter)
+                    </button>
+                </div>
+            </div>
+
+            <!-- PÍLULAS RÁPIDAS DAS TABELAS DO BANCO -->
+            <div id="sql-tables-pills" class="sql-tables-pills"></div>
+
+            <div class="sql-editor-box">
+                <textarea id="sql-editor"></textarea>
+            </div>
+
+            <div id="sql-feedback" class="sql-feedback" style="display:none;"></div>
+
+            <div id="sql-result-wrap" class="sql-result-wrap" style="display:none;">
+                <table class="sql-result-table">
+                    <thead id="sql-result-head"></thead>
+                    <tbody id="sql-result-body"></tbody>
+                </table>
             </div>
         </div>
     </div>
 </section>
 
+<!-- SCRIPTS CODEMIRROR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/sql-hint.min.js"></script>
+
 <script>
+    let ultimoLogIdTerminal = 0;
+    let intervaloPollingTerminal = null;
+    let estadoAgendamentosCache = {};
+    let sqlCodeMirrorEditor = null;
+    let schemaTabelasCache = null;
+
+    function formatarSegundosRestantes(seg) {
+        if (!seg || seg <= 0) return "executando em instantes...";
+        const h = Math.floor(seg / 3600);
+        const m = Math.floor((seg % 3600) / 60);
+        const s = seg % 60;
+        return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+    }
+
+    async function carregarStatusAgendamentos() {
+        try {
+            const res = await fetch("/api/etl/agendamentos", { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso || !d.agendamentos) return;
+
+            estadoAgendamentosCache = d.agendamentos;
+
+            ["faltas", "estrutura"].forEach(task => {
+                const info = d.agendamentos[task];
+                if (!info) return;
+
+                const badge = document.getElementById(`badge-sched-${task}`);
+                const btn = document.getElementById(`btn-sched-${task}`);
+                const meta = document.getElementById(`info-sched-${task}`);
+                const sel = document.getElementById(`intervalo-${task}`);
+
+                if (info.ativo) {
+                    badge.className = "sched-badge sched-on";
+                    badge.innerText = info.executando ? "EXECUTANDO..." : `AUTO (${info.intervalo_horas}h)`;
+                    btn.innerText = "Desativar";
+                    btn.className = "btn btn-danger btn-sm";
+                    if (sel && document.activeElement !== sel) {
+                        sel.value = String(info.intervalo_horas);
+                    }
+                    meta.innerHTML = `Próxima: <strong>${info.proxima_execucao || "--"}</strong> (${formatarSegundosRestantes(info.tempo_restante_segundos)})`
+                        + (info.ultima_execucao ? ` • Última: ${info.ultima_execucao}` : "");
+                } else {
+                    badge.className = "sched-badge sched-off";
+                    badge.innerText = info.executando ? "EXECUTANDO..." : "MANUAL";
+                    btn.innerText = "Ativar Auto";
+                    btn.className = "btn btn-secondary btn-sm";
+                    meta.innerHTML = info.ultima_execucao
+                        ? `Agendamento desativado • Última execução: ${info.ultima_execucao}`
+                        : "Sem agendamento ativo.";
+                }
+            });
+        } catch (_) {}
+    }
+
+    async function alternarAgendamento(taskName) {
+        const atual = estadoAgendamentosCache[taskName];
+        const estaAtivo = atual && atual.ativo;
+
+        if (estaAtivo) {
+            const res = await fetch(`/api/etl/agendamentos/${taskName}`, { method: "DELETE" });
+            const d = await res.json();
+            mostrarToast(d.mensagem, !d.sucesso);
+        } else {
+            const intervalo = document.getElementById(`intervalo-${taskName}`).value;
+            const res = await fetch(`/api/etl/agendamentos/${taskName}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ intervalo_horas: parseFloat(intervalo) })
+            });
+            const d = await res.json();
+            mostrarToast(d.mensagem, !d.sucesso);
+        }
+        await carregarStatusAgendamentos();
+        await atualizarLogsTerminal();
+    }
+
+    async function atualizarLogsTerminal() {
+        try {
+            const res = await fetch(`/api/etl/terminal/logs?after_id=${ultimoLogIdTerminal}`, { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso) return;
+
+            const container = document.getElementById("terminal-output");
+            if (!container) return;
+
+            if (d.logs && d.logs.length > 0) {
+                if (ultimoLogIdTerminal === 0) {
+                    container.innerHTML = "";
+                }
+                d.logs.forEach(item => {
+                    const div = document.createElement("div");
+                    const classeNivel = item.nivel === "ERROR"
+                        ? "term-error"
+                        : item.nivel === "WARN"
+                            ? "term-warn"
+                            : item.nivel === "SUCCESS"
+                                ? "term-success"
+                                : "term-info";
+                    div.className = `term-line ${classeNivel}`;
+                    div.textContent = `[${item.ts}] [${item.origem}] ${item.mensagem}`;
+                    container.appendChild(div);
+                });
+                ultimoLogIdTerminal = d.ultimo_id;
+
+                if (document.getElementById("chk-terminal-autoscroll").checked) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }
+        } catch (_) {}
+    }
+
+    async function limparTerminalWeb() {
+        await fetch("/api/etl/terminal/logs", { method: "DELETE" });
+        ultimoLogIdTerminal = 0;
+        const container = document.getElementById("terminal-output");
+        if (container) container.innerHTML = "";
+        await atualizarLogsTerminal();
+    }
+
+    async function inicializarEditorSQLIntelliSense() {
+        if (!sqlCodeMirrorEditor && typeof CodeMirror !== "undefined") {
+            const textarea = document.getElementById("sql-editor");
+            sqlCodeMirrorEditor = CodeMirror.fromTextArea(textarea, {
+                mode: "text/x-pgsql",
+                theme: "material-darker",
+                lineNumbers: true,
+                matchBrackets: true,
+                indentWithTabs: false,
+                tabSize: 2,
+                extraKeys: {
+                    "Ctrl-Space": "autocomplete",
+                    "Ctrl-Enter": () => executarComandoSQL(),
+                    "Cmd-Enter": () => executarComandoSQL()
+                },
+                hintOptions: {
+                    completeSingle: false,
+                    tables: {}
+                }
+            });
+
+            // Dispara autocomplete automaticamente ao digitar letras ou ponto (alias.coluna)
+            sqlCodeMirrorEditor.on("inputRead", function (cm, change) {
+                if (change.origin !== "+input") return;
+                const ch = change.text[0];
+                if (/[a-zA-Z_.]/.test(ch)) {
+                    cm.showHint({ completeSingle: false });
+                }
+            });
+        }
+
+        // Busca o schema real (tabelas e colunas) do PostgreSQL
+        if (!schemaTabelasCache) {
+            try {
+                const res = await fetch("/api/etl/sql/schema", { cache: "no-store" });
+                const d = await res.json();
+                if (d.sucesso && d.tables) {
+                    schemaTabelasCache = d.tables;
+                    if (sqlCodeMirrorEditor) {
+                        sqlCodeMirrorEditor.setOption("hintOptions", {
+                            completeSingle: false,
+                            tables: schemaTabelasCache
+                        });
+                    }
+                    renderizarPilulasTabelas(Object.keys(schemaTabelasCache));
+                }
+            } catch (_) {}
+        }
+
+        if (sqlCodeMirrorEditor) {
+            setTimeout(() => sqlCodeMirrorEditor.refresh(), 50);
+        }
+    }
+
+    function renderizarPilulasTabelas(nomesTabelas) {
+        const wrap = document.getElementById("sql-tables-pills");
+        if (!wrap || !nomesTabelas.length) return;
+        wrap.innerHTML = `<span class="pills-label">Tabelas disponíveis:</span>` + nomesTabelas.map(tbl =>
+            `<button type="button" class="sql-table-pill" title="Clique para consultar ${tbl}" onclick="inserirSelectTabela('${tbl}')">${tbl}</button>`
+        ).join("");
+    }
+
+    function inserirSelectTabela(nomeTabela) {
+        const query = `SELECT * FROM ${nomeTabela} LIMIT 50;`;
+        if (sqlCodeMirrorEditor) {
+            sqlCodeMirrorEditor.setValue(query);
+            sqlCodeMirrorEditor.focus();
+        } else {
+            document.getElementById("sql-editor").value = query;
+        }
+    }
+
+    function iniciarMonitoramentoETL() {
+        carregarStatusAgendamentos();
+        atualizarLogsTerminal();
+        inicializarEditorSQLIntelliSense();
+        if (!intervaloPollingTerminal) {
+            intervaloPollingTerminal = setInterval(() => {
+                const abaEtl = document.getElementById("aba-etl");
+                if (abaEtl && abaEtl.classList.contains("active")) {
+                    carregarStatusAgendamentos();
+                    atualizarLogsTerminal();
+                }
+            }, 2500);
+        }
+    }
+
     async function dispararETL(tipo, btn) {
         btn.disabled = true;
+        const textoOriginal = btn.innerText;
+        btn.innerText = "Executando...";
         try {
             const res = await fetch("/api/etl/executar", {
                 method: "POST",
@@ -25,14 +369,76 @@
             });
             const d = await res.json();
             mostrarToast(d.mensagem, !d.sucesso);
+            await atualizarLogsTerminal();
+            await carregarStatusAgendamentos();
             if (d.sucesso) {
                 if (typeof carregarFaltas === "function") carregarFaltas();
-                carregarMetricasRoot();
+                if (typeof carregarMetricasRoot === "function") carregarMetricasRoot();
             }
         } catch (e) {
             mostrarToast("Erro ao comunicar com o servidor durante o ETL.", true);
         } finally {
             btn.disabled = false;
+            btn.innerText = textoOriginal;
+        }
+    }
+
+    function inserirExemploSQL() {
+        const exemplo = "SELECT status, COUNT(*) AS total\nFROM ocorrencias_falta\nGROUP BY status;";
+        if (sqlCodeMirrorEditor) {
+            sqlCodeMirrorEditor.setValue(exemplo);
+            sqlCodeMirrorEditor.focus();
+        } else {
+            document.getElementById("sql-editor").value = exemplo;
+        }
+    }
+
+    async function executarComandoSQL() {
+        const sql = (sqlCodeMirrorEditor ? sqlCodeMirrorEditor.getValue() : document.getElementById("sql-editor").value).trim();
+        const btn = document.getElementById("btn-executar-sql");
+        const feedback = document.getElementById("sql-feedback");
+        const resultWrap = document.getElementById("sql-result-wrap");
+        const thead = document.getElementById("sql-result-head");
+        const tbody = document.getElementById("sql-result-body");
+
+        if (!sql) {
+            mostrarToast("Informe uma consulta SELECT para executar.", true);
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Executando...";
+        feedback.style.display = "none";
+        resultWrap.style.display = "none";
+
+        try {
+            const res = await fetch("/api/etl/sql/executar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sql })
+            });
+            const d = await res.json();
+
+            feedback.style.display = "block";
+            feedback.className = `sql-feedback ${d.sucesso ? "sql-ok" : "sql-err"}`;
+            feedback.innerText = d.mensagem;
+
+            if (d.sucesso && d.colunas && d.colunas.length > 0) {
+                thead.innerHTML = "<tr>" + d.colunas.map(c => `<th>${c}</th>`).join("") + "</tr>";
+                tbody.innerHTML = d.linhas.map(row =>
+                    "<tr>" + row.map(cell => `<td>${cell === null ? '<span style="color:#94a3b8;">NULL</span>' : String(cell)}</td>`).join("") + "</tr>"
+                ).join("");
+                resultWrap.style.display = "block";
+            }
+
+            await atualizarLogsTerminal();
+        } catch (err) {
+            feedback.style.display = "block";
+            feedback.className = "sql-feedback sql-err";
+            feedback.innerText = "Falha de comunicação ao executar consulta SQL.";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "▶ Executar Consulta (Ctrl+Enter)";
         }
     }
 </script>
