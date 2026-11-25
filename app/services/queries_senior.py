@@ -1,3 +1,6 @@
+import re 
+
+
 CARGOS_REJEITADOS_LEGADO = {
     '1013', '11', '1159', '1161', '12', '125', '135', '137', '156', '157',
     '158', '161', '162', '171', '172', '173', '174', '175', '176', '177',
@@ -72,3 +75,21 @@ def montar_query_faltas(dias_retroativos: int = 15) -> str:
         TRIM(TO_CHAR(f.codccu)),
         TRUNC(s.datapu)
     """
+
+
+PALAVRAS_PROIBIDAS_SQL = re.compile(
+    r'\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|COPY|VACUUM|CALL|DO|EXECUTE|MERGE)\b',
+    re.IGNORECASE
+)
+
+
+
+COORDENADORES_AUTORIZADORES = {
+    "Ana Paula Augusto Valverde",
+    "Débora Augusto Valverde",
+    "Janaina Souza de Lima",
+    "Kátia Luciana Franca Pereira",
+    "Rafaela Marqui",
+    "Suzilene Ribeiro",
+    "Juliane Cristina Souza Ferraroni",
+}

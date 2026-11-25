@@ -10,5 +10,11 @@
     "intervalo_horas": 24.0,
     "proxima_execucao": null,
     "ultima_execucao": "2026-11-24T15:09:13.723887"
+  },
+  "censo": {
+    "ativo": true,
+    "intervalo_horas": 0.5,
+    "proxima_execucao": "2026-11-25T17:33:30.270538",
+    "ultima_execucao": "2026-11-25T17:03:30.270340"
   }
 }

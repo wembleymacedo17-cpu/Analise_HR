@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Boolean, Date, DateTime, Text,
-    ForeignKey, CheckConstraint, UniqueConstraint, Index
+    ForeignKey, CheckConstraint, UniqueConstraint, Index ,Numeric
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -215,4 +215,98 @@ class HistoricoAnaliseDesfeita(Base):
     desfeito_por_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
     motivo = Column(Text, nullable=False)
     dados_analise_anterior = Column(Text, nullable=True)
-    desfeito_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)    
+    desfeito_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)   
+
+class CensoInternacaoUnidade(Base):
+    """
+    Snapshot direto da planilha CENSO_FUNFARME.XLSX (atualizado a cada 30 min).
+    Armazena exatamente o nome_unidade da planilha e a contagem exata de linhas (qtd_internacao).
+    """
+    __tablename__ = "censo_internacao_unidades"
+    __table_args__ = (
+        Index("ix_censo_internacao_atualizado_em", "atualizado_em"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    nome_unidade = Column(String(180), unique=True, nullable=False, index=True)
+    qtd_internacao = Column(Integer, default=0, nullable=False)
+    atualizado_em = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+class ProgramacaoAssistencial(Base):
+    """
+    Registro diário de Programação Assistencial por Unidade (vinda da tabela censo_internacao_unidades) e Turno.
+    """
+    __tablename__ = "programacoes_assistenciais"
+    __table_args__ = (
+        UniqueConstraint(
+            "nome_unidade", "data_programacao", "turno",
+            name="uq_prog_assistencial_unidade_data_turno",
+        ),
+        CheckConstraint("turno IN ('DIURNO', 'NOTURNO')", name="ck_prog_turno"),
+        CheckConstraint("qtd_colaboradores_programados >= 0", name="ck_prog_colab_prog"),
+        CheckConstraint("leitos_fisicos >= 0", name="ck_prog_leitos_fisicos"),
+        CheckConstraint("leitos_bloqueados >= 0", name="ck_prog_leitos_bloq"),
+        Index("ix_prog_assistencial_data_turno", "data_programacao", "turno"),
+        Index("ix_prog_assistencial_gestor_id", "gestor_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    nome_unidade = Column(String(180), nullable=False, index=True)
+    gestor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
+    data_programacao = Column(Date, nullable=False, index=True)
+    turno = Column(String(15), nullable=False)
+
+    qtd_colaboradores_programados = Column(Integer, nullable=False)
+    leitos_fisicos = Column(Integer, nullable=False)
+    leitos_bloqueados = Column(Integer, default=0, nullable=False)
+
+    qtd_emprestados = Column(Integer, default=0, nullable=False)
+    qtd_recebidos = Column(Integer, default=0, nullable=False)
+    qtd_colaboradores_efetivos = Column(Integer, nullable=False)
+
+    pacientes_internados = Column(Integer, default=0, nullable=False)
+    leitos_operacionais = Column(Integer, default=0, nullable=False)
+    leitos_vagos = Column(Integer, default=0, nullable=False)
+    taxa_ocupacao = Column(Numeric(6, 2), default=0, nullable=False)
+    pacientes_por_colaborador = Column(Numeric(6, 2), default=0, nullable=False)
+    leitos_por_colaborador = Column(Numeric(6, 2), default=0, nullable=False)
+
+    observacao = Column(Text, nullable=True)
+    criado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    atualizado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    gestor = relationship("Usuario")
+    remanejamentos = relationship(
+        "RemanejamentoAssistencial",
+        back_populates="programacao",
+        cascade="all, delete-orphan",
+    )
+
+
+class RemanejamentoAssistencial(Base):
+    """
+    Movimentações individuais (Empréstimo ou Recebimento) vinculadas a uma Programação Assistencial.
+    """
+    __tablename__ = "remanejamentos_assistenciais"
+    __table_args__ = (
+        CheckConstraint("tipo IN ('EMPRESTIMO', 'RECEBIMENTO')", name="ck_remanejamento_tipo"),
+        CheckConstraint("quantidade > 0", name="ck_remanejamento_qtd"),
+        Index("ix_remanejamento_prog_id", "programacao_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    programacao_id = Column(
+        Integer,
+        ForeignKey("programacoes_assistenciais.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    tipo = Column(String(20), nullable=False)
+    quantidade = Column(Integer, nullable=False)
+    unidade_contraparte = Column(String(180), nullable=False)
+
+    programacao = relationship("ProgramacaoAssistencial", back_populates="remanejamentos")    

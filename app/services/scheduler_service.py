@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
+from app.services.etl_censo_local import executar_sincronizacao_censo, PASTA_CENSO
 
 DIR_SERVICES = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE_PATH = os.path.join(DIR_SERVICES, "agendamentos_config.json")
@@ -134,9 +135,18 @@ def executar_task_estrutura():
     )
 
 
+def executar_task_censo():
+    return _executar_com_captura(
+        "censo",
+        "Sincronização Censo Internação MV",
+        executar_sincronizacao_censo
+    )
+
+
 MAPA_FUNCOES = {
     "faltas": executar_task_faltas,
     "estrutura": executar_task_estrutura,
+    "censo": executar_task_censo,
 }
 
 AGENDADORES = {
@@ -156,6 +166,16 @@ AGENDADORES = {
         "executando": False,
         "inicio_execucao": None,
         "intervalo_horas": 24.0,
+        "proxima_execucao": None,
+        "ultima_execucao": None,
+        "thread": None,
+    },
+    "censo": {
+        "nome": "Censo Internação MV (E:\\Progress10\\TEMP)",
+        "ativo": False,
+        "executando": False,
+        "inicio_execucao": None,
+        "intervalo_horas": 0.5,
         "proxima_execucao": None,
         "ultima_execucao": None,
         "thread": None,
@@ -381,7 +401,6 @@ def inicializar_scheduler_com_recuperacao():
         return
     _SCHEDULER_INICIADO = True
 
-    # No modo debug do Flask (Werkzeug reloader), ignora o processo pai monitor
     if os.environ.get("WERKZEUG_RUN_MAIN") == "false":
         return
 
@@ -390,54 +409,70 @@ def inicializar_scheduler_com_recuperacao():
 
     registrar_log("Serviço de Agendamento & Recuperação inicializado.", nivel="INFO", origem="SCHEDULER")
 
-    if not os.path.exists(CONFIG_FILE_PATH):
-        salvar_agendamentos_disco()
-        return
+    dados = {}
+    if os.path.exists(CONFIG_FILE_PATH):
+        try:
+            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+                dados = json.load(f)
+        except Exception as e:
+            registrar_log(f"Erro ao ler agendamentos_config.json: {e}", nivel="ERROR", origem="SCHEDULER")
 
-    try:
-        with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
-            dados = json.load(f)
+    # Se a pasta local E:\Progress10\TEMP existir e 'censo' ainda não estiver no JSON, inicia ativo a cada 0.5h (30 min)
+    if "censo" not in dados and os.path.isdir(PASTA_CENSO):
+        dados["censo"] = {
+            "ativo": True,
+            "intervalo_horas": 0.5,
+            "proxima_execucao": datetime.now().isoformat(),
+            "ultima_execucao": None,
+        }
 
-        for task_name, info in dados.items():
-            if task_name not in AGENDADORES:
+    for task_name, info in dados.items():
+        if task_name not in AGENDADORES:
+            continue
+
+        with _STATE_LOCK:
+            AGENDADORES[task_name]["intervalo_horas"] = float(
+                info.get("intervalo_horas", AGENDADORES[task_name]["intervalo_horas"])
+            )
+            ultima_str = info.get("ultima_execucao")
+            if ultima_str:
+                try:
+                    AGENDADORES[task_name]["ultima_execucao"] = datetime.fromisoformat(ultima_str)
+                except Exception:
+                    pass
+
+        if info.get("ativo") is True:
+            # Se o diretório local do censo não existir (ex: ambiente Render), não ativa o loop local
+            if task_name == "censo" and not os.path.isdir(PASTA_CENSO):
+                registrar_log(
+                    f"Diretório '{PASTA_CENSO}' indisponível neste host. Censo aguardará envio via API externa.",
+                    nivel="INFO",
+                    origem="SCHEDULER"
+                )
                 continue
 
+            intervalo = float(info.get("intervalo_horas", AGENDADORES[task_name]["intervalo_horas"]))
+            proxima_str = info.get("proxima_execucao")
+            proxima_dt = None
+            if proxima_str:
+                try:
+                    proxima_dt = datetime.fromisoformat(proxima_str)
+                except Exception:
+                    proxima_dt = None
+
+            iniciar_agendador_tarefa(
+                task_name=task_name,
+                intervalo_horas=intervalo,
+                proxima_execucao_existente=proxima_dt,
+                persistir=False,
+            )
+        else:
             with _STATE_LOCK:
-                AGENDADORES[task_name]["intervalo_horas"] = float(
-                    info.get("intervalo_horas", AGENDADORES[task_name]["intervalo_horas"])
-                )
-                ultima_str = info.get("ultima_execucao")
-                if ultima_str:
-                    try:
-                        AGENDADORES[task_name]["ultima_execucao"] = datetime.fromisoformat(ultima_str)
-                    except Exception:
-                        pass
+                AGENDADORES[task_name]["ativo"] = False
+                AGENDADORES[task_name]["proxima_execucao"] = None
+            registrar_log(f"Tarefa '{task_name}' carregada como PAUSADA.", nivel="INFO", origem="SCHEDULER")
 
-            # Só reativa se estiver explicitamente ativo == True no JSON
-            if info.get("ativo") is True:
-                intervalo = float(info.get("intervalo_horas", AGENDADORES[task_name]["intervalo_horas"]))
-                proxima_str = info.get("proxima_execucao")
-                proxima_dt = None
-                if proxima_str:
-                    try:
-                        proxima_dt = datetime.fromisoformat(proxima_str)
-                    except Exception:
-                        proxima_dt = None
-
-                iniciar_agendador_tarefa(
-                    task_name=task_name,
-                    intervalo_horas=intervalo,
-                    proxima_execucao_existente=proxima_dt,
-                    persistir=False,
-                )
-            else:
-                with _STATE_LOCK:
-                    AGENDADORES[task_name]["ativo"] = False
-                    AGENDADORES[task_name]["proxima_execucao"] = None
-                registrar_log(f"Tarefa '{task_name}' carregada como PAUSADA.", nivel="INFO", origem="SCHEDULER")
-
-    except Exception as e:
-        registrar_log(f"Erro ao restaurar agendamentos do JSON: {e}", nivel="ERROR", origem="SCHEDULER")
+    salvar_agendamentos_disco()
 
 
 inicializar_scheduler_com_recuperacao()
