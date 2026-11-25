@@ -362,7 +362,6 @@
             }
 
             if (idAba === "aba-faltas" && typeof carregarFaltas === "function") carregarFaltas();
-            else if (idAba === "aba-programacao" && typeof inicializarProgramacaoAssistencial === "function") inicializarProgramacaoAssistencial();
             else if (idAba === "aba-convites" && typeof carregarCentrosCusto === "function") carregarCentrosCusto();
             else if (idAba === "aba-gestores" && typeof carregarGestores === "function") carregarGestores();
             else if (idAba === "aba-etl" && typeof iniciarMonitoramentoETL === "function") iniciarMonitoramentoETL();
@@ -374,31 +373,27 @@
             const chevron = document.getElementById("chevron-prog");
             if (!submenu) return;
 
-            const abrindo = submenu.style.display === "none";
+            const abrindo = submenu.style.display === "none" || submenu.style.display === "";
             submenu.style.display = abrindo ? "flex" : "none";
             if (chevron) chevron.style.transform = abrindo ? "rotate(180deg)" : "rotate(0deg)";
-
-            if (abrindo) {
-                const btnGerar = document.getElementById("btn-sub-gerar-relatorio");
-                abrirGerarRelatorioProgramacao(btnGerar);
-            }
         }
 
         function abrirGerarRelatorioProgramacao(btnSub) {
             trocarAba("aba-programacao", btnSub);
             const btnPai = document.getElementById("btn-menu-prog-pai");
             if (btnPai) btnPai.classList.add("active");
-            if (typeof resetarWizardProgramacao === "function") {
-                resetarWizardProgramacao();
+            if (typeof alternarVisaoProgramacao === "function") {
+                alternarVisaoProgramacao("GERAR");
             }
         }
 
         function abrirConsultarRelatoriosProgramacao(btnSub) {
-            document.querySelectorAll(".glass-nav-btn").forEach(el => el.classList.remove("active"));
+            trocarAba("aba-programacao", btnSub);
             const btnPai = document.getElementById("btn-menu-prog-pai");
             if (btnPai) btnPai.classList.add("active");
-            if (btnSub) btnSub.classList.add("active");
-            mostrarToast("A página 'Consultar Relatórios' será liberada em breve.");
+            if (typeof alternarVisaoProgramacao === "function") {
+                alternarVisaoProgramacao("CONSULTAR");
+            }
         }
 
         function abrirModalConfirmacao({ titulo, mensagem, textoBotao = "Confirmar", onConfirm }) {

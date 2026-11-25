@@ -2223,9 +2223,9 @@ def salvar_programacao_assistencial():
 
     try:
         data_prog = datetime.strptime(data_str, '%Y-%m-%d').date()
-        qtd_prog = int(data.get('qtd_colaboradores_programados', 0))
-        leitos_fisicos = int(data.get('leitos_fisicos', 0))
-        leitos_bloqueados = int(data.get('leitos_bloqueados', 0))
+        qtd_prog = int(data.get('qtd_colaboradores_programados') or 0)
+        leitos_fisicos = int(data.get('leitos_fisicos') or 0)
+        leitos_bloqueados = int(data.get('leitos_bloqueados') or 0)
     except (TypeError, ValueError):
         return jsonify({'sucesso': False, 'mensagem': 'Valores numéricos inválidos.'}), 400
 
@@ -2271,6 +2271,7 @@ def salvar_programacao_assistencial():
     taxa_ocupacao = round((pacientes_internados / leitos_operacionais) * 100, 2) if leitos_operacionais > 0 else 0
     pacientes_por_colab = round(pacientes_internados / qtd_efetivos, 2)
     leitos_por_colab = round(leitos_operacionais / qtd_efetivos, 2)
+    observacao_txt = str(data.get('observacao') or '').strip() or None
 
     try:
         prog = (
@@ -2291,7 +2292,21 @@ def salvar_programacao_assistencial():
                 gestor_id=id_user,
                 data_programacao=data_prog,
                 turno=turno,
+                qtd_colaboradores_programados=qtd_prog,
+                leitos_fisicos=leitos_fisicos,
+                leitos_bloqueados=leitos_bloqueados,
+                qtd_emprestados=qtd_emprestados,
+                qtd_recebidos=qtd_recebidos,
+                qtd_colaboradores_efetivos=qtd_efetivos,
+                pacientes_internados=pacientes_internados,
+                leitos_operacionais=leitos_operacionais,
+                leitos_vagos=leitos_vagos,
+                taxa_ocupacao=taxa_ocupacao,
+                pacientes_por_colaborador=pacientes_por_colab,
+                leitos_por_colaborador=leitos_por_colab,
+                observacao=observacao_txt,
                 criado_em=agora_utc,
+                atualizado_em=agora_utc,
             )
             db.add(prog)
             db.flush()
@@ -2300,21 +2315,21 @@ def salvar_programacao_assistencial():
                 RemanejamentoAssistencial.programacao_id == prog.id
             ).delete(synchronize_session=False)
 
-        prog.gestor_id = id_user
-        prog.qtd_colaboradores_programados = qtd_prog
-        prog.leitos_fisicos = leitos_fisicos
-        prog.leitos_bloqueados = leitos_bloqueados
-        prog.qtd_emprestados = qtd_emprestados
-        prog.qtd_recebidos = qtd_recebidos
-        prog.qtd_colaboradores_efetivos = qtd_efetivos
-        prog.pacientes_internados = pacientes_internados
-        prog.leitos_operacionais = leitos_operacionais
-        prog.leitos_vagos = leitos_vagos
-        prog.taxa_ocupacao = taxa_ocupacao
-        prog.pacientes_por_colaborador = pacientes_por_colab
-        prog.leitos_por_colaborador = leitos_por_colab
-        prog.observacao = str(data.get('observacao') or '').strip() or None
-        prog.atualizado_em = agora_utc
+            prog.gestor_id = id_user
+            prog.qtd_colaboradores_programados = qtd_prog
+            prog.leitos_fisicos = leitos_fisicos
+            prog.leitos_bloqueados = leitos_bloqueados
+            prog.qtd_emprestados = qtd_emprestados
+            prog.qtd_recebidos = qtd_recebidos
+            prog.qtd_colaboradores_efetivos = qtd_efetivos
+            prog.pacientes_internados = pacientes_internados
+            prog.leitos_operacionais = leitos_operacionais
+            prog.leitos_vagos = leitos_vagos
+            prog.taxa_ocupacao = taxa_ocupacao
+            prog.pacientes_por_colaborador = pacientes_por_colab
+            prog.leitos_por_colaborador = leitos_por_colab
+            prog.observacao = observacao_txt
+            prog.atualizado_em = agora_utc
 
         for rem in itens_remanejamento:
             rem.programacao_id = prog.id
@@ -2327,6 +2342,7 @@ def salvar_programacao_assistencial():
         }), 200
     except Exception as e:
         db.rollback()
+        print(f"❌ [ERRO SALVAR PROGRAMACAO] {e}")
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao salvar programação: {str(e)}'}), 500
 
 

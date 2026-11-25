@@ -1,6 +1,10 @@
 <section id="aba-programacao" class="tab-content">
     <div class="prog-wrapper">
-        <div class="prog-card-main">
+
+        <!-- ================================================================== -->
+        <!-- VISÃO 1: GERAR RELATÓRIO (WIZARD 4 STEPS)                          -->
+        <!-- ================================================================== -->
+        <div id="view-prog-gerar" class="prog-card-main">
             <!-- CABEÇALHO -->
             <div class="prog-header">
                 <div class="prog-header-left">
@@ -23,12 +27,12 @@
                         <span id="lbl-prog-censo-sync">Censo: carregando...</span>
                     </span>
 
-                    <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoProgramacao()">
+                    <button type="button" class="btn btn-outline" onclick="alternarVisaoProgramacao('CONSULTAR')">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <span>Relatórios Anteriores</span>
+                        <span>Consultar Relatórios</span>
                     </button>
                 </div>
             </div>
@@ -48,9 +52,7 @@
                 <span id="lbl-prog-banner-edicao">Relatório existente carregado. Salvar irá atualizar este turno.</span>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- STEP 1: UNIDADE E TURNO                                        -->
-            <!-- ============================================================== -->
+            <!-- STEP 1: UNIDADE E TURNO -->
             <div id="prog-step-1" class="prog-step-pane active">
                 <div class="prog-section">
                     <div class="prog-section-title">Unidade, data e turno</div>
@@ -98,9 +100,7 @@
                 </div>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- STEP 2: DIMENSIONAMENTO DE COLABORADORES E LEITOS              -->
-            <!-- ============================================================== -->
+            <!-- STEP 2: DIMENSIONAMENTO DE COLABORADORES E LEITOS -->
             <div id="prog-step-2" class="prog-step-pane" style="display:none;">
                 <div class="prog-section">
                     <div class="prog-section-title">Equipe e leitos</div>
@@ -175,9 +175,7 @@
                 </div>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- STEP 3: REMANEJAMENTO (DESTAQUE VISUAL E BOTÕES ORGANIZADOS)   -->
-            <!-- ============================================================== -->
+            <!-- STEP 3: REMANEJAMENTO -->
             <div id="prog-step-3" class="prog-step-pane" style="display:none;">
                 <div class="prog-section">
                     <div class="prog-section-title">Houve remanejamento no turno?</div>
@@ -231,7 +229,6 @@
                         </label>
                     </div>
 
-                    <!-- PAINEL DESTACADO DE REMANEJAMENTO -->
                     <div id="prog-box-remanejamento" class="prog-remanejamento-box mode-out" style="display:none;">
                         <div class="prog-rem-box-header">
                             <span id="badge-modo-remanejamento" class="prog-mode-badge badge-out">
@@ -264,20 +261,19 @@
 
                         <div class="prog-flow-bar flow-out" id="box-flow-center">
                             <div class="prog-flow-unit">
-                                <small id="lbl-flow-esq-tag">ORIGEM</small>
+                                <small>ORIGEM</small>
                                 <strong id="lbl-flow-esq-nome">--</strong>
                             </div>
 
                             <div class="prog-flow-pill" id="lbl-flow-qtd">-1 colab. →</div>
 
                             <div class="prog-flow-unit text-right">
-                                <small id="lbl-flow-dir-tag">DESTINO</small>
+                                <small>DESTINO</small>
                                 <strong id="lbl-flow-dir-nome">--</strong>
                             </div>
                         </div>
                     </div>
 
-                    <!-- LISTA DE REMANEJAMENTOS REGISTRADOS -->
                     <div id="prog-lista-remanejamentos-wrap" style="margin-top: 16px; display:none;">
                         <div class="prog-lista-header">Movimentações adicionadas neste turno</div>
                         <div id="prog-lista-remanejamentos" class="prog-rem-items"></div>
@@ -294,14 +290,11 @@
                 </div>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- STEP 4: RESUMO CONSOLIDADO E SALVAR                            -->
-            <!-- ============================================================== -->
+            <!-- STEP 4: RESUMO CONSOLIDADO E SALVAR -->
             <div id="prog-step-4" class="prog-step-pane" style="display:none;">
                 <div class="prog-section">
                     <div class="prog-section-title">Resumo do turno</div>
 
-                    <!-- CABEÇALHO DO RESUMO -->
                     <div class="prog-resumo-contexto">
                         <div>
                             <span class="prog-resumo-lbl">Unidade</span>
@@ -317,7 +310,6 @@
                         </div>
                     </div>
 
-                    <!-- RESUMO DA EQUIPE (SOMENTE NO RESUMO) -->
                     <div class="prog-equipe-cards">
                         <div class="prog-mini-stat">
                             <span class="prog-mini-lbl">Programados</span>
@@ -337,7 +329,6 @@
                         </div>
                     </div>
 
-                    <!-- INDICADORES ASSISTENCIAIS -->
                     <div class="prog-kpi-grid" style="margin-top: 14px;">
                         <div class="prog-kpi-box">
                             <span class="prog-kpi-lbl">Leitos disponíveis</span>
@@ -365,7 +356,6 @@
                         </div>
                     </div>
 
-                    <!-- BARRA DE OCUPAÇÃO -->
                     <div class="prog-ocupacao-bar-wrap">
                         <div class="prog-ocupacao-top">
                             <span>Ocupação hospitalar</span>
@@ -392,40 +382,67 @@
                 </div>
             </div>
         </div>
+
+        <!-- ================================================================== -->
+        <!-- VISÃO 2: CONSULTAR RELATÓRIOS (BENTO GRID POR DATA)                -->
+        <!-- ================================================================== -->
+        <div id="view-prog-consultar" class="prog-card-main" style="display:none;">
+            <div class="prog-header">
+                <div class="prog-header-left">
+                    <div class="prog-header-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="prog-title">Consultar Relatórios</h2>
+                        <p class="prog-subtitle">Selecione um cartão pela data para visualizar o relatório completo</p>
+                    </div>
+                </div>
+
+                <div class="prog-header-actions">
+                    <input
+                        type="text"
+                        id="filtro-bento-relatorios"
+                        class="prog-input-pill"
+                        style="width: 220px; padding: 8px 14px; font-size: 0.82rem;"
+                        placeholder="Filtrar data, unidade ou turno..."
+                        oninput="filtrarBentoRelatoriosProg()"
+                    >
+                    <button type="button" class="btn btn-primary" onclick="alternarVisaoProgramacao('GERAR')">
+                        + Novo Relatório
+                    </button>
+                </div>
+            </div>
+
+            <div id="grid-bento-relatorios-prog" class="prog-bento-grid">
+                <div style="grid-column: 1 / -1; text-align:center; color:#64748b; padding:28px;">
+                    Carregando relatórios...
+                </div>
+            </div>
+        </div>
+
     </div>
 </section>
 
-<!-- MODAL: RELATÓRIOS ANTERIORES DO GESTOR -->
-<div id="modal-historico-programacao" class="modal-backdrop">
+<!-- MODAL: EXIBIR RELATÓRIO INTEIRO AO CLICAR NO CARTÃO BENTO GRID -->
+<div id="modal-detalhe-relatorio-prog" class="modal-backdrop">
     <div class="modal-card modal-lg">
         <div class="modal-header">
             <div>
-                <h3>Relatórios Anteriores</h3>
-                <div class="modal-info">Clique em "Abrir" para carregar no formulário</div>
+                <h3 id="det-rel-titulo">Relatório Assistencial</h3>
+                <div class="modal-info" id="det-rel-subtitulo">--</div>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalHistoricoProgramacao()">Fechar</button>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-det-rel-editar">Editar no Formulário</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalDetalheRelatorioProg()">Fechar</button>
+            </div>
         </div>
 
-        <div class="modal-body-scroll table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Turno</th>
-                        <th>Unidade</th>
-                        <th>Equipe</th>
-                        <th>Internados / Leitos</th>
-                        <th>Ocupação</th>
-                        <th>Pac/Colab</th>
-                        <th>Leitos/Colab</th>
-                        <th style="width: 90px;">Ação</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-historico-programacao">
-                    <tr><td colspan="9" style="text-align:center; color:#64748b;">Carregando...</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <div class="modal-body-scroll" id="det-rel-conteudo"></div>
     </div>
 </div>
 
@@ -450,9 +467,24 @@
         return Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    async function alternarVisaoProgramacao(modo) {
+        const viewGerar = document.getElementById("view-prog-gerar");
+        const viewConsultar = document.getElementById("view-prog-consultar");
+
+        if (modo === "CONSULTAR") {
+            viewGerar.style.display = "none";
+            viewConsultar.style.display = "block";
+            await carregarBentoRelatoriosProg();
+        } else {
+            viewConsultar.style.display = "none";
+            viewGerar.style.display = "block";
+            resetarWizardProgramacao();
+            await carregarContextoProgramacao();
+        }
+    }
+
     async function inicializarProgramacaoAssistencial() {
-        resetarWizardProgramacao();
-        await carregarContextoProgramacao();
+        await alternarVisaoProgramacao("GERAR");
     }
 
     function resetarWizardProgramacao() {
@@ -979,7 +1011,7 @@
             const d = await res.json();
             mostrarToast(d.mensagem, !d.sucesso);
             if (d.sucesso) {
-                await carregarContextoProgramacao();
+                await alternarVisaoProgramacao("CONSULTAR");
             }
         } catch (err) {
             mostrarToast("Erro ao salvar relatório.", true);
@@ -989,61 +1021,186 @@
         }
     }
 
-    async function abrirModalHistoricoProgramacao() {
-        const modal = document.getElementById("modal-historico-programacao");
-        const tbody = document.getElementById("tbody-historico-programacao");
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Carregando...</td></tr>';
-        modal.style.display = "flex";
+    // =========================================================================
+    // CONSULTAR RELATÓRIOS — BENTO GRID POR DATA + MODAL COMPLETO
+    // =========================================================================
+    async function carregarBentoRelatoriosProg() {
+        const grid = document.getElementById("grid-bento-relatorios-prog");
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#64748b; padding:28px;">Carregando relatórios...</div>';
 
         try {
             const res = await fetch("/api/programacao-assistencial/historico", { cache: "no-store" });
             const d = await res.json();
             if (!d.sucesso) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#dc2626;">${d.mensagem}</td></tr>`;
+                grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; color:#dc2626; padding:24px;">${d.mensagem}</div>`;
                 return;
             }
             progRelatoriosAnterioresCache = d.relatorios || [];
-            if (!progRelatoriosAnterioresCache.length) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Nenhum relatório encontrado.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = progRelatoriosAnterioresCache.map((r, idx) => `
-                <tr>
-                    <td><strong>${r.data_br}</strong></td>
-                    <td><span class="status-pill ${r.turno === "DIURNO" ? "pill-pendente" : "pill-utilizado"}">${r.turno}</span></td>
-                    <td>${r.nome_unidade}</td>
-                    <td>${r.qtd_programados} / <strong>${r.qtd_efetivos}</strong></td>
-                    <td>${r.pacientes_internados} / ${r.leitos_operacionais}</td>
-                    <td><strong>${formatarDecimalBR(r.taxa_ocupacao)}%</strong></td>
-                    <td>${formatarDecimalBR(r.pacientes_por_colaborador)}</td>
-                    <td>${formatarDecimalBR(r.leitos_por_colaborador)}</td>
-                    <td>
-                        <button type="button" class="btn btn-outline btn-sm" onclick="carregarRelatorioAnteriorNoFormulario(${idx})">
-                            Abrir
-                        </button>
-                    </td>
-                </tr>
-            `).join("");
+            filtrarBentoRelatoriosProg();
         } catch (err) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc2626;">Erro ao buscar relatórios.</td></tr>';
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#dc2626; padding:24px;">Erro ao carregar relatórios.</div>';
         }
     }
 
-    function fecharModalHistoricoProgramacao() {
-        document.getElementById("modal-historico-programacao").style.display = "none";
+    function filtrarBentoRelatoriosProg() {
+        const termo = (document.getElementById("filtro-bento-relatorios")?.value || "").toLowerCase().trim();
+        const lista = termo
+            ? progRelatoriosAnterioresCache.filter(r =>
+                r.data_br.toLowerCase().includes(termo) ||
+                r.nome_unidade.toLowerCase().includes(termo) ||
+                r.turno.toLowerCase().includes(termo)
+            )
+            : progRelatoriosAnterioresCache;
+
+        renderizarBentoRelatoriosProg(lista);
     }
 
-    async function carregarRelatorioAnteriorNoFormulario(idx) {
+    function renderizarBentoRelatoriosProg(lista) {
+        const grid = document.getElementById("grid-bento-relatorios-prog");
+        if (!lista.length) {
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; color:#64748b; padding:28px;">Nenhum relatório registrado até o momento.</div>';
+            return;
+        }
+
+        grid.innerHTML = lista.map((r) => {
+            const idxReal = progRelatoriosAnterioresCache.indexOf(r);
+            const isDiurno = r.turno === "DIURNO";
+            return `
+                <div class="prog-bento-card" onclick="abrirModalDetalheRelatorioProg(${idxReal})">
+                    <div class="prog-bento-top">
+                        <span class="prog-bento-date">${r.data_br}</span>
+                        <span class="prog-bento-turno ${isDiurno ? "turno-diurno" : "turno-noturno"}">${r.turno}</span>
+                    </div>
+
+                    <div class="prog-bento-unidade">${r.nome_unidade}</div>
+
+                    <div class="prog-bento-metrics">
+                        <div>
+                            <small>Equipe Efetiva</small>
+                            <strong>${r.qtd_efetivos} colab.</strong>
+                        </div>
+                        <div>
+                            <small>Ocupação</small>
+                            <strong>${formatarDecimalBR(r.taxa_ocupacao)}%</strong>
+                        </div>
+                    </div>
+
+                    <div class="prog-bento-footer">
+                        <span>Clique para abrir o relatório</span>
+                        <span>→</span>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function abrirModalDetalheRelatorioProg(idx) {
         const r = progRelatoriosAnterioresCache[idx];
         if (!r) return;
-        fecharModalHistoricoProgramacao();
 
-        document.getElementById("prog-filtro-unidade").value = "";
-        filtrarSelectUnidadesProg();
-        document.getElementById("prog-select-unidade").value = r.nome_unidade;
-        document.getElementById("prog-data").value = r.data_iso;
-        selecionarTurnoProgramacao(r.turno);
-        irParaStepProgramacao(1, true);
+        document.getElementById("det-rel-titulo").innerText = `${r.nome_unidade} • ${r.data_br} (${r.turno})`;
+        document.getElementById("det-rel-subtitulo").innerText = `Registrado por ${r.gestor_nome} • Atualizado em ${r.atualizado_em}`;
+
+        const remHtml = (r.remanejamentos && r.remanejamentos.length)
+            ? r.remanejamentos.map(rem => {
+                const isEmp = rem.tipo === "EMPRESTIMO";
+                return `
+                    <div class="prog-rem-row ${isEmp ? "row-out" : "row-in"}">
+                        <div class="prog-rem-row-left">
+                            <span class="prog-rem-tag ${isEmp ? "tag-out" : "tag-in"}">
+                                ${isEmp ? `↗ EMPRÉSTIMO (-${rem.quantidade})` : `↙ RECEBIMENTO (+${rem.quantidade})`}
+                            </span>
+                            <div class="prog-rem-dest">
+                                <strong>${isEmp ? "Destino" : "Origem"}:</strong> ${rem.unidade_contraparte}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("")
+            : '<div style="font-size:0.83rem; color:#64748b;">Sem remanejamento registrado neste turno.</div>';
+
+        document.getElementById("det-rel-conteudo").innerHTML = `
+            <div class="prog-equipe-cards" style="margin-top:0;">
+                <div class="prog-mini-stat">
+                    <span class="prog-mini-lbl">Programados</span>
+                    <strong class="prog-mini-val">${r.qtd_programados}</strong>
+                </div>
+                <div class="prog-mini-stat">
+                    <span class="prog-mini-lbl">Emprestados</span>
+                    <strong class="prog-mini-val val-red">-${r.qtd_emprestados}</strong>
+                </div>
+                <div class="prog-mini-stat">
+                    <span class="prog-mini-lbl">Recebidos</span>
+                    <strong class="prog-mini-val val-green">+${r.qtd_recebidos}</strong>
+                </div>
+                <div class="prog-mini-stat stat-highlight">
+                    <span class="prog-mini-lbl">Efetivos no Turno</span>
+                    <strong class="prog-mini-val val-blue">${r.qtd_efetivos}</strong>
+                </div>
+            </div>
+
+            <div class="prog-kpi-grid" style="margin-top: 14px;">
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Leitos disponíveis</span>
+                    <strong class="prog-kpi-val">${r.leitos_fisicos}</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Leitos bloqueados</span>
+                    <strong class="prog-kpi-val">${r.leitos_bloqueados}</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Leitos operacionais</span>
+                    <strong class="prog-kpi-val">${r.leitos_operacionais}</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Pacientes internados</span>
+                    <strong class="prog-kpi-val">${r.pacientes_internados}</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Leitos vagos</span>
+                    <strong class="prog-kpi-val">${r.leitos_vagos}</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Taxa de ocupação</span>
+                    <strong class="prog-kpi-val">${formatarDecimalBR(r.taxa_ocupacao)}%</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Pacientes / colab.</span>
+                    <strong class="prog-kpi-val">${formatarDecimalBR(r.pacientes_por_colaborador)}</strong>
+                </div>
+                <div class="prog-kpi-box">
+                    <span class="prog-kpi-lbl">Leitos / colab.</span>
+                    <strong class="prog-kpi-val">${formatarDecimalBR(r.leitos_por_colaborador)}</strong>
+                </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <div class="prog-lista-header">Movimentações de Equipe</div>
+                <div class="prog-rem-items">${remHtml}</div>
+            </div>
+
+            ${r.observacao ? `
+                <div style="margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.84rem; color: #1e293b;">
+                    <strong>Observações / Escala:</strong><br>${r.observacao}
+                </div>
+            ` : ""}
+        `;
+
+        document.getElementById("btn-det-rel-editar").onclick = async () => {
+            fecharModalDetalheRelatorioProg();
+            await alternarVisaoProgramacao("GERAR");
+            document.getElementById("prog-filtro-unidade").value = "";
+            filtrarSelectUnidadesProg();
+            document.getElementById("prog-select-unidade").value = r.nome_unidade;
+            document.getElementById("prog-data").value = r.data_iso;
+            selecionarTurnoProgramacao(r.turno);
+            irParaStepProgramacao(1, true);
+        };
+
+        document.getElementById("modal-detalhe-relatorio-prog").style.display = "flex";
+    }
+
+    function fecharModalDetalheRelatorioProg() {
+        document.getElementById("modal-detalhe-relatorio-prog").style.display = "none";
     }
 </script>
