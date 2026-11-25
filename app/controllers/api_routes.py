@@ -7,20 +7,29 @@ from sqlalchemy.orm import joinedload, selectinload, aliased
 from werkzeug.security import check_password_hash, generate_password_hash
 import json
 from app import get_db
+import unicodedata
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+#---------------------------------------------------------------------------------------------------------------------
 from app.models.models import (
     Colaborador, CentroCusto, Cargo, Usuario, UsuarioCentroCusto,
     ConviteAcesso, ConviteCentroCusto, OcorrenciaFalta, AnaliseFalta,
-    LogEnvioEmail,HistoricoAnaliseDesfeita
+    LogEnvioEmail, HistoricoAnaliseDesfeita,
+    CensoInternacaoUnidade, ProgramacaoAssistencial, RemanejamentoAssistencial,
 )
+#---------------------------------------------------------------------------------------------------------------------
 from app.services.etl_estrutura import ETLEstruturaSenior
 from app.services.etl_faltas import ETLFaltasDiario
 from app.services.notificador_email import NotificadorEmail
 from app.services.cookie_service import CookieService
 import re
 from sqlalchemy import func, or_, text
+from app.services.etl_censo_local import persistir_censo_no_banco
+#---------------------------------------------------------------------------------------------------------------------
 from app.services.scheduler_service import (
     executar_task_faltas,
     executar_task_estrutura,
+    executar_task_censo,
     iniciar_agendador_tarefa,
     parar_agendador_tarefa,
     obter_status_agendadores,
@@ -28,24 +37,12 @@ from app.services.scheduler_service import (
     limpar_logs_terminal,
     registrar_log,
 )
+#---------------------------------------------------------------------------------------------------------------------
+from  app.services.queries_senior  import PALAVRAS_PROIBIDAS_SQL,COORDENADORES_AUTORIZADORES
+import os 
 
 
 
-PALAVRAS_PROIBIDAS_SQL = re.compile(
-    r'\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|COPY|VACUUM|CALL|DO|EXECUTE|MERGE)\b',
-    re.IGNORECASE
-)
-
-
-COORDENADORES_AUTORIZADORES = {
-    "Ana Paula Augusto Valverde",
-    "Débora Augusto Valverde",
-    "Janaina Souza de Lima",
-    "Kátia Luciana Franca Pereira",
-    "Rafaela Marqui",
-    "Suzilene Ribeiro",
-    "Juliane Cristina Souza Ferraroni",
-}
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -1923,16 +1920,17 @@ def executar_etl():
         return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
 
     data = request.json or {}
-    tipo = data.get('tipo', 'faltas')
+    tipo = str(data.get('tipo', 'faltas')).strip().lower()
 
     if tipo == 'estrutura':
         res = executar_task_estrutura()
+    elif tipo == 'censo':
+        res = executar_task_censo()
     else:
         res = executar_task_faltas()
 
     status_code = 200 if res.get('sucesso') else 500
     return jsonify(res), status_code
-
 
 @api_bp.route('/etl/agendamentos', methods=['GET'])
 def listar_agendamentos_etl():
@@ -2115,3 +2113,318 @@ def obter_url_powerbi():
         'sucesso': True,
         'url': 'https://app.powerbi.com/view?r=eyJrIjoiMjAwNDc1ZTEtYzQ3OC00MTUyLWI4NjMtOTJhZDEwNDczNDdjIiwidCI6ImNlMDNjMzhjLTgxYjYtNDdmNC1hMTZmLTk4MWZmMWQzMjU3MCJ9'
     }), 200
+
+# ==============================================================================
+# PROGRAMAÇÃO ASSISTENCIAL (GESTOR) & SINCRONIZAÇÃO CENSO
+# ==============================================================================
+@api_bp.route('/programacao-assistencial/contexto', methods=['GET'])
+def contexto_programacao_assistencial():
+    id_user = session.get('usuario_id')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    db = get_db()
+    unidades_censo = (
+        db.query(CensoInternacaoUnidade)
+        .order_by(CensoInternacaoUnidade.nome_unidade.asc())
+        .all()
+    )
+
+    if not unidades_censo:
+        return jsonify({
+            'sucesso': False,
+            'mensagem': 'Nenhuma unidade encontrada na tabela de censo. Execute a sincronização da planilha primeiro.'
+        }), 404
+
+    nomes_disponiveis = [u.nome_unidade for u in unidades_censo]
+    unidade_sel = str(request.args.get('nome_unidade') or '').strip()
+    if not unidade_sel or unidade_sel not in set(nomes_disponiveis):
+        unidade_sel = nomes_disponiveis[0]
+
+    data_str = str(request.args.get('data') or '').strip()
+    turno = str(request.args.get('turno') or 'DIURNO').strip().upper()
+    if turno not in ('DIURNO', 'NOTURNO'):
+        turno = 'DIURNO'
+
+    hoje_br = (datetime.now(timezone.utc) - timedelta(hours=3)).date()
+    try:
+        data_prog = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else hoje_br
+    except ValueError:
+        data_prog = hoje_br
+
+    censo_obj = next((u for u in unidades_censo if u.nome_unidade == unidade_sel), None)
+    censo_payload = {
+        'qtd_internacao': censo_obj.qtd_internacao if censo_obj else 0,
+        'atualizado_em': (
+            (censo_obj.atualizado_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
+            if censo_obj and censo_obj.atualizado_em else None
+        ),
+    }
+
+    prog_existente = (
+        db.query(ProgramacaoAssistencial)
+        .options(selectinload(ProgramacaoAssistencial.remanejamentos))
+        .filter(
+            ProgramacaoAssistencial.nome_unidade == unidade_sel,
+            ProgramacaoAssistencial.data_programacao == data_prog,
+            ProgramacaoAssistencial.turno == turno,
+        )
+        .first()
+    )
+
+    prog_payload = None
+    if prog_existente:
+        prog_payload = {
+            'id': prog_existente.id,
+            'qtd_colaboradores_programados': prog_existente.qtd_colaboradores_programados,
+            'leitos_fisicos': prog_existente.leitos_fisicos,
+            'leitos_bloqueados': prog_existente.leitos_bloqueados,
+            'observacao': prog_existente.observacao or '',
+            'atualizado_em': (
+                (prog_existente.atualizado_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
+                if prog_existente.atualizado_em else ''
+            ),
+            'remanejamentos': [
+                {
+                    'tipo': r.tipo,
+                    'quantidade': r.quantidade,
+                    'unidade_contraparte': r.unidade_contraparte,
+                }
+                for r in prog_existente.remanejamentos
+            ],
+        }
+
+    return jsonify({
+        'sucesso': True,
+        'data_padrao': data_prog.isoformat(),
+        'unidade_selecionada': unidade_sel,
+        'unidades': [
+            {'nome_unidade': u.nome_unidade, 'qtd_internacao': u.qtd_internacao}
+            for u in unidades_censo
+        ],
+        'censo': censo_payload,
+        'programacao_existente': prog_payload,
+    }), 200
+
+
+@api_bp.route('/programacao-assistencial', methods=['POST'])
+def salvar_programacao_assistencial():
+    id_user = session.get('usuario_id')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    data = request.json or {}
+    nome_unidade = str(data.get('nome_unidade') or '').strip()
+    turno = str(data.get('turno') or '').strip().upper()
+    data_str = str(data.get('data_programacao') or '').strip()
+
+    if not nome_unidade or turno not in ('DIURNO', 'NOTURNO') or not data_str:
+        return jsonify({'sucesso': False, 'mensagem': 'Informe unidade, data e turno.'}), 400
+
+    try:
+        data_prog = datetime.strptime(data_str, '%Y-%m-%d').date()
+        qtd_prog = int(data.get('qtd_colaboradores_programados', 0))
+        leitos_fisicos = int(data.get('leitos_fisicos', 0))
+        leitos_bloqueados = int(data.get('leitos_bloqueados', 0))
+    except (TypeError, ValueError):
+        return jsonify({'sucesso': False, 'mensagem': 'Valores numéricos inválidos.'}), 400
+
+    if qtd_prog < 1 or leitos_fisicos < 1:
+        return jsonify({'sucesso': False, 'mensagem': 'Colaboradores programados e leitos físicos devem ser maiores que zero.'}), 400
+
+    if leitos_bloqueados < 0 or leitos_bloqueados > leitos_fisicos:
+        return jsonify({'sucesso': False, 'mensagem': 'Leitos bloqueados/interditados não pode exceder os leitos físicos.'}), 400
+
+    remanejamentos_raw = data.get('remanejamentos') or []
+    qtd_emprestados = 0
+    qtd_recebidos = 0
+    itens_remanejamento = []
+
+    for item in remanejamentos_raw:
+        tipo_rem = str(item.get('tipo') or '').strip().upper()
+        qtd_rem = int(item.get('quantidade') or 0)
+        contra_nome = str(item.get('unidade_contraparte') or '').strip()
+        if tipo_rem not in ('EMPRESTIMO', 'RECEBIMENTO') or qtd_rem < 1 or not contra_nome or contra_nome == nome_unidade:
+            continue
+        if tipo_rem == 'EMPRESTIMO':
+            qtd_emprestados += qtd_rem
+        else:
+            qtd_recebidos += qtd_rem
+        itens_remanejamento.append(
+            RemanejamentoAssistencial(
+                tipo=tipo_rem,
+                quantidade=qtd_rem,
+                unidade_contraparte=contra_nome,
+            )
+        )
+
+    qtd_efetivos = qtd_prog - qtd_emprestados + qtd_recebidos
+    if qtd_efetivos < 1:
+        return jsonify({'sucesso': False, 'mensagem': 'O total de colaboradores efetivos no turno não pode ser menor que 1.'}), 400
+
+    db = get_db()
+    censo = db.query(CensoInternacaoUnidade).filter(CensoInternacaoUnidade.nome_unidade == nome_unidade).first()
+    pacientes_internados = censo.qtd_internacao if censo else 0
+
+    leitos_operacionais = max(0, leitos_fisicos - leitos_bloqueados)
+    leitos_vagos = max(0, leitos_operacionais - pacientes_internados)
+    taxa_ocupacao = round((pacientes_internados / leitos_operacionais) * 100, 2) if leitos_operacionais > 0 else 0
+    pacientes_por_colab = round(pacientes_internados / qtd_efetivos, 2)
+    leitos_por_colab = round(leitos_operacionais / qtd_efetivos, 2)
+
+    try:
+        prog = (
+            db.query(ProgramacaoAssistencial)
+            .filter(
+                ProgramacaoAssistencial.nome_unidade == nome_unidade,
+                ProgramacaoAssistencial.data_programacao == data_prog,
+                ProgramacaoAssistencial.turno == turno,
+            )
+            .with_for_update()
+            .first()
+        )
+
+        agora_utc = datetime.now(timezone.utc)
+        if not prog:
+            prog = ProgramacaoAssistencial(
+                nome_unidade=nome_unidade,
+                gestor_id=id_user,
+                data_programacao=data_prog,
+                turno=turno,
+                criado_em=agora_utc,
+            )
+            db.add(prog)
+            db.flush()
+        else:
+            db.query(RemanejamentoAssistencial).filter(
+                RemanejamentoAssistencial.programacao_id == prog.id
+            ).delete(synchronize_session=False)
+
+        prog.gestor_id = id_user
+        prog.qtd_colaboradores_programados = qtd_prog
+        prog.leitos_fisicos = leitos_fisicos
+        prog.leitos_bloqueados = leitos_bloqueados
+        prog.qtd_emprestados = qtd_emprestados
+        prog.qtd_recebidos = qtd_recebidos
+        prog.qtd_colaboradores_efetivos = qtd_efetivos
+        prog.pacientes_internados = pacientes_internados
+        prog.leitos_operacionais = leitos_operacionais
+        prog.leitos_vagos = leitos_vagos
+        prog.taxa_ocupacao = taxa_ocupacao
+        prog.pacientes_por_colaborador = pacientes_por_colab
+        prog.leitos_por_colaborador = leitos_por_colab
+        prog.observacao = str(data.get('observacao') or '').strip() or None
+        prog.atualizado_em = agora_utc
+
+        for rem in itens_remanejamento:
+            rem.programacao_id = prog.id
+            db.add(rem)
+
+        db.commit()
+        return jsonify({
+            'sucesso': True,
+            'mensagem': 'Programação Assistencial registrada com sucesso!',
+        }), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao salvar programação: {str(e)}'}), 500
+
+
+@api_bp.route('/programacao-assistencial/historico', methods=['GET'])
+def historico_programacao_assistencial():
+    """Retorna os relatórios anteriores lançados pelo gestor (ou da unidade filtrada)."""
+    id_user = session.get('usuario_id')
+    perfil = session.get('usuario_perfil')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    db = get_db()
+    q = (
+        db.query(ProgramacaoAssistencial)
+        .options(
+            joinedload(ProgramacaoAssistencial.gestor).joinedload(Usuario.colaborador),
+            selectinload(ProgramacaoAssistencial.remanejamentos),
+        )
+    )
+
+    if perfil != 'ROOT':
+        q = q.filter(ProgramacaoAssistencial.gestor_id == id_user)
+
+    rows = (
+        q.order_by(
+            ProgramacaoAssistencial.data_programacao.desc(),
+            ProgramacaoAssistencial.turno.asc(),
+        )
+        .limit(60)
+        .all()
+    )
+
+    relatorios = []
+    for p in rows:
+        relatorios.append({
+            'id': p.id,
+            'nome_unidade': p.nome_unidade,
+            'data_iso': p.data_programacao.isoformat(),
+            'data_br': p.data_programacao.strftime('%d/%m/%Y'),
+            'turno': p.turno,
+            'qtd_programados': p.qtd_colaboradores_programados,
+            'qtd_emprestados': p.qtd_emprestados,
+            'qtd_recebidos': p.qtd_recebidos,
+            'qtd_efetivos': p.qtd_colaboradores_efetivos,
+            'leitos_fisicos': p.leitos_fisicos,
+            'leitos_bloqueados': p.leitos_bloqueados,
+            'leitos_operacionais': p.leitos_operacionais,
+            'pacientes_internados': p.pacientes_internados,
+            'leitos_vagos': p.leitos_vagos,
+            'taxa_ocupacao': float(p.taxa_ocupacao or 0),
+            'pacientes_por_colaborador': float(p.pacientes_por_colaborador or 0),
+            'leitos_por_colaborador': float(p.leitos_por_colaborador or 0),
+            'observacao': p.observacao or '',
+            'gestor_nome': p.gestor.colaborador.nome if p.gestor and p.gestor.colaborador else '--',
+            'atualizado_em': (p.atualizado_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if p.atualizado_em else '--',
+            'remanejamentos': [
+                {
+                    'tipo': r.tipo,
+                    'quantidade': r.quantidade,
+                    'unidade_contraparte': r.unidade_contraparte,
+                }
+                for r in p.remanejamentos
+            ],
+        })
+
+    return jsonify({'sucesso': True, 'relatorios': relatorios}), 200
+
+
+@api_bp.route('/censo/sincronizar', methods=['POST'])
+def sincronizar_censo_unidades():
+    """Recebe o resumo agrupado da planilha CENSO_FUNFARME.XLSX enviado pela VM da TI."""
+    api_key_env = os.getenv('CENSO_SYNC_KEY', '').strip().strip("'\"")
+    api_key_req = str(request.headers.get('X-API-KEY') or '').strip()
+
+    autorizado_chave = bool(api_key_env and api_key_req and api_key_req == api_key_env)
+    autorizado_root = session.get('usuario_perfil') == 'ROOT'
+
+    if not autorizado_chave and not autorizado_root:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autorizado para sincronizar censo.'}), 401
+
+    data = request.json or {}
+    itens = data.get('unidades') or []
+    arquivo_nome = str(data.get('arquivo') or 'CENSO_FUNFARME.XLSX').strip()[:255]
+
+    if not isinstance(itens, list) or not itens:
+        return jsonify({'sucesso': False, 'mensagem': 'Payload de unidades vazio.'}), 400
+
+    db = get_db()
+    try:
+        res = persistir_censo_no_banco(db, itens)
+        registrar_log(
+            f"🏥 [CENSO] Sincronizado ({arquivo_nome}): {res['unidades_atualizadas']} unidades | "
+            f"{res['total_internados']} internados.",
+            nivel="SUCCESS",
+            origem="CENSO",
+        )
+        return jsonify({'sucesso': True, 'mensagem': 'Censo sincronizado com sucesso!', **res}), 200
+    except Exception as e:
+        db.rollback()
+        registrar_log(f"❌ [CENSO] Erro na sincronização: {str(e)}", nivel="ERROR", origem="CENSO")
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao sincronizar censo: {str(e)}'}), 500

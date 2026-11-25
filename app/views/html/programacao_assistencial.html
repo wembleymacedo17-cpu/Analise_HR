@@ -1,0 +1,1049 @@
+<section id="aba-programacao" class="tab-content">
+    <div class="prog-wrapper">
+        <div class="prog-card-main">
+            <!-- CABEÇALHO -->
+            <div class="prog-header">
+                <div class="prog-header-left">
+                    <div class="prog-header-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+                            <path d="M12 8v8"></path>
+                            <path d="M8 12h8"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="prog-title">Programação Assistencial</h2>
+                        <p class="prog-subtitle">Dimensionamento, leitos e remanejamento por turno</p>
+                    </div>
+                </div>
+
+                <div class="prog-header-actions">
+                    <span id="prog-censo-sync-badge" class="prog-sync-pill" title="Atualizado via planilha MV a cada 30 min">
+                        <span class="prog-sync-dot"></span>
+                        <span id="lbl-prog-censo-sync">Censo: carregando...</span>
+                    </span>
+
+                    <button type="button" class="btn btn-outline" onclick="abrirModalHistoricoProgramacao()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>Relatórios Anteriores</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BARRA DE PROGRESSO VERDE EM PORCENTAGEM -->
+            <div class="prog-progress-wrap">
+                <div class="prog-progress-top">
+                    <span class="prog-progress-label" id="lbl-prog-step-titulo">Etapa 1 de 4 • Unidade e Turno</span>
+                    <span class="prog-progress-badge" id="lbl-prog-step-pct">25% concluído</span>
+                </div>
+                <div class="prog-progress-track">
+                    <div class="prog-progress-fill" id="barra-prog-step-fill" style="width: 25%;"></div>
+                </div>
+            </div>
+
+            <div id="prog-banner-edicao" class="prog-edit-banner" style="display:none;">
+                <span id="lbl-prog-banner-edicao">Relatório existente carregado. Salvar irá atualizar este turno.</span>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- STEP 1: UNIDADE E TURNO                                        -->
+            <!-- ============================================================== -->
+            <div id="prog-step-1" class="prog-step-pane active">
+                <div class="prog-section">
+                    <div class="prog-section-title">Unidade, data e turno</div>
+
+                    <div class="prog-grid-step1">
+                        <div class="prog-field prog-field-unidade">
+                            <label for="prog-select-unidade">Unidade *</label>
+                            <input
+                                type="text"
+                                id="prog-filtro-unidade"
+                                class="prog-input-pill"
+                                style="margin-bottom: 6px; font-size: 0.82rem; padding: 7px 14px;"
+                                placeholder="Filtrar unidade..."
+                                oninput="filtrarSelectUnidadesProg()"
+                            >
+                            <select id="prog-select-unidade" class="prog-input-pill" onchange="carregarContextoProgramacao()"></select>
+                        </div>
+
+                        <div class="prog-field">
+                            <label for="prog-data">Data *</label>
+                            <input type="date" id="prog-data" class="prog-input-pill" onchange="carregarContextoProgramacao()">
+                        </div>
+
+                        <div class="prog-field">
+                            <label>Turno *</label>
+                            <div class="prog-turno-switch" role="group" aria-label="Selecionar Turno">
+                                <button type="button" id="btn-turno-pendente" class="prog-turno-btn active" onclick="selecionarTurnoProgramacao('')">
+                                    Selecione
+                                </button>
+                                <button type="button" id="btn-turno-diurno" class="prog-turno-btn" onclick="selecionarTurnoProgramacao('DIURNO')">
+                                    Diurno
+                                </button>
+                                <button type="button" id="btn-turno-noturno" class="prog-turno-btn" onclick="selecionarTurnoProgramacao('NOTURNO')">
+                                    Noturno
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prog-footer-actions">
+                    <button type="button" class="btn btn-primary" onclick="avancarStepProgramacao(1)">
+                        Próximo →
+                    </button>
+                </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- STEP 2: DIMENSIONAMENTO DE COLABORADORES E LEITOS              -->
+            <!-- ============================================================== -->
+            <div id="prog-step-2" class="prog-step-pane" style="display:none;">
+                <div class="prog-section">
+                    <div class="prog-section-title">Equipe e leitos</div>
+
+                    <div class="prog-grid-2-step2">
+                        <div class="prog-field">
+                            <label for="prog-qtd-programados">Aux/Tec Enfermagem *</label>
+                            <input
+                                type="number"
+                                id="prog-qtd-programados"
+                                class="prog-input-pill"
+                                min="1"
+                                step="1"
+                                placeholder="Ex: 10"
+                                oninput="recalcularIndicadoresProgramacao()"
+                            >
+                        </div>
+
+                        <div class="prog-field">
+                            <label for="prog-busca-enfermeiro">Enfermeiro(a) — Crachá ou nome *</label>
+                            <div class="prog-autocomplete-wrap">
+                                <input
+                                    type="text"
+                                    id="prog-busca-enfermeiro"
+                                    class="prog-input-pill"
+                                    placeholder="Digite crachá ou nome..."
+                                    autocomplete="off"
+                                    oninput="buscarEnfermeiroProgDebounced()"
+                                >
+                                <div id="prog-resultados-enfermeiro" class="prog-autocomplete-results"></div>
+                            </div>
+
+                            <div id="prog-lista-enfermeiros" class="prog-chips-list"></div>
+                        </div>
+
+                        <div class="prog-field">
+                            <label for="prog-leitos-bloqueados">Leitos bloqueados</label>
+                            <input
+                                type="number"
+                                id="prog-leitos-bloqueados"
+                                class="prog-input-pill"
+                                min="0"
+                                step="1"
+                                value="0"
+                                placeholder="0"
+                                oninput="recalcularIndicadoresProgramacao()"
+                            >
+                        </div>
+
+                        <div class="prog-field">
+                            <label for="prog-leitos-fisicos">Leitos disponíveis *</label>
+                            <input
+                                type="number"
+                                id="prog-leitos-fisicos"
+                                class="prog-input-pill"
+                                min="1"
+                                step="1"
+                                placeholder="Ex: 40"
+                                oninput="recalcularIndicadoresProgramacao()"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prog-footer-actions prog-footer-between">
+                    <button type="button" class="btn btn-secondary" onclick="irParaStepProgramacao(1)">
+                        ← Voltar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="avancarStepProgramacao(2)">
+                        Próximo →
+                    </button>
+                </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- STEP 3: REMANEJAMENTO (DESTAQUE VISUAL E BOTÕES ORGANIZADOS)   -->
+            <!-- ============================================================== -->
+            <div id="prog-step-3" class="prog-step-pane" style="display:none;">
+                <div class="prog-section">
+                    <div class="prog-section-title">Houve remanejamento no turno?</div>
+
+                    <div class="prog-rem-choice-grid">
+                        <label class="prog-rem-choice-card choice-neutral">
+                            <input type="radio" name="prog_tipo_remanejamento" value="NENHUM" checked onchange="aoMudarTipoRemanejamento()">
+                            <div class="prog-rem-choice-body">
+                                <span class="prog-rem-choice-icon icon-neutral">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <strong>Sem remanejamento</strong>
+                                    <span>Manter equipe original</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="prog-rem-choice-card choice-out">
+                            <input type="radio" name="prog_tipo_remanejamento" value="EMPRESTIMO" onchange="aoMudarTipoRemanejamento()">
+                            <div class="prog-rem-choice-body">
+                                <span class="prog-rem-choice-icon icon-out">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="7" y1="17" x2="17" y2="7"></line>
+                                        <polyline points="7 7 17 7 17 17"></polyline>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <strong>Emprestar</strong>
+                                    <span>Ceder para outra unidade</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="prog-rem-choice-card choice-in">
+                            <input type="radio" name="prog_tipo_remanejamento" value="RECEBIMENTO" onchange="aoMudarTipoRemanejamento()">
+                            <div class="prog-rem-choice-body">
+                                <span class="prog-rem-choice-icon icon-in">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="17" y1="7" x2="7" y2="17"></line>
+                                        <polyline points="17 17 7 17 7 7"></polyline>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <strong>Receber</strong>
+                                    <span>Apoio de outra unidade</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- PAINEL DESTACADO DE REMANEJAMENTO -->
+                    <div id="prog-box-remanejamento" class="prog-remanejamento-box mode-out" style="display:none;">
+                        <div class="prog-rem-box-header">
+                            <span id="badge-modo-remanejamento" class="prog-mode-badge badge-out">
+                                ↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)
+                            </span>
+                            <span class="prog-rem-hint">Informe a quantidade e a unidade</span>
+                        </div>
+
+                        <div class="prog-grid-rem-form">
+                            <div class="prog-field">
+                                <label for="prog-rem-qtd">Quantidade *</label>
+                                <input type="number" id="prog-rem-qtd" class="prog-input-pill prog-control-h" min="1" step="1" value="1" oninput="atualizarPreviewRemanejamento()">
+                            </div>
+
+                            <div class="prog-field">
+                                <label id="lbl-prog-rem-unidade" for="prog-rem-unidade">Unidade de destino *</label>
+                                <select id="prog-rem-unidade" class="prog-input-pill prog-control-h" onchange="atualizarPreviewRemanejamento()"></select>
+                            </div>
+
+                            <div class="prog-field prog-field-btn">
+                                <button type="button" id="btn-add-remanejamento" class="prog-btn-add-action btn-mode-out" onclick="adicionarRemanejamentoLista()">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    <span>Adicionar</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="prog-flow-bar flow-out" id="box-flow-center">
+                            <div class="prog-flow-unit">
+                                <small id="lbl-flow-esq-tag">ORIGEM</small>
+                                <strong id="lbl-flow-esq-nome">--</strong>
+                            </div>
+
+                            <div class="prog-flow-pill" id="lbl-flow-qtd">-1 colab. →</div>
+
+                            <div class="prog-flow-unit text-right">
+                                <small id="lbl-flow-dir-tag">DESTINO</small>
+                                <strong id="lbl-flow-dir-nome">--</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LISTA DE REMANEJAMENTOS REGISTRADOS -->
+                    <div id="prog-lista-remanejamentos-wrap" style="margin-top: 16px; display:none;">
+                        <div class="prog-lista-header">Movimentações adicionadas neste turno</div>
+                        <div id="prog-lista-remanejamentos" class="prog-rem-items"></div>
+                    </div>
+                </div>
+
+                <div class="prog-footer-actions prog-footer-between">
+                    <button type="button" class="btn btn-secondary" onclick="irParaStepProgramacao(2)">
+                        ← Voltar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="avancarStepProgramacao(3)">
+                        Ver Resumo →
+                    </button>
+                </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- STEP 4: RESUMO CONSOLIDADO E SALVAR                            -->
+            <!-- ============================================================== -->
+            <div id="prog-step-4" class="prog-step-pane" style="display:none;">
+                <div class="prog-section">
+                    <div class="prog-section-title">Resumo do turno</div>
+
+                    <!-- CABEÇALHO DO RESUMO -->
+                    <div class="prog-resumo-contexto">
+                        <div>
+                            <span class="prog-resumo-lbl">Unidade</span>
+                            <strong id="resumo-unidade-nome">--</strong>
+                        </div>
+                        <div>
+                            <span class="prog-resumo-lbl">Data / Turno</span>
+                            <strong id="resumo-data-turno">--</strong>
+                        </div>
+                        <div>
+                            <span class="prog-resumo-lbl">Enfermeiro(a)</span>
+                            <strong id="resumo-enfermeiros-nomes">--</strong>
+                        </div>
+                    </div>
+
+                    <!-- RESUMO DA EQUIPE (SOMENTE NO RESUMO) -->
+                    <div class="prog-equipe-cards">
+                        <div class="prog-mini-stat">
+                            <span class="prog-mini-lbl">Programados</span>
+                            <strong class="prog-mini-val" id="stat-prog-base">0</strong>
+                        </div>
+                        <div class="prog-mini-stat">
+                            <span class="prog-mini-lbl">Emprestados</span>
+                            <strong class="prog-mini-val val-red" id="stat-prog-emp">-0</strong>
+                        </div>
+                        <div class="prog-mini-stat">
+                            <span class="prog-mini-lbl">Recebidos</span>
+                            <strong class="prog-mini-val val-green" id="stat-prog-rec">+0</strong>
+                        </div>
+                        <div class="prog-mini-stat stat-highlight">
+                            <span class="prog-mini-lbl">Efetivos no Turno</span>
+                            <strong class="prog-mini-val val-blue" id="stat-prog-efetivos">0</strong>
+                        </div>
+                    </div>
+
+                    <!-- INDICADORES ASSISTENCIAIS -->
+                    <div class="prog-kpi-grid" style="margin-top: 14px;">
+                        <div class="prog-kpi-box">
+                            <span class="prog-kpi-lbl">Leitos disponíveis</span>
+                            <strong class="prog-kpi-val" id="ind-leitos-fisicos">0</strong>
+                        </div>
+                        <div class="prog-kpi-box">
+                            <span class="prog-kpi-lbl">Internados (Censo MV)</span>
+                            <strong class="prog-kpi-val" id="ind-pacientes-internados">0</strong>
+                        </div>
+                        <div class="prog-kpi-box">
+                            <span class="prog-kpi-lbl">Leitos vagos</span>
+                            <strong class="prog-kpi-val" id="ind-leitos-vagos">0</strong>
+                        </div>
+                        <div class="prog-kpi-box">
+                            <span class="prog-kpi-lbl">Taxa de ocupação</span>
+                            <strong class="prog-kpi-val" id="ind-taxa-ocupacao">0,00%</strong>
+                        </div>
+                        <div class="prog-kpi-box">
+                            <span class="prog-kpi-lbl">Pacientes / colab.</span>
+                            <strong class="prog-kpi-val" id="ind-pac-por-colab">0,00</strong>
+                        </div>
+                        <div class="prog-kpi-box">
+                            <span class="prog-kpi-lbl">Leitos / colab.</span>
+                            <strong class="prog-kpi-val" id="ind-leitos-por-colab">0,00</strong>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE OCUPAÇÃO -->
+                    <div class="prog-ocupacao-bar-wrap">
+                        <div class="prog-ocupacao-top">
+                            <span>Ocupação hospitalar</span>
+                            <span id="lbl-ocupacao-detalhe">0 pacientes em 0 leitos operacionais</span>
+                        </div>
+                        <div class="prog-ocupacao-track">
+                            <div id="barra-ocupacao-fill" class="prog-ocupacao-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="prog-field" style="margin-top: 14px;">
+                        <label for="prog-observacao">Observações (opcional)</label>
+                        <textarea id="prog-observacao" class="textarea-control" style="min-height: 60px;" placeholder="Intercorrências ou observações de escala..."></textarea>
+                    </div>
+                </div>
+
+                <div class="prog-footer-actions prog-footer-between">
+                    <button type="button" class="btn btn-secondary" onclick="irParaStepProgramacao(3)">
+                        ← Voltar
+                    </button>
+                    <button type="button" id="btn-salvar-programacao" class="btn btn-primary" onclick="salvarProgramacaoAssistencial()">
+                        Salvar Relatório
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL: RELATÓRIOS ANTERIORES DO GESTOR -->
+<div id="modal-historico-programacao" class="modal-backdrop">
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <div>
+                <h3>Relatórios Anteriores</h3>
+                <div class="modal-info">Clique em "Abrir" para carregar no formulário</div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalHistoricoProgramacao()">Fechar</button>
+        </div>
+
+        <div class="modal-body-scroll table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Turno</th>
+                        <th>Unidade</th>
+                        <th>Equipe</th>
+                        <th>Internados / Leitos</th>
+                        <th>Ocupação</th>
+                        <th>Pac/Colab</th>
+                        <th>Leitos/Colab</th>
+                        <th style="width: 90px;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-historico-programacao">
+                    <tr><td colspan="9" style="text-align:center; color:#64748b;">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let progStepAtual = 1;
+    let progTurnoAtual = "";
+    let progTodasUnidadesCenso = [];
+    let progPacientesInternadosAtual = 0;
+    let progRemanejamentosLista = [];
+    let progEnfermeirosSelecionados = [];
+    let progRelatoriosAnterioresCache = [];
+    let timerBuscaEnfermeiroProg = null;
+
+    const PROG_STEPS_META = {
+        1: { titulo: "Etapa 1 de 4 • Unidade e Turno", pct: 25 },
+        2: { titulo: "Etapa 2 de 4 • Equipe e Leitos", pct: 50 },
+        3: { titulo: "Etapa 3 de 4 • Remanejamento", pct: 75 },
+        4: { titulo: "Etapa 4 de 4 • Resumo", pct: 100 },
+    };
+
+    function formatarDecimalBR(valor) {
+        return Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    async function inicializarProgramacaoAssistencial() {
+        resetarWizardProgramacao();
+        await carregarContextoProgramacao();
+    }
+
+    function resetarWizardProgramacao() {
+        selecionarTurnoProgramacao("", false);
+        progEnfermeirosSelecionados = [];
+        renderizarEnfermeirosSelecionados();
+        const inpEnf = document.getElementById("prog-busca-enfermeiro");
+        if (inpEnf) inpEnf.value = "";
+        irParaStepProgramacao(1, true);
+    }
+
+    function validarStepProgramacao(step) {
+        if (step === 1) {
+            const unidade = document.getElementById("prog-select-unidade").value;
+            const dataVal = document.getElementById("prog-data").value;
+            if (!unidade || !dataVal) {
+                mostrarToast("Selecione a unidade e a data antes de continuar.", true);
+                return false;
+            }
+            if (!progTurnoAtual || (progTurnoAtual !== "DIURNO" && progTurnoAtual !== "NOTURNO")) {
+                mostrarToast("Escolha um turno (Diurno ou Noturno) antes de prosseguir.", true);
+                return false;
+            }
+            return true;
+        }
+
+        if (step === 2) {
+            const qtdProg = parseInt(document.getElementById("prog-qtd-programados").value || "0", 10);
+            const leitosFisicos = parseInt(document.getElementById("prog-leitos-fisicos").value || "0", 10);
+            const leitosBloq = parseInt(document.getElementById("prog-leitos-bloqueados").value || "0", 10);
+
+            if (qtdProg < 1) {
+                mostrarToast("Informe a quantidade de Aux/Tec Enfermagem.", true);
+                return false;
+            }
+            if (progEnfermeirosSelecionados.length === 0) {
+                mostrarToast("Selecione pelo menos um(a) Enfermeiro(a) pelo crachá.", true);
+                return false;
+            }
+            if (leitosFisicos < 1) {
+                mostrarToast("Informe a quantidade de leitos disponíveis.", true);
+                return false;
+            }
+            if (leitosBloq < 0 || leitosBloq > leitosFisicos) {
+                mostrarToast("Leitos bloqueados não pode exceder os leitos disponíveis.", true);
+                return false;
+            }
+            return true;
+        }
+
+        if (step === 3) {
+            const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
+            if (tipo !== "NENHUM" && progRemanejamentosLista.length === 0) {
+                mostrarToast("Adicione o remanejamento ou selecione 'Sem remanejamento'.", true);
+                return false;
+            }
+            const qtdProg = parseInt(document.getElementById("prog-qtd-programados").value || "0", 10);
+            const emp = progRemanejamentosLista.filter(r => r.tipo === "EMPRESTIMO").reduce((a, b) => a + b.quantidade, 0);
+            const rec = progRemanejamentosLista.filter(r => r.tipo === "RECEBIMENTO").reduce((a, b) => a + b.quantidade, 0);
+            if ((qtdProg - emp + rec) < 1) {
+                mostrarToast("O total de colaboradores efetivos não pode ser menor que 1.", true);
+                return false;
+            }
+            return true;
+        }
+
+        return true;
+    }
+
+    function avancarStepProgramacao(stepOrigem) {
+        if (!validarStepProgramacao(stepOrigem)) return;
+        irParaStepProgramacao(stepOrigem + 1, true);
+    }
+
+    function irParaStepProgramacao(destino, pularValidacao = false) {
+        if (!pularValidacao && destino > progStepAtual) {
+            for (let s = progStepAtual; s < destino; s++) {
+                if (!validarStepProgramacao(s)) return;
+            }
+        }
+
+        progStepAtual = destino;
+        for (let i = 1; i <= 4; i++) {
+            const pane = document.getElementById(`prog-step-${i}`);
+            if (pane) pane.style.display = (i === destino) ? "block" : "none";
+        }
+
+        const meta = PROG_STEPS_META[destino] || PROG_STEPS_META[1];
+        document.getElementById("lbl-prog-step-titulo").innerText = meta.titulo;
+        document.getElementById("lbl-prog-step-pct").innerText = `${meta.pct}% concluído`;
+        document.getElementById("barra-prog-step-fill").style.width = `${meta.pct}%`;
+
+        if (destino === 4) {
+            recalcularIndicadoresProgramacao();
+            atualizarResumoCabecalhoStep4();
+        }
+    }
+
+    function atualizarResumoCabecalhoStep4() {
+        const unidade = document.getElementById("prog-select-unidade").value || "--";
+        const dataIso = document.getElementById("prog-data").value || "";
+        const dataBr = dataIso ? dataIso.split("-").reverse().join("/") : "--";
+        const enfTexto = progEnfermeirosSelecionados.length
+            ? progEnfermeirosSelecionados.map(e => `${e.cracha} - ${e.nome}`).join(" | ")
+            : "--";
+
+        document.getElementById("resumo-unidade-nome").innerText = unidade;
+        document.getElementById("resumo-data-turno").innerText = `${dataBr} • ${progTurnoAtual}`;
+        document.getElementById("resumo-enfermeiros-nomes").innerText = enfTexto;
+    }
+
+    function selecionarTurnoProgramacao(turno, recarregarContexto = true) {
+        progTurnoAtual = turno;
+        document.getElementById("btn-turno-pendente").classList.toggle("active", turno === "");
+        document.getElementById("btn-turno-diurno").classList.toggle("active", turno === "DIURNO");
+        document.getElementById("btn-turno-noturno").classList.toggle("active", turno === "NOTURNO");
+
+        if (recarregarContexto && (turno === "DIURNO" || turno === "NOTURNO")) {
+            carregarContextoProgramacao();
+        } else if (turno === "") {
+            document.getElementById("prog-banner-edicao").style.display = "none";
+        }
+    }
+
+    // =========================================================================
+    // BUSCA DE ENFERMEIRO(A) POR CRACHÁ NA BASE
+    // =========================================================================
+    function buscarEnfermeiroProgDebounced() {
+        clearTimeout(timerBuscaEnfermeiroProg);
+        const termo = (document.getElementById("prog-busca-enfermeiro")?.value || "").trim();
+        const box = document.getElementById("prog-resultados-enfermeiro");
+        if (!box) return;
+
+        if (termo.length < 2) {
+            box.style.display = "none";
+            return;
+        }
+
+        timerBuscaEnfermeiroProg = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/colaboradores/buscar?q=${encodeURIComponent(termo)}`, { cache: "no-store" });
+                const d = await res.json();
+                const colabs = (d.colaboradores || []).filter(
+                    c => !progEnfermeirosSelecionados.some(sel => sel.id === c.id)
+                );
+
+                if (!colabs.length) {
+                    box.innerHTML = '<div class="prog-autocomplete-item"><span>Nenhum colaborador encontrado.</span></div>';
+                } else {
+                    box.innerHTML = colabs.map(c => `
+                        <div class="prog-autocomplete-item" onclick='selecionarEnfermeiroProg(${JSON.stringify(c)})'>
+                            <strong>${c.cracha} — ${c.nome}</strong>
+                            <span>${c.codigo_cc} - ${c.centro_custo}</span>
+                        </div>
+                    `).join("");
+                }
+                box.style.display = "block";
+            } catch (err) {
+                box.style.display = "none";
+            }
+        }, 250);
+    }
+
+    function selecionarEnfermeiroProg(colab) {
+        if (!colab || progEnfermeirosSelecionados.some(e => e.id === colab.id)) return;
+        progEnfermeirosSelecionados.push({
+            id: colab.id,
+            cracha: colab.cracha,
+            nome: colab.nome,
+            centro_custo: colab.centro_custo || "",
+        });
+        document.getElementById("prog-busca-enfermeiro").value = "";
+        document.getElementById("prog-resultados-enfermeiro").style.display = "none";
+        renderizarEnfermeirosSelecionados();
+    }
+
+    function removerEnfermeiroProg(id) {
+        progEnfermeirosSelecionados = progEnfermeirosSelecionados.filter(e => e.id !== id);
+        renderizarEnfermeirosSelecionados();
+    }
+
+    function renderizarEnfermeirosSelecionados() {
+        const container = document.getElementById("prog-lista-enfermeiros");
+        if (!container) return;
+        if (!progEnfermeirosSelecionados.length) {
+            container.innerHTML = "";
+            return;
+        }
+        container.innerHTML = progEnfermeirosSelecionados.map(e => `
+            <div class="prog-enf-chip">
+                <div>
+                    <strong>${e.cracha} — ${e.nome}</strong>
+                    ${e.centro_custo ? `<span>${e.centro_custo}</span>` : ""}
+                </div>
+                <button type="button" onclick="removerEnfermeiroProg(${e.id})" title="Remover">×</button>
+            </div>
+        `).join("");
+    }
+
+    document.addEventListener("click", (e) => {
+        const wrap = document.querySelector(".prog-autocomplete-wrap");
+        const box = document.getElementById("prog-resultados-enfermeiro");
+        if (wrap && box && !wrap.contains(e.target)) {
+            box.style.display = "none";
+        }
+    });
+
+    function filtrarSelectUnidadesProg() {
+        const sel = document.getElementById("prog-select-unidade");
+        const atual = sel.value;
+        const termo = (document.getElementById("prog-filtro-unidade")?.value || "").toLowerCase().trim();
+        const filtradas = termo
+            ? progTodasUnidadesCenso.filter(u => u.nome_unidade.toLowerCase().includes(termo))
+            : progTodasUnidadesCenso;
+
+        sel.innerHTML = filtradas
+            .map(u => `<option value="${u.nome_unidade}">${u.nome_unidade}</option>`)
+            .join("");
+
+        if (atual && filtradas.some(u => u.nome_unidade === atual)) {
+            sel.value = atual;
+        } else if (filtradas.length) {
+            carregarContextoProgramacao();
+        }
+    }
+
+    async function carregarContextoProgramacao() {
+        const selUnidade = document.getElementById("prog-select-unidade");
+        const inpData = document.getElementById("prog-data");
+        const nomeUnidade = selUnidade.value || "";
+        const dataVal = inpData.value || "";
+
+        const params = new URLSearchParams();
+        if (nomeUnidade) params.set("nome_unidade", nomeUnidade);
+        if (dataVal) params.set("data", dataVal);
+        params.set("turno", progTurnoAtual || "DIURNO");
+
+        try {
+            const res = await fetch(`/api/programacao-assistencial/contexto?${params.toString()}`, { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso) {
+                mostrarToast(d.mensagem || "Erro ao carregar unidade.", true);
+                return;
+            }
+
+            progTodasUnidadesCenso = d.unidades || [];
+
+            if (!selUnidade.options.length && progTodasUnidadesCenso.length) {
+                selUnidade.innerHTML = progTodasUnidadesCenso
+                    .map(u => `<option value="${u.nome_unidade}">${u.nome_unidade}</option>`)
+                    .join("");
+            }
+            if (d.unidade_selecionada && selUnidade.value !== d.unidade_selecionada) {
+                selUnidade.value = d.unidade_selecionada;
+            }
+
+            if (!inpData.value && d.data_padrao) {
+                inpData.value = d.data_padrao;
+            }
+
+            const censo = d.censo || {};
+            progPacientesInternadosAtual = Number(censo.qtd_internacao || 0);
+            const lblSync = document.getElementById("lbl-prog-censo-sync");
+            if (lblSync) {
+                lblSync.innerText = censo.atualizado_em
+                    ? `Censo MV: ${progPacientesInternadosAtual} internados (${censo.atualizado_em})`
+                    : `Censo MV: ${progPacientesInternadosAtual} internados`;
+            }
+
+            const bannerEdicao = document.getElementById("prog-banner-edicao");
+            if (progTurnoAtual && d.programacao_existente) {
+                const pe = d.programacao_existente;
+                document.getElementById("prog-qtd-programados").value = pe.qtd_colaboradores_programados;
+                document.getElementById("prog-leitos-fisicos").value = pe.leitos_fisicos;
+                document.getElementById("prog-leitos-bloqueados").value = pe.leitos_bloqueados;
+                document.getElementById("prog-observacao").value = pe.observacao || "";
+                progRemanejamentosLista = (pe.remanejamentos || []).map(r => ({
+                    tipo: r.tipo,
+                    quantidade: r.quantidade,
+                    unidade_contraparte: r.unidade_contraparte,
+                }));
+
+                const radioAlvo = progRemanejamentosLista.length
+                    ? progRemanejamentosLista[0].tipo
+                    : "NENHUM";
+                const radioEl = document.querySelector(`input[name="prog_tipo_remanejamento"][value="${radioAlvo}"]`);
+                if (radioEl) radioEl.checked = true;
+                aoMudarTipoRemanejamento();
+
+                bannerEdicao.style.display = "block";
+                document.getElementById("lbl-prog-banner-edicao").innerText =
+                    `Relatório já salvo (${pe.atualizado_em}). Salvar irá atualizar este turno.`;
+            } else {
+                progRemanejamentosLista = [];
+                document.getElementById("prog-observacao").value = "";
+                const radioNenhum = document.querySelector('input[name="prog_tipo_remanejamento"][value="NENHUM"]');
+                if (radioNenhum) radioNenhum.checked = true;
+                aoMudarTipoRemanejamento();
+                bannerEdicao.style.display = "none";
+            }
+
+            popularSelectUnidadesContraparte();
+            renderizarListaRemanejamentos();
+            recalcularIndicadoresProgramacao();
+            if (progStepAtual === 4) atualizarResumoCabecalhoStep4();
+        } catch (err) {
+            mostrarToast("Falha ao carregar Programação Assistencial.", true);
+        }
+    }
+
+    function popularSelectUnidadesContraparte() {
+        const atualNome = document.getElementById("prog-select-unidade").value || "";
+        const selContra = document.getElementById("prog-rem-unidade");
+        if (!selContra) return;
+        selContra.innerHTML = progTodasUnidadesCenso
+            .filter(u => u.nome_unidade !== atualNome)
+            .map(u => `<option value="${u.nome_unidade}">${u.nome_unidade}</option>`)
+            .join("");
+        atualizarPreviewRemanejamento();
+    }
+
+    function aoMudarTipoRemanejamento() {
+        const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
+        const box = document.getElementById("prog-box-remanejamento");
+        if (tipo === "NENHUM") {
+            box.style.display = "none";
+            progRemanejamentosLista = [];
+            renderizarListaRemanejamentos();
+            recalcularIndicadoresProgramacao();
+            return;
+        }
+
+        const isEmp = tipo === "EMPRESTIMO";
+        box.style.display = "block";
+        box.className = `prog-remanejamento-box ${isEmp ? "mode-out" : "mode-in"}`;
+
+        const badge = document.getElementById("badge-modo-remanejamento");
+        badge.className = `prog-mode-badge ${isEmp ? "badge-out" : "badge-in"}`;
+        badge.innerText = isEmp
+            ? "↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)"
+            : "↙ RECEBIMENTO DE COLABORADOR (ENTRADA)";
+
+        const btnAdd = document.getElementById("btn-add-remanejamento");
+        btnAdd.className = `prog-btn-add-action ${isEmp ? "btn-mode-out" : "btn-mode-in"}`;
+
+        popularSelectUnidadesContraparte();
+        atualizarPreviewRemanejamento();
+    }
+
+    function atualizarPreviewRemanejamento() {
+        const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
+        if (tipo === "NENHUM") return;
+
+        const selUnidade = document.getElementById("prog-select-unidade");
+        const selContra = document.getElementById("prog-rem-unidade");
+        const qtd = Math.max(1, parseInt(document.getElementById("prog-rem-qtd").value || "1", 10));
+
+        const nomeMinha = selUnidade.value || "Minha Unidade";
+        const nomeContra = selContra.value || "Outra Unidade";
+
+        const lblUnidade = document.getElementById("lbl-prog-rem-unidade");
+        const esqNome = document.getElementById("lbl-flow-esq-nome");
+        const dirNome = document.getElementById("lbl-flow-dir-nome");
+        const centerBox = document.getElementById("box-flow-center");
+
+        if (tipo === "EMPRESTIMO") {
+            lblUnidade.innerText = "Unidade de destino *";
+            esqNome.innerText = nomeMinha;
+            dirNome.innerText = nomeContra;
+            centerBox.className = "prog-flow-bar flow-out";
+            document.getElementById("lbl-flow-qtd").innerText = `-${qtd} colab. →`;
+        } else {
+            lblUnidade.innerText = "Unidade de origem *";
+            esqNome.innerText = nomeContra;
+            dirNome.innerText = nomeMinha;
+            centerBox.className = "prog-flow-bar flow-in";
+            document.getElementById("lbl-flow-qtd").innerText = `+${qtd} colab. →`;
+        }
+    }
+
+    function adicionarRemanejamentoLista() {
+        const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
+        if (tipo === "NENHUM") return;
+
+        const qtd = parseInt(document.getElementById("prog-rem-qtd").value || "0", 10);
+        const contraNome = document.getElementById("prog-rem-unidade").value || "";
+
+        if (!qtd || qtd < 1 || !contraNome) {
+            mostrarToast("Informe a quantidade e a unidade.", true);
+            return;
+        }
+
+        progRemanejamentosLista.push({
+            tipo,
+            quantidade: qtd,
+            unidade_contraparte: contraNome,
+        });
+
+        renderizarListaRemanejamentos();
+        recalcularIndicadoresProgramacao();
+    }
+
+    function removerRemanejamentoLista(idx) {
+        progRemanejamentosLista.splice(idx, 1);
+        renderizarListaRemanejamentos();
+        recalcularIndicadoresProgramacao();
+    }
+
+    function renderizarListaRemanejamentos() {
+        const wrap = document.getElementById("prog-lista-remanejamentos-wrap");
+        const listEl = document.getElementById("prog-lista-remanejamentos");
+        if (!progRemanejamentosLista.length) {
+            wrap.style.display = "none";
+            listEl.innerHTML = "";
+            return;
+        }
+
+        wrap.style.display = "block";
+        listEl.innerHTML = progRemanejamentosLista.map((r, idx) => {
+            const isEmp = r.tipo === "EMPRESTIMO";
+            return `
+                <div class="prog-rem-row ${isEmp ? "row-out" : "row-in"}">
+                    <div class="prog-rem-row-left">
+                        <span class="prog-rem-tag ${isEmp ? "tag-out" : "tag-in"}">
+                            ${isEmp ? `↗ EMPRÉSTIMO (-${r.quantidade})` : `↙ RECEBIMENTO (+${r.quantidade})`}
+                        </span>
+                        <div class="prog-rem-dest">
+                            <strong>${isEmp ? "Destino" : "Origem"}:</strong> ${r.unidade_contraparte}
+                        </div>
+                    </div>
+                    <button type="button" class="prog-btn-del" onclick="removerRemanejamentoLista(${idx})" title="Remover movimentação">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function recalcularIndicadoresProgramacao() {
+        const qtdProg = Math.max(0, parseInt(document.getElementById("prog-qtd-programados").value || "0", 10));
+        const leitosFisicos = Math.max(0, parseInt(document.getElementById("prog-leitos-fisicos").value || "0", 10));
+        const leitosBloq = Math.max(0, parseInt(document.getElementById("prog-leitos-bloqueados").value || "0", 10));
+
+        const emprestados = progRemanejamentosLista
+            .filter(r => r.tipo === "EMPRESTIMO")
+            .reduce((acc, r) => acc + r.quantidade, 0);
+        const recebidos = progRemanejamentosLista
+            .filter(r => r.tipo === "RECEBIMENTO")
+            .reduce((acc, r) => acc + r.quantidade, 0);
+
+        const efetivos = Math.max(0, qtdProg - emprestados + recebidos);
+        const leitosOperacionais = Math.max(0, leitosFisicos - leitosBloq);
+        const leitosVagos = Math.max(0, leitosOperacionais - progPacientesInternadosAtual);
+
+        const taxaOcupacao = leitosOperacionais > 0
+            ? (progPacientesInternadosAtual / leitosOperacionais) * 100
+            : 0;
+        const pacPorColab = efetivos > 0 ? (progPacientesInternadosAtual / efetivos) : 0;
+        const leitosPorColab = efetivos > 0 ? (leitosOperacionais / efetivos) : 0;
+
+        document.getElementById("stat-prog-base").innerText = qtdProg;
+        document.getElementById("stat-prog-emp").innerText = `-${emprestados}`;
+        document.getElementById("stat-prog-rec").innerText = `+${recebidos}`;
+        document.getElementById("stat-prog-efetivos").innerText = efetivos;
+
+        document.getElementById("ind-leitos-fisicos").innerText = leitosFisicos;
+        document.getElementById("ind-pacientes-internados").innerText = progPacientesInternadosAtual;
+        document.getElementById("ind-leitos-vagos").innerText = leitosVagos;
+        document.getElementById("ind-taxa-ocupacao").innerText = `${formatarDecimalBR(taxaOcupacao)}%`;
+        document.getElementById("ind-pac-por-colab").innerText = formatarDecimalBR(pacPorColab);
+        document.getElementById("ind-leitos-por-colab").innerText = formatarDecimalBR(leitosPorColab);
+
+        document.getElementById("lbl-ocupacao-detalhe").innerText =
+            `${progPacientesInternadosAtual} pacientes / ${leitosOperacionais} leitos`
+            + (leitosBloq > 0 ? ` (${leitosBloq} bloq.)` : "");
+
+        const pctBarra = Math.min(100, Math.max(0, taxaOcupacao));
+        const barra = document.getElementById("barra-ocupacao-fill");
+        barra.style.width = `${pctBarra}%`;
+        barra.style.background = taxaOcupacao > 100 ? "#dc2626" : "#10b981";
+    }
+
+    async function salvarProgramacaoAssistencial() {
+        const nomeUnidade = document.getElementById("prog-select-unidade").value || "";
+        const dataProg = document.getElementById("prog-data").value;
+        const qtdProg = parseInt(document.getElementById("prog-qtd-programados").value || "0", 10);
+        const leitosFisicos = parseInt(document.getElementById("prog-leitos-fisicos").value || "0", 10);
+        const leitosBloq = parseInt(document.getElementById("prog-leitos-bloqueados").value || "0", 10);
+        const obsLivre = document.getElementById("prog-observacao").value.trim();
+
+        if (!nomeUnidade || !dataProg || !progTurnoAtual || qtdProg < 1 || leitosFisicos < 1) {
+            mostrarToast("Preencha unidade, data, turno, Aux/Tec Enfermagem e leitos.", true);
+            return;
+        }
+
+        const enfResumo = progEnfermeirosSelecionados.length
+            ? `Enfermeiro(a): ${progEnfermeirosSelecionados.map(e => `${e.cracha} - ${e.nome}`).join(", ")}`
+            : "";
+        const observacaoFinal = [enfResumo, obsLivre].filter(Boolean).join(" | ");
+
+        const btn = document.getElementById("btn-salvar-programacao");
+        btn.disabled = true;
+        btn.innerText = "Salvando...";
+
+        try {
+            const res = await fetch("/api/programacao-assistencial", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nome_unidade: nomeUnidade,
+                    data_programacao: dataProg,
+                    turno: progTurnoAtual,
+                    qtd_colaboradores_programados: qtdProg,
+                    leitos_fisicos: leitosFisicos,
+                    leitos_bloqueados: leitosBloq,
+                    remanejamentos: progRemanejamentosLista,
+                    enfermeiros: progEnfermeirosSelecionados,
+                    observacao: observacaoFinal,
+                }),
+            });
+            const d = await res.json();
+            mostrarToast(d.mensagem, !d.sucesso);
+            if (d.sucesso) {
+                await carregarContextoProgramacao();
+            }
+        } catch (err) {
+            mostrarToast("Erro ao salvar relatório.", true);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Salvar Relatório";
+        }
+    }
+
+    async function abrirModalHistoricoProgramacao() {
+        const modal = document.getElementById("modal-historico-programacao");
+        const tbody = document.getElementById("tbody-historico-programacao");
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Carregando...</td></tr>';
+        modal.style.display = "flex";
+
+        try {
+            const res = await fetch("/api/programacao-assistencial/historico", { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#dc2626;">${d.mensagem}</td></tr>`;
+                return;
+            }
+            progRelatoriosAnterioresCache = d.relatorios || [];
+            if (!progRelatoriosAnterioresCache.length) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#64748b;">Nenhum relatório encontrado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = progRelatoriosAnterioresCache.map((r, idx) => `
+                <tr>
+                    <td><strong>${r.data_br}</strong></td>
+                    <td><span class="status-pill ${r.turno === "DIURNO" ? "pill-pendente" : "pill-utilizado"}">${r.turno}</span></td>
+                    <td>${r.nome_unidade}</td>
+                    <td>${r.qtd_programados} / <strong>${r.qtd_efetivos}</strong></td>
+                    <td>${r.pacientes_internados} / ${r.leitos_operacionais}</td>
+                    <td><strong>${formatarDecimalBR(r.taxa_ocupacao)}%</strong></td>
+                    <td>${formatarDecimalBR(r.pacientes_por_colaborador)}</td>
+                    <td>${formatarDecimalBR(r.leitos_por_colaborador)}</td>
+                    <td>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="carregarRelatorioAnteriorNoFormulario(${idx})">
+                            Abrir
+                        </button>
+                    </td>
+                </tr>
+            `).join("");
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc2626;">Erro ao buscar relatórios.</td></tr>';
+        }
+    }
+
+    function fecharModalHistoricoProgramacao() {
+        document.getElementById("modal-historico-programacao").style.display = "none";
+    }
+
+    async function carregarRelatorioAnteriorNoFormulario(idx) {
+        const r = progRelatoriosAnterioresCache[idx];
+        if (!r) return;
+        fecharModalHistoricoProgramacao();
+
+        document.getElementById("prog-filtro-unidade").value = "";
+        filtrarSelectUnidadesProg();
+        document.getElementById("prog-select-unidade").value = r.nome_unidade;
+        document.getElementById("prog-data").value = r.data_iso;
+        selecionarTurnoProgramacao(r.turno);
+        irParaStepProgramacao(1, true);
+    }
+</script>
