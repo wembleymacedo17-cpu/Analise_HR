@@ -84,7 +84,7 @@ PALAVRAS_PROIBIDAS_SQL = re.compile(
 
 
 
-COORDENADORES_AUTORIZADORES = {
+LISTA_PLANTAO_ADM = {
     "Ana Paula Augusto Valverde",
     "Débora Augusto Valverde",
     "Janaina Souza de Lima",
@@ -92,4 +92,12 @@ COORDENADORES_AUTORIZADORES = {
     "Rafaela Marqui",
     "Suzilene Ribeiro",
     "Juliane Cristina Souza Ferraroni",
+}
+
+LISTA_COORDENACAO = {
+    "Rafaela",
+    "Ana Paula",
+    "Bruna",
+    "Débora",
+    "Paula",
 }

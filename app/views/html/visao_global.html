@@ -185,8 +185,10 @@
         <form id="form-analise-falta" class="modal-body-scroll">
             <input type="hidden" id="analise-ocorrencia-id">
             <input type="hidden" id="analise-faltante-id">
+            <input type="hidden" id="analise-faltante-cc-codigo">
             <input type="hidden" id="cobridor-colaborador-id">
 
+            <!-- ETAPA 1 -->
             <div id="an-step-pane-1" class="step-pane active">
                 <div class="single-question-card">
                     <div class="single-question-title">1. Ausência programada pelo supervisor?</div>
@@ -202,6 +204,7 @@
                 </div>
             </div>
 
+            <!-- ETAPA 2 -->
             <div id="an-step-pane-2" class="step-pane">
                 <div class="single-question-card">
                     <div class="single-question-title">2. A falta foi comunicada com 2h de antecedência?</div>
@@ -216,6 +219,7 @@
                 </div>
             </div>
 
+            <!-- ETAPA 3 -->
             <div id="an-step-pane-3" class="step-pane">
                 <div class="single-question-card">
                     <div class="single-question-title">3. Foi autorizado horas extras para a cobertura?</div>
@@ -223,34 +227,44 @@
                         <label class="choice-card"><input type="radio" name="q_aut_he" value="1" onchange="atualizarSubpergunta3a()"><span>Sim</span></label>
                         <label class="choice-card"><input type="radio" name="q_aut_he" value="0" onchange="atualizarSubpergunta3a()"><span>Não</span></label>
                     </div>
+
                     <div id="bloco-pergunta-3a" class="sub-question-block">
                         <div class="sub-question-title">3a. Quem autorizou?</div>
-                        <div class="field-group" style="margin-bottom: 16px;">
-                            <select id="select-autorizador-he" class="select-control" style="width: 100%;">
-                                <option value="">Selecione o coordenador...</option>
-                                <option value="Ana Paula Augusto Valverde">Ana Paula Augusto Valverde</option>
-                                <option value="Débora Augusto Valverde">Débora Augusto Valverde</option>
-                                <option value="Janaina Souza de Lima">Janaina Souza de Lima</option>
-                                <option value="Kátia Luciana Franca Pereira">Kátia Luciana Franca Pereira</option>
-                                <option value="Rafaela Marqui">Rafaela Marqui</option>
-                                <option value="Suzilene Ribeiro">Suzilene Ribeiro</option>
-                                <option value="Juliane Cristina Souza Ferraroni">Juliane Cristina Souza Ferraroni</option>
+                        <div class="choice-cards-grid" style="margin-bottom: 12px;">
+                            <label class="choice-card">
+                                <input type="radio" name="q_tipo_autorizador" value="PLANTAO_ADM" onchange="aoMudarTipoAutorizador()">
+                                <span>Plantão Administrativo</span>
+                            </label>
+                            <label class="choice-card">
+                                <input type="radio" name="q_tipo_autorizador" value="COORDENACAO" onchange="aoMudarTipoAutorizador()">
+                                <span>Coordenação</span>
+                            </label>
+                        </div>
+
+                        <div id="box-select-autorizador" class="field-group" style="display:none; margin-bottom: 16px;">
+                            <label id="lbl-select-autorizador" for="select-autorizador-he" style="font-size:0.82rem; font-weight:700; color:#334155;">Selecione o responsável *</label>
+                            <select id="select-autorizador-he" class="select-control" style="width: 100%;" onchange="aoSelecionarAutorizador()">
+                                <option value="">Selecione...</option>
                             </select>
                         </div>
-                        <div class="sub-question-title" style="padding-top: 14px; border-top: 1px dashed #cbd5e1;">3b. Conseguiu cobertura para esta ausência?</div>
-                        <div class="choice-cards-grid">
-                            <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()"><span>Sim</span></label>
-                            <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()"><span>Não</span></label>
-                        </div>
-                        <div class="cobertura-box" id="box-origem-cobertura">
-                            <label class="cobertura-label" for="input-busca-cobridor">Informe o crachá ou nome de quem cobriu *</label>
-                            <div class="autocomplete-wrap">
-                                <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
-                                <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
+
+                        <div id="bloco-pergunta-3b" style="display:none; padding-top: 14px; border-top: 1px dashed #cbd5e1;">
+                            <div class="sub-question-title">3b. Conseguiu cobertura para esta ausência?</div>
+                            <div class="choice-cards-grid">
+                                <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()"><span>Sim</span></label>
+                                <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()"><span>Não</span></label>
                             </div>
-                            <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
-                                <div class="cobridor-selecionado-info"><strong id="lbl-cobridor-nome">--</strong><span id="lbl-cobridor-cc">--</span></div>
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+
+                            <div class="cobertura-box" id="box-origem-cobertura">
+                                <label class="cobertura-label" for="input-busca-cobridor">Informe o crachá ou nome de quem cobriu *</label>
+                                <div class="autocomplete-wrap">
+                                    <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
+                                    <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
+                                </div>
+                                <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
+                                    <div class="cobridor-selecionado-info"><strong id="lbl-cobridor-nome">--</strong><span id="lbl-cobridor-cc">--</span></div>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="limparCobridorSelecionado()">Trocar</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -258,30 +272,55 @@
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="irStepAnalise(2)">Voltar</button>
                     <button type="button" class="btn btn-primary" id="btn-step3-next" onclick="avancarDoStep3()">Próximo</button>
-                    <button type="button" class="btn btn-success" id="btn-step3-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">Salvar e Finalizar Análise</button>
+                    <button type="button" class="btn btn-success" id="btn-step3-salvar" style="display:none;" onclick="salvarAnaliseCompleta()">Salvar e Finalizar</button>
                 </div>
             </div>
 
+            <!-- ETAPA 4: REDIMENSIONAMENTO INTERNO OU REMANEJAMENTO ENTRE SETORES -->
             <div id="an-step-pane-4" class="step-pane">
                 <div class="single-question-card">
-                    <div class="single-question-title">4. A equipe foi redimensionada?</div>
+                    <div class="single-question-title">4. Adequação da equipe na ausência</div>
                     <div class="choice-cards-grid">
-                        <label class="choice-card"><input type="radio" name="q_redividiu" value="1" onchange="atualizarDetalhesStep4()"><span>Sim</span></label>
-                        <label class="choice-card"><input type="radio" name="q_redividiu" value="0" onchange="atualizarDetalhesStep4()"><span>Não</span></label>
+                        <label class="choice-card">
+                            <input type="radio" name="q_tipo_adequacao" value="INTERNO" onchange="atualizarDetalhesStep4()">
+                            <span>Redimensionamento interno</span>
+                        </label>
+                        <label class="choice-card">
+                            <input type="radio" name="q_tipo_adequacao" value="REMANEJAMENTO" onchange="atualizarDetalhesStep4()">
+                            <span>Remanejamento entre setores</span>
+                        </label>
                     </div>
-                    <div id="box-redivisao-sim" class="redivisao-detalhes-box">
+
+                    <!-- OPÇÃO A: REDIMENSIONAMENTO INTERNO -->
+                    <div id="box-adequacao-interno" class="redivisao-detalhes-box">
                         <div class="redivisao-grid">
-                            <div class="field-group"><label for="input-qtd-pacientes">Número de Pacientes *</label><input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1"></div>
-                            <div class="field-group"><label for="input-qtd-colaboradores">Número de Colaboradores *</label><input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1"></div>
+                            <div class="field-group">
+                                <label for="input-qtd-pacientes">Número de Pacientes *</label>
+                                <input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1" placeholder="Ex: 18">
+                            </div>
+                            <div class="field-group">
+                                <label for="input-qtd-colaboradores">Número de Colaboradores *</label>
+                                <input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1" placeholder="Ex: 4">
+                            </div>
                         </div>
                     </div>
-                    <div id="box-redivisao-nao" class="redivisao-detalhes-box">
-                        <div class="field-group"><label for="input-justificativa-nao">Descreva o que foi feito *</label><textarea id="input-justificativa-nao" class="textarea-control"></textarea></div>
+
+                    <!-- OPÇÃO B: REMANEJAMENTO ENTRE SETORES -->
+                    <div id="box-adequacao-remanejamento" class="redivisao-detalhes-box">
+                        <div class="field-group" style="margin-bottom: 12px;">
+                            <label for="input-qtd-colab-remanejado">Número de Colaboradores *</label>
+                            <input type="number" id="input-qtd-colab-remanejado" class="input-control" min="1" step="1" placeholder="Ex: 1">
+                        </div>
+                        <div class="field-group">
+                            <label for="select-cc-origem-remanejamento">Centro de Custo de origem (de quem veio) *</label>
+                            <input type="text" id="input-filtro-cc-remanejamento" class="input-control" style="margin-bottom: 6px; font-size: 0.82rem;" placeholder="Filtrar centro de custo..." oninput="filtrarSelectCCRemanejamento()">
+                            <select id="select-cc-origem-remanejamento" class="select-control" style="width: 100%;"></select>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="irStepAnalise(3)">Voltar</button>
-                    <button type="button" class="btn btn-success" id="btn-step4-salvar" onclick="salvarAnaliseCompleta()">Salvar e Finalizar Análise</button>
+                    <button type="button" class="btn btn-success" id="btn-step4-salvar" onclick="salvarAnaliseCompleta()">Salvar e Finalizar</button>
                 </div>
             </div>
         </form>
@@ -289,6 +328,24 @@
 </div>
 
 <script>
+    const LISTA_PLANTAO_ADM = [
+        "Ana Paula Augusto Valverde",
+        "Débora Augusto Valverde",
+        "Janaina Souza de Lima",
+        "Kátia Luciana Franca Pereira",
+        "Rafaela Marqui",
+        "Suzilene Ribeiro",
+        "Juliane Cristina Souza Ferraroni"
+    ];
+
+    const LISTA_COORDENACAO = [
+        "Rafaela",
+        "Ana Paula",
+        "Bruna",
+        "Débora",
+        "Paula"
+    ];
+
     let listaFaltasCache = [];
     let listaGestoresGlobal = [], gestorSelecionadoGlobal = null;
     let usuarioProprioId = null;
@@ -718,8 +775,8 @@
             else {
                 if (falta.analise.autorizador_he_nome) l.push(`<strong>Autorizado por:</strong> ${falta.analise.autorizador_he_nome}`);
                 if (falta.analise.cobridor) l.push(`<strong>Coberto por:</strong> ${falta.analise.cobridor}`);
-                if (falta.analise.redividiu_equipe && falta.analise.qtd_pacientes) l.push(`<strong>Redimensionada:</strong> ${falta.analise.qtd_pacientes} pac / ${falta.analise.qtd_colaboradores} colab`);
-                if (falta.analise.justificativa_nao_redimensionada) l.push(`<strong>Ação:</strong> ${falta.analise.justificativa_nao_redimensionada}`);
+                if (falta.analise.redividiu_equipe && falta.analise.qtd_pacientes) l.push(`<strong>Redimensionamento interno:</strong> ${falta.analise.qtd_pacientes} pac / ${falta.analise.qtd_colaboradores} colab`);
+                if (falta.analise.justificativa_nao_redimensionada) l.push(`<strong>Adequação:</strong> ${falta.analise.justificativa_nao_redimensionada}`);
             }
             aud.innerHTML = l.join("<br>"); aud.style.display = "block";
         } else aud.style.display = "none";
@@ -802,22 +859,59 @@
         if (d.sucesso) { fecharModalPuxarColaborador(); await carregarFaltas(); await carregarMetricasRoot(); }
     }
 
-    function abrirModalAnalise(id) {
-        const falta = listaFaltasCache.find(i => i.id === id); if (!falta) return;
+    // =========================================================================
+    // MODAL ANÁLISE OPERACIONAL (NOVO FLUXO)
+    // =========================================================================
+    async function abrirModalAnalise(id) {
+        const falta = listaFaltasCache.find(i => i.id === id);
+        if (!falta) return;
+
         document.getElementById("form-analise-falta").reset();
         document.getElementById("analise-ocorrencia-id").value = falta.id;
         document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
-        dataOcorrenciaAtual = falta.data_ocorrencia || ""; faltanteCrachaAtual = falta.cracha || "";
+        document.getElementById("analise-faltante-cc-codigo").value = falta.codigo_cc || "";
+        dataOcorrenciaAtual = falta.data_ocorrencia || "";
+        faltanteCrachaAtual = falta.cracha || "";
         document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
+
         limparCobridorSelecionado();
         document.getElementById("bloco-pergunta-3a").style.display = "none";
+        document.getElementById("box-select-autorizador").style.display = "none";
+        document.getElementById("bloco-pergunta-3b").style.display = "none";
         document.getElementById("box-origem-cobertura").style.display = "none";
-        document.getElementById("box-redivisao-sim").style.display = "none";
-        document.getElementById("box-redivisao-nao").style.display = "none";
+        document.getElementById("box-adequacao-interno").style.display = "none";
+        document.getElementById("box-adequacao-remanejamento").style.display = "none";
+        document.getElementById("input-filtro-cc-remanejamento").value = "";
+
+        const ccs = await garantirCCsCarregados();
+        renderizarSelectCCRemanejamento(ccs);
+
         irStepAnalise(1);
         document.getElementById("modal-analise").style.display = "flex";
     }
-    function fecharModalAnalise() { document.getElementById("modal-analise").style.display = "none"; }
+
+    function fecharModalAnalise() {
+        document.getElementById("modal-analise").style.display = "none";
+    }
+
+    function renderizarSelectCCRemanejamento(lista) {
+        const atualCodigo = document.getElementById("analise-faltante-cc-codigo")?.value || "";
+        const sel = document.getElementById("select-cc-origem-remanejamento");
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Selecione o Centro de Custo de origem...</option>' +
+            lista
+                .filter(c => c.codigo_cc !== atualCodigo)
+                .map(c => `<option value="${c.id}" data-label="${c.codigo_cc} - ${c.nome}">${c.codigo_cc} - ${c.nome}</option>`)
+                .join("");
+    }
+
+    function filtrarSelectCCRemanejamento() {
+        const termo = (document.getElementById("input-filtro-cc-remanejamento")?.value || "").toLowerCase().trim();
+        const filtrados = termo
+            ? listaCCsGlobal.filter(c => c.codigo_cc.toLowerCase().includes(termo) || c.nome.toLowerCase().includes(termo))
+            : listaCCsGlobal;
+        renderizarSelectCCRemanejamento(filtrados);
+    }
 
     function atualizarBarraProgressoAnalise(step, pctCustom = null, labelCustom = null) {
         const map = { 1: 25, 2: 50, 3: 75, 4: 100 };
@@ -831,9 +925,15 @@
         [1, 2, 3, 4].forEach(i => document.getElementById(`an-step-pane-${i}`)?.classList.toggle("active", i === step));
         if (step === 1) atualizarAcaoStep1();
         else if (step === 3) atualizarSubpergunta3a();
-        else atualizarBarraProgressoAnalise(step);
+        else if (step === 4) {
+            atualizarDetalhesStep4();
+            atualizarBarraProgressoAnalise(4);
+        } else {
+            atualizarBarraProgressoAnalise(step);
+        }
     }
 
+    // ETAPA 1
     function atualizarAcaoStep1() {
         const q1 = document.querySelector('input[name="q_programada"]:checked');
         const isSim = q1?.value === "1";
@@ -841,39 +941,139 @@
         document.getElementById("btn-step1-salvar").style.display = isSim ? "inline-flex" : "none";
         atualizarBarraProgressoAnalise(1, isSim ? 100 : 25, isSim ? "Etapa 1 • Pronta para finalizar" : "Etapa 1 de 4");
     }
-    function avancarDoStep1() { const q1 = document.querySelector('input[name="q_programada"]:checked'); if (!q1) { mostrarToast("Selecione Sim ou Não.", true); return; } if (q1.value === "1") { salvarAnaliseCompleta(); return; } irStepAnalise(2); }
-    function avancarDoStep2() { if (!document.querySelector('input[name="q_comunicada"]:checked')) { mostrarToast("Selecione Sim ou Não.", true); return; } irStepAnalise(3); }
 
+    function avancarDoStep1() {
+        const q1 = document.querySelector('input[name="q_programada"]:checked');
+        if (!q1) {
+            mostrarToast("Selecione Sim ou Não.", true);
+            return;
+        }
+        if (q1.value === "1") {
+            salvarAnaliseCompleta();
+            return;
+        }
+        irStepAnalise(2);
+    }
+
+    // ETAPA 2
+    function avancarDoStep2() {
+        if (!document.querySelector('input[name="q_comunicada"]:checked')) {
+            mostrarToast("Selecione Sim ou Não.", true);
+            return;
+        }
+        irStepAnalise(3);
+    }
+
+    // ETAPA 3 (3 -> 3a Plantão Adm / Coordenação -> 3b Conseguiu cobertura)
     function atualizarSubpergunta3a() {
         const q3 = document.querySelector('input[name="q_aut_he"]:checked');
-        const bloco = document.getElementById("bloco-pergunta-3a");
-        if (q3?.value === "1") { bloco.style.display = "block"; atualizarCampoCobridor3a(); }
-        else { bloco.style.display = "none"; limparCobridorSelecionado(); document.getElementById("btn-step3-next").style.display = "inline-flex"; document.getElementById("btn-step3-salvar").style.display = "none"; atualizarBarraProgressoAnalise(3, 75, "Etapa 3 de 4"); }
+        const bloco3a = document.getElementById("bloco-pergunta-3a");
+
+        if (q3?.value === "1") {
+            bloco3a.style.display = "block";
+            aoMudarTipoAutorizador();
+        } else {
+            bloco3a.style.display = "none";
+            limparCobridorSelecionado();
+            document.getElementById("btn-step3-next").style.display = "inline-flex";
+            document.getElementById("btn-step3-salvar").style.display = "none";
+            atualizarBarraProgressoAnalise(3, 75, "Etapa 3 de 4");
+        }
     }
+
+    function aoMudarTipoAutorizador() {
+        const tipoAut = document.querySelector('input[name="q_tipo_autorizador"]:checked')?.value || "";
+        const boxSelect = document.getElementById("box-select-autorizador");
+        const selectEl = document.getElementById("select-autorizador-he");
+        const lblSelect = document.getElementById("lbl-select-autorizador");
+
+        if (!tipoAut) {
+            boxSelect.style.display = "none";
+            document.getElementById("bloco-pergunta-3b").style.display = "none";
+            document.getElementById("btn-step3-next").style.display = "inline-flex";
+            document.getElementById("btn-step3-salvar").style.display = "none";
+            return;
+        }
+
+        const valorAnterior = selectEl.value;
+        const lista = tipoAut === "PLANTAO_ADM" ? LISTA_PLANTAO_ADM : LISTA_COORDENACAO;
+        lblSelect.innerText = tipoAut === "PLANTAO_ADM"
+            ? "Selecione quem autorizou (Plantão Administrativo) *"
+            : "Selecione quem autorizou (Coordenação) *";
+
+        selectEl.innerHTML = '<option value="">Selecione...</option>' +
+            lista.map(nome => `<option value="${nome}">${nome}</option>`).join("");
+
+        if (valorAnterior && lista.includes(valorAnterior)) {
+            selectEl.value = valorAnterior;
+        }
+
+        boxSelect.style.display = "block";
+        aoSelecionarAutorizador();
+    }
+
+    function aoSelecionarAutorizador() {
+        const nomeAut = document.getElementById("select-autorizador-he").value.trim();
+        const bloco3b = document.getElementById("bloco-pergunta-3b");
+
+        if (!nomeAut) {
+            bloco3b.style.display = "none";
+            document.getElementById("btn-step3-next").style.display = "inline-flex";
+            document.getElementById("btn-step3-salvar").style.display = "none";
+            return;
+        }
+
+        bloco3b.style.display = "block";
+        atualizarCampoCobridor3a();
+    }
+
     function atualizarCampoCobridor3a() {
         const q3b = document.querySelector('input[name="q_cons_he"]:checked');
         const isSim = q3b?.value === "1";
+
         if (!isSim) limparCobridorSelecionado();
         document.getElementById("box-origem-cobertura").style.display = isSim ? "block" : "none";
         document.getElementById("btn-step3-next").style.display = isSim ? "none" : "inline-flex";
         document.getElementById("btn-step3-salvar").style.display = isSim ? "inline-flex" : "none";
         atualizarBarraProgressoAnalise(3, isSim ? 100 : 75, isSim ? "Etapa 3 • Cobertura confirmada" : "Etapa 3 de 4");
     }
+
     function avancarDoStep3() {
         const q3 = document.querySelector('input[name="q_aut_he"]:checked');
-        if (!q3) { mostrarToast("Selecione Sim ou Não.", true); return; }
-        if (q3.value === "1") {
-            if (!document.getElementById("select-autorizador-he").value.trim()) { mostrarToast("Selecione o coordenador.", true); return; }
-            const q3b = document.querySelector('input[name="q_cons_he"]:checked');
-            if (!q3b) { mostrarToast("Responda 3b.", true); return; }
-            if (q3b.value === "1") { salvarAnaliseCompleta(); return; }
+        if (!q3) {
+            mostrarToast("Selecione Sim ou Não na pergunta 3.", true);
+            return;
         }
+
+        if (q3.value === "1") {
+            const tipoAut = document.querySelector('input[name="q_tipo_autorizador"]:checked');
+            if (!tipoAut) {
+                mostrarToast("Selecione Plantão Administrativo ou Coordenação.", true);
+                return;
+            }
+            if (!document.getElementById("select-autorizador-he").value.trim()) {
+                mostrarToast("Selecione o nome de quem autorizou.", true);
+                return;
+            }
+            const q3b = document.querySelector('input[name="q_cons_he"]:checked');
+            if (!q3b) {
+                mostrarToast("Informe se conseguiu cobertura para esta ausência.", true);
+                return;
+            }
+            if (q3b.value === "1") {
+                salvarAnaliseCompleta();
+                return;
+            }
+        }
+
         irStepAnalise(4);
     }
+
+    // ETAPA 4
     function atualizarDetalhesStep4() {
-        const q4 = document.querySelector('input[name="q_redividiu"]:checked');
-        document.getElementById("box-redivisao-sim").style.display = q4?.value === "1" ? "block" : "none";
-        document.getElementById("box-redivisao-nao").style.display = q4?.value === "0" ? "block" : "none";
+        const tipoAdeq = document.querySelector('input[name="q_tipo_adequacao"]:checked')?.value || "";
+        document.getElementById("box-adequacao-interno").style.display = tipoAdeq === "INTERNO" ? "block" : "none";
+        document.getElementById("box-adequacao-remanejamento").style.display = tipoAdeq === "REMANEJAMENTO" ? "block" : "none";
     }
 
     function buscarCobridorDebounced() {
@@ -890,6 +1090,7 @@
             box.style.display = "block";
         }, 250);
     }
+
     function selecionarCobridor(c) {
         cobridorSelecionadoObj = c;
         document.getElementById("cobridor-colaborador-id").value = c.id;
@@ -899,6 +1100,7 @@
         document.getElementById("lista-resultados-cobridor").style.display = "none";
         document.getElementById("card-cobridor-selecionado").style.display = "flex";
     }
+
     function limparCobridorSelecionado() {
         cobridorSelecionadoObj = null;
         document.getElementById("cobridor-colaborador-id").value = "";
@@ -910,37 +1112,118 @@
 
     async function salvarAnaliseCompleta() {
         const q1 = document.querySelector('input[name="q_programada"]:checked');
-        if (!q1) { mostrarToast("Selecione Sim ou Não na pergunta 1.", true); return; }
+        if (!q1) {
+            mostrarToast("Selecione Sim ou Não na pergunta 1.", true);
+            return;
+        }
+
         const prog = q1.value === "1";
-        const payload = { ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value, 10), ausencia_programada: prog };
+        const payload = {
+            ocorrencia_id: parseInt(document.getElementById("analise-ocorrencia-id").value, 10),
+            ausencia_programada: prog
+        };
+
         if (!prog) {
             const q2 = document.querySelector('input[name="q_comunicada"]:checked');
             const q3 = document.querySelector('input[name="q_aut_he"]:checked');
-            if (!q2 || !q3) { mostrarToast("Responda todas as perguntas obrigatórias.", true); return; }
+            if (!q2 || !q3) {
+                mostrarToast("Responda todas as perguntas obrigatórias.", true);
+                return;
+            }
+
             const autHe = q3.value === "1";
+            const tipoAut = autHe ? (document.querySelector('input[name="q_tipo_autorizador"]:checked')?.value || null) : null;
             const autNome = autHe ? document.getElementById("select-autorizador-he").value.trim() : null;
             const consHe = autHe ? document.querySelector('input[name="q_cons_he"]:checked')?.value === "1" : false;
-            if (autHe && !autNome) { mostrarToast("Selecione o coordenador.", true); return; }
+
+            if (autHe && (!tipoAut || !autNome)) {
+                mostrarToast("Selecione o tipo e o nome de quem autorizou.", true);
+                return;
+            }
+
             if (autHe && consHe) {
-                if (!cobridorSelecionadoObj) { mostrarToast("Selecione quem cobriu.", true); return; }
-                Object.assign(payload, { comunicada_2h_antecedencia: q2.value === "1", autorizado_hora_extra: true, autorizador_he_nome: autNome, conseguiu_he_cobertura: true, cobridor_colaborador_id: cobridorSelecionadoObj.id });
+                if (!cobridorSelecionadoObj) {
+                    mostrarToast("Selecione quem cobriu a ausência.", true);
+                    return;
+                }
+                Object.assign(payload, {
+                    comunicada_2h_antecedencia: q2.value === "1",
+                    autorizado_hora_extra: true,
+                    tipo_autorizador_he: tipoAut,
+                    autorizador_he_nome: autNome,
+                    conseguiu_he_cobertura: true,
+                    cobridor_colaborador_id: cobridorSelecionadoObj.id
+                });
             } else {
-                const q4 = document.querySelector('input[name="q_redividiu"]:checked');
-                if (!q4) { mostrarToast("Responda a pergunta 4.", true); return; }
-                const red = q4.value === "1";
-                const qtdP = red ? parseInt(document.getElementById("input-qtd-pacientes").value, 10) : null;
-                const qtdC = red ? parseInt(document.getElementById("input-qtd-colaboradores").value, 10) : null;
-                const just = !red ? document.getElementById("input-justificativa-nao").value.trim() : null;
-                if (red && (!qtdP || !qtdC)) { mostrarToast("Informe pacientes e colaboradores.", true); return; }
-                if (!red && !just) { mostrarToast("Descreva o que foi feito.", true); return; }
-                Object.assign(payload, { comunicada_2h_antecedencia: q2.value === "1", autorizado_hora_extra: autHe, autorizador_he_nome: autNome, conseguiu_he_cobertura: false, redividiu_equipe: red, qtd_pacientes: qtdP, qtd_colaboradores: qtdC, justificativa_nao_redimensionada: just });
+                const tipoAdeq = document.querySelector('input[name="q_tipo_adequacao"]:checked')?.value || "";
+                if (!tipoAdeq) {
+                    mostrarToast("Selecione Redimensionamento interno ou Remanejamento entre setores.", true);
+                    return;
+                }
+
+                if (tipoAdeq === "INTERNO") {
+                    const qtdP = parseInt(document.getElementById("input-qtd-pacientes").value || "0", 10);
+                    const qtdC = parseInt(document.getElementById("input-qtd-colaboradores").value || "0", 10);
+                    if (qtdP < 1 || qtdC < 1) {
+                        mostrarToast("Informe o número de pacientes e o número de colaboradores.", true);
+                        return;
+                    }
+                    Object.assign(payload, {
+                        comunicada_2h_antecedencia: q2.value === "1",
+                        autorizado_hora_extra: autHe,
+                        tipo_autorizador_he: tipoAut,
+                        autorizador_he_nome: autNome,
+                        conseguiu_he_cobertura: false,
+                        redividiu_equipe: true,
+                        qtd_pacientes: qtdP,
+                        qtd_colaboradores: qtdC,
+                        justificativa_nao_redimensionada: null
+                    });
+                } else {
+                    const qtdColabRem = parseInt(document.getElementById("input-qtd-colab-remanejado").value || "0", 10);
+                    const selCC = document.getElementById("select-cc-origem-remanejamento");
+                    const ccOrigemId = parseInt(selCC.value || "0", 10);
+                    const ccOrigemLabel = selCC.options[selCC.selectedIndex]?.getAttribute("data-label") || "";
+
+                    if (qtdColabRem < 1 || !ccOrigemId) {
+                        mostrarToast("Informe o número de colaboradores e o Centro de Custo de origem.", true);
+                        return;
+                    }
+
+                    Object.assign(payload, {
+                        comunicada_2h_antecedencia: q2.value === "1",
+                        autorizado_hora_extra: autHe,
+                        tipo_autorizador_he: tipoAut,
+                        autorizador_he_nome: autNome,
+                        conseguiu_he_cobertura: false,
+                        redividiu_equipe: false,
+                        qtd_pacientes: null,
+                        qtd_colaboradores: qtdColabRem,
+                        cc_origem_remanejamento_id: ccOrigemId,
+                        justificativa_nao_redimensionada: `Remanejamento entre setores: ${qtdColabRem} colaborador(es) vindo(s) de ${ccOrigemLabel}`
+                    });
+                }
             }
         }
-        const res = await fetch("/api/analisar-falta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+
+        const res = await fetch("/api/analisar-falta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
         const d = await res.json();
-        if (res.ok && d.sucesso) { mostrarToast(d.mensagem); fecharModalAnalise(); await carregarFaltas(); await carregarMetricasRoot(); }
-        else mostrarToast(d.mensagem || "Erro ao salvar.", true);
+        if (res.ok && d.sucesso) {
+            mostrarToast(d.mensagem);
+            fecharModalAnalise();
+            await carregarFaltas();
+            await carregarMetricasRoot();
+        } else {
+            mostrarToast(d.mensagem || "Erro ao salvar.", true);
+        }
     }
 
-    document.getElementById("form-analise-falta")?.addEventListener("submit", (e) => { e.preventDefault(); salvarAnaliseCompleta(); });
+    document.getElementById("form-analise-falta")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        salvarAnaliseCompleta();
+    });
 </script>

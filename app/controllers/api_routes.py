@@ -38,7 +38,7 @@ from app.services.scheduler_service import (
     registrar_log,
 )
 #---------------------------------------------------------------------------------------------------------------------
-from  app.services.queries_senior  import PALAVRAS_PROIBIDAS_SQL,COORDENADORES_AUTORIZADORES
+from  app.services.queries_senior  import PALAVRAS_PROIBIDAS_SQL,LISTA_COORDENACAO, LISTA_PLANTAO_ADM
 import os 
 
 
@@ -897,16 +897,24 @@ def analisar_falta():
 
     comunicada_2h = bool(data.get('comunicada_2h_antecedencia'))
     autorizado_he = bool(data.get('autorizado_hora_extra'))
+    tipo_autorizador_he = str(data.get('tipo_autorizador_he') or '').strip().upper() or None
     autorizador_he_nome = str(data.get('autorizador_he_nome') or '').strip() or None
     conseguiu_he = bool(data.get('conseguiu_he_cobertura')) if autorizado_he else False
     cobridor_id_raw = data.get('cobridor_colaborador_id')
 
     if autorizado_he:
-        if not autorizador_he_nome or autorizador_he_nome not in COORDENADORES_AUTORIZADORES:
+        permitidos = set(LISTA_PLANTAO_ADM) | set(LISTA_COORDENACAO)
+        if not autorizador_he_nome or autorizador_he_nome not in permitidos:
             db.rollback()
-            return jsonify({'sucesso': False, 'mensagem': 'Selecione o coordenador que autorizou as horas extras.'}), 400
+            return jsonify({'sucesso': False, 'mensagem': 'Selecione o responsável que autorizou as horas extras.'}), 400
+        if tipo_autorizador_he == 'PLANTAO_ADM':
+            autorizador_he_nome_salvo = f"[Plantão Adm] {autorizador_he_nome}"
+        elif tipo_autorizador_he == 'COORDENACAO':
+            autorizador_he_nome_salvo = f"[Coordenação] {autorizador_he_nome}"
+        else:
+            autorizador_he_nome_salvo = autorizador_he_nome
     else:
-        autorizador_he_nome = None
+        autorizador_he_nome_salvo = None
 
     cobridor_id = None
     cobridor_cc_id = None
@@ -969,7 +977,7 @@ def analisar_falta():
     else:
         if data.get('redividiu_equipe') is None:
             db.rollback()
-            return jsonify({'sucesso': False, 'mensagem': 'Informe se a equipe foi redimensionada.'}), 400
+            return jsonify({'sucesso': False, 'mensagem': 'Informe a adequação da equipe.'}), 400
 
         redividiu = bool(data.get('redividiu_equipe'))
 
@@ -991,13 +999,31 @@ def analisar_falta():
                     'mensagem': 'O número de pacientes e de colaboradores devem ser maiores que zero.'
                 }), 400
         else:
+            try:
+                qtd_colaboradores = int(data.get('qtd_colaboradores') or 0)
+            except (TypeError, ValueError):
+                qtd_colaboradores = 0
+
+            cc_origem_rem_id = data.get('cc_origem_remanejamento_id')
             justificativa_texto = str(data.get('justificativa_nao_redimensionada') or '').strip()
-            if not justificativa_texto:
+
+            if qtd_colaboradores < 1 or not cc_origem_rem_id or not justificativa_texto:
                 db.rollback()
                 return jsonify({
                     'sucesso': False,
-                    'mensagem': 'Descreva o que foi feito na ausência do colaborador.'
+                    'mensagem': 'Informe o número de colaboradores e o Centro de Custo de origem.'
                 }), 400
+
+            cc_origem_existe = (
+                db.query(CentroCusto.id)
+                .filter(CentroCusto.id == int(cc_origem_rem_id), CentroCusto.ativo.is_(True))
+                .first()
+            )
+            if not cc_origem_existe:
+                db.rollback()
+                return jsonify({'sucesso': False, 'mensagem': 'Centro de Custo de origem inválido.'}), 400
+
+            cobridor_cc_id = int(cc_origem_rem_id)
 
     nova_analise = AnaliseFalta(
         ocorrencia_id=ocorrencia.id,
@@ -1006,7 +1032,7 @@ def analisar_falta():
         comunicada_2h_antecedencia=comunicada_2h,
         foi_troca_folga=False,
         autorizado_hora_extra=autorizado_he,
-        autorizador_he_nome=autorizador_he_nome,
+        autorizador_he_nome=autorizador_he_nome_salvo,
         conseguiu_he_cobertura=conseguiu_he,
         cobridor_colaborador_id=cobridor_id,
         cobridor_centro_custo_id=cobridor_cc_id,
@@ -1020,7 +1046,6 @@ def analisar_falta():
     db.commit()
 
     return jsonify({'sucesso': True, 'mensagem': 'Análise registrada com sucesso!'}), 200
-
 
 # ==============================================================================
 # ADMINISTRAÇÃO ROOT (VALIDAÇÃO CRACHÁ, CONVITES, GESTORES, ETL E MÉTRICAS)
