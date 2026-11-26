@@ -2645,3 +2645,304 @@ def sincronizar_censo_unidades():
         db.rollback()
         registrar_log(f"❌ [CENSO] Erro na sincronização: {str(e)}", nivel="ERROR", origem="CENSO")
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao sincronizar censo: {str(e)}'}), 500
+
+def _remover_acentos_upper(texto: str) -> str:
+    nfd = unicodedata.normalize('NFD', str(texto or '').upper().strip())
+    return ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+
+
+def _classificar_unidade_predio(nome_unidade: str) -> dict:
+    """
+    Extrai Complexo (HB, HCM, OUTROS), Andar (8º ANDAR .. SUBSOLO) e Bloco/Ala
+    diretamente do nome da unidade da planilha CENSO_FUNFARME.XLSX.
+    """
+    un = _remover_acentos_upper(nome_unidade)
+
+    # 1. Complexo Hospitalar
+    if un.startswith('HCM'):
+        complexo = 'HCM'
+        complexo_label = 'HCM • Hospital da Criança e Maternidade'
+    elif un.startswith('HB'):
+        complexo = 'HB'
+        complexo_label = 'FUNFARME • Hospital de Base'
+    else:
+        complexo = 'OUTROS'
+        complexo_label = 'Unidades Externas / Ambulatórios / ICA'
+
+    # 2. Andar
+    if re.search(r'\b(SS|SSOLO|SUBSOLO)\b', un) or '-SS-' in un:
+        andar_cod = 'SUBSOLO'
+        andar_label = 'SUBSOLO'
+        andar_ordem = 0
+    elif 'TERREO' in un:
+        andar_cod = 'TERREO'
+        andar_label = 'TÉRREO'
+        andar_ordem = 1
+    else:
+        m_andar = re.search(r'\b([1-8])\s*[º°O]?\b', un)
+        if m_andar:
+            num = int(m_andar.group(1))
+            andar_cod = f'{num}_ANDAR'
+            andar_label = f'{num}º ANDAR'
+            andar_ordem = num + 1  # 2 a 9
+        else:
+            andar_cod = 'SEM_ANDAR'
+            andar_label = 'ALAS ESPECIAIS'
+            andar_ordem = -1
+
+    # 3. Bloco / Ala
+    m_bloco = re.search(r'\bBL(?:OCO)?\.?\s*([A-E])\b', un)
+    if m_bloco:
+        letra = m_bloco.group(1)
+        bloco_cod = f'BLOCO_{letra}'
+        bloco_label = f'BLOCO {letra}'
+        bloco_ordem = {'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5}.get(letra, 9)
+    elif 'BLA' in un:
+        bloco_cod = 'BLOCO_A'
+        bloco_label = 'BLOCO A'
+        bloco_ordem = 1
+    elif any(k in un for k in ('EMERG', 'TRIAGEM', 'PA SUS', 'URG/EMERG')):
+        bloco_cod = 'EMERGENCIA'
+        bloco_label = 'EMERGÊNCIA / PA'
+        bloco_ordem = 6
+    elif any(k in un for k in ('CC-', 'CC ', 'CENTRO CIRURGICO', 'CENTRO OBSTETRICO')):
+        bloco_cod = 'CENTRO_CIRURGICO'
+        bloco_label = 'CENTRO CIRÚRGICO'
+        bloco_ordem = 7
+    elif any(k in un for k in ('UTI', 'CARDIOINTENSIVISMO', 'INTENSIVA', 'UCIN')):
+        bloco_cod = 'UTI'
+        bloco_label = 'TERAPIA INTENSIVA'
+        bloco_ordem = 8
+    else:
+        bloco_cod = 'GERAL'
+        bloco_label = 'ENFERMARIA / GERAL'
+        bloco_ordem = 9
+
+    return {
+        'complexo': complexo,
+        'complexo_label': complexo_label,
+        'andar_cod': andar_cod,
+        'andar_label': andar_label,
+        'andar_ordem': andar_ordem,
+        'bloco_cod': bloco_cod,
+        'bloco_label': bloco_label,
+        'bloco_ordem': bloco_ordem,
+    }
+
+
+@api_bp.route('/root/mapa-assistencial', methods=['GET'])
+def root_mapa_assistencial():
+    """
+    Consolida o Censo em tempo real (CENSO_FUNFARME.XLSX) com os resumos enviados
+    na Programação Assistencial por Data e Turno para a visão arquitetônica do ROOT.
+    """
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    data_str = str(request.args.get('data') or '').strip()
+    turno = str(request.args.get('turno') or 'DIURNO').strip().upper()
+    if turno not in ('DIURNO', 'NOTURNO'):
+        turno = 'DIURNO'
+
+    hoje_br = (datetime.now(timezone.utc) - timedelta(hours=3)).date()
+    try:
+        data_ref = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else hoje_br
+    except ValueError:
+        data_ref = hoje_br
+
+    db = get_db()
+
+    unidades_censo = (
+        db.query(CensoInternacaoUnidade)
+        .order_by(CensoInternacaoUnidade.nome_unidade.asc())
+        .all()
+    )
+
+    programacoes = (
+        db.query(ProgramacaoAssistencial)
+        .options(
+            joinedload(ProgramacaoAssistencial.gestor).joinedload(Usuario.colaborador),
+            selectinload(ProgramacaoAssistencial.remanejamentos),
+        )
+        .filter(
+            ProgramacaoAssistencial.data_programacao == data_ref,
+            ProgramacaoAssistencial.turno == turno,
+        )
+        .all()
+    )
+    prog_por_unidade = {p.nome_unidade: p for p in programacoes}
+
+    # Garante inclusão mesmo se alguma programação existir para unidade ausente no censo atual
+    todos_nomes = sorted(
+        {u.nome_unidade for u in unidades_censo} | set(prog_por_unidade.keys())
+    )
+    censo_map = {u.nome_unidade: u for u in unidades_censo}
+
+    complexos_dict = {}
+    resumo_geral = {
+        'total_unidades': len(todos_nomes),
+        'unidades_programadas': 0,
+        'unidades_pendentes': 0,
+        'total_internados': 0,
+        'total_leitos_fisicos': 0,
+        'total_leitos_bloqueados': 0,
+        'total_leitos_operacionais': 0,
+        'total_leitos_vagos': 0,
+        'total_colab_programados': 0,
+        'total_colab_efetivos': 0,
+        'censo_atualizado_em': None,
+    }
+
+    ultima_sync = max((u.atualizado_em for u in unidades_censo if u.atualizado_em), default=None)
+    if ultima_sync:
+        resumo_geral['censo_atualizado_em'] = (ultima_sync - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
+
+    for nome_un in todos_nomes:
+        meta = _classificar_unidade_predio(nome_un)
+        censo_obj = censo_map.get(nome_un)
+        prog_obj = prog_por_unidade.get(nome_un)
+
+        internados_censo = censo_obj.qtd_internacao if censo_obj else 0
+
+        if prog_obj:
+            resumo_geral['unidades_programadas'] += 1
+            internados = prog_obj.pacientes_internados
+            leitos_fisicos = prog_obj.leitos_fisicos
+            leitos_bloq = prog_obj.leitos_bloqueados
+            leitos_op = prog_obj.leitos_operacionais
+            leitos_vagos = prog_obj.leitos_vagos
+            taxa_ocup = float(prog_obj.taxa_ocupacao or 0)
+            qtd_prog = prog_obj.qtd_colaboradores_programados
+            qtd_emp = prog_obj.qtd_emprestados
+            qtd_rec = prog_obj.qtd_recebidos
+            qtd_efet = prog_obj.qtd_colaboradores_efetivos
+            pac_colab = float(prog_obj.pacientes_por_colaborador or 0)
+            leitos_colab = float(prog_obj.leitos_por_colaborador or 0)
+
+            resumo_geral['total_leitos_fisicos'] += leitos_fisicos
+            resumo_geral['total_leitos_bloqueados'] += leitos_bloq
+            resumo_geral['total_leitos_operacionais'] += leitos_op
+            resumo_geral['total_leitos_vagos'] += leitos_vagos
+            resumo_geral['total_colab_programados'] += qtd_prog
+            resumo_geral['total_colab_efetivos'] += qtd_efet
+
+            if taxa_ocup >= 95 or pac_colab >= 6.0:
+                status_criticidade = 'CRITICO'
+            elif taxa_ocup >= 85 or pac_colab >= 4.5:
+                status_criticidade = 'ATENCAO'
+            else:
+                status_criticidade = 'NORMAL'
+
+            detalhe_prog = {
+                'programado': True,
+                'gestor_nome': (
+                    prog_obj.gestor.colaborador.nome
+                    if prog_obj.gestor and prog_obj.gestor.colaborador else '--'
+                ),
+                'atualizado_em': (
+                    (prog_obj.atualizado_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M')
+                    if prog_obj.atualizado_em else '--'
+                ),
+                'qtd_programados': qtd_prog,
+                'qtd_emprestados': qtd_emp,
+                'qtd_recebidos': qtd_rec,
+                'qtd_efetivos': qtd_efet,
+                'leitos_fisicos': leitos_fisicos,
+                'leitos_bloqueados': leitos_bloq,
+                'leitos_operacionais': leitos_op,
+                'leitos_vagos': leitos_vagos,
+                'taxa_ocupacao': taxa_ocup,
+                'pacientes_por_colaborador': pac_colab,
+                'leitos_por_colaborador': leitos_colab,
+                'observacao': prog_obj.observacao or '',
+                'remanejamentos': [
+                    {
+                        'tipo': r.tipo,
+                        'quantidade': r.quantidade,
+                        'unidade_contraparte': r.unidade_contraparte,
+                    }
+                    for r in prog_obj.remanejamentos
+                ],
+            }
+        else:
+            resumo_geral['unidades_pendentes'] += 1
+            internados = internados_censo
+            status_criticidade = 'PENDENTE'
+            detalhe_prog = {
+                'programado': False,
+                'gestor_nome': None,
+                'atualizado_em': None,
+                'qtd_programados': 0,
+                'qtd_emprestados': 0,
+                'qtd_recebidos': 0,
+                'qtd_efetivos': 0,
+                'leitos_fisicos': 0,
+                'leitos_bloqueados': 0,
+                'leitos_operacionais': 0,
+                'leitos_vagos': 0,
+                'taxa_ocupacao': 0,
+                'pacientes_por_colaborador': 0,
+                'leitos_por_colaborador': 0,
+                'observacao': '',
+                'remanejamentos': [],
+            }
+
+        resumo_geral['total_internados'] += internados
+
+        unidade_item = {
+            'nome_unidade': nome_un,
+            'pacientes_internados': internados,
+            'internados_censo_atual': internados_censo,
+            'status_criticidade': status_criticidade,
+            'bloco_cod': meta['bloco_cod'],
+            'bloco_label': meta['bloco_label'],
+            **detalhe_prog,
+        }
+
+        comp_entry = complexos_dict.setdefault(meta['complexo'], {
+            'complexo': meta['complexo'],
+            'complexo_label': meta['complexo_label'],
+            'andares_map': {},
+        })
+        andar_entry = comp_entry['andares_map'].setdefault(meta['andar_cod'], {
+            'andar_cod': meta['andar_cod'],
+            'andar_label': meta['andar_label'],
+            'andar_ordem': meta['andar_ordem'],
+            'blocos_map': {},
+        })
+        bloco_entry = andar_entry['blocos_map'].setdefault(meta['bloco_cod'], {
+            'bloco_cod': meta['bloco_cod'],
+            'bloco_label': meta['bloco_label'],
+            'bloco_ordem': meta['bloco_ordem'],
+            'unidades': [],
+        })
+        bloco_entry['unidades'].append(unidade_item)
+
+    complexos_ordenados = []
+    for comp_key in ('HB', 'HCM', 'OUTROS'):
+        comp = complexos_dict.get(comp_key)
+        if not comp:
+            continue
+        andares_list = sorted(
+            comp['andares_map'].values(),
+            key=lambda a: a['andar_ordem'],
+            reverse=True,
+        )
+        for a in andares_list:
+            blocos_list = sorted(a['blocos_map'].values(), key=lambda b: b['bloco_ordem'])
+            a['blocos'] = blocos_list
+            del a['blocos_map']
+        complexos_ordenados.append({
+            'complexo': comp['complexo'],
+            'complexo_label': comp['complexo_label'],
+            'andares': andares_list,
+        })
+
+    return jsonify({
+        'sucesso': True,
+        'data_iso': data_ref.isoformat(),
+        'data_br': data_ref.strftime('%d/%m/%Y'),
+        'turno': turno,
+        'resumo': resumo_geral,
+        'complexos': complexos_ordenados,
+    }), 200    

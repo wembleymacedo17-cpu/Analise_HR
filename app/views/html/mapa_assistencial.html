@@ -1,0 +1,310 @@
+<section id="aba-mapa-assistencial" class="tab-content">
+    <div class="mapa-toolbar-card">
+        <div>
+            <h2 class="panel-title" style="margin-bottom: 4px;">Mapa Assistencial • Visão Estrutural por Andar e Bloco</h2>
+            <div style="font-size: 0.78rem; color: #64748b;" id="mapa-subtitulo-sync">
+                Cruzamento em tempo real: Censo Hospitalar × Programação Assistencial
+            </div>
+        </div>
+
+        <div class="mapa-filtros-grupo">
+            <div class="mapa-complexo-tabs">
+                <button type="button" class="mapa-comp-btn active" data-comp="HB" onclick="selecionarComplexoMapa('HB', this)">Hospital de Base (HB)</button>
+                <button type="button" class="mapa-comp-btn" data-comp="HCM" onclick="selecionarComplexoMapa('HCM', this)">HCM</button>
+                <button type="button" class="mapa-comp-btn" data-comp="TODOS" onclick="selecionarComplexoMapa('TODOS', this)">Todos</button>
+            </div>
+
+            <input type="date" id="mapa-filtro-data" class="input-control" style="padding: 8px 11px; font-size: 0.82rem;" onchange="carregarMapaAssistencial()">
+
+            <select id="mapa-filtro-turno" class="select-control" style="padding: 8px 11px; font-size: 0.82rem;" onchange="carregarMapaAssistencial()">
+                <option value="DIURNO" selected>Turno Diurno</option>
+                <option value="NOTURNO">Turno Noturno</option>
+            </select>
+
+            <input type="text" id="mapa-filtro-busca" class="input-control" style="padding: 8px 11px; font-size: 0.82rem; width: 190px;" placeholder="Filtrar unidade..." oninput="renderizarPredioMapa()">
+
+            <button type="button" class="btn btn-primary btn-sm" onclick="carregarMapaAssistencial()">Atualizar</button>
+        </div>
+
+        <div class="mapa-legenda-row" style="width: 100%; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+            <span>Legenda:</span>
+            <span class="mapa-leg-item"><span class="mapa-leg-dot" style="background:#10b981;"></span> Normal (&lt;85% ocup.)</span>
+            <span class="mapa-leg-item"><span class="mapa-leg-dot" style="background:#f59e0b;"></span> Atenção (85%–94% ou ≥4,5 pac/colab)</span>
+            <span class="mapa-leg-item"><span class="mapa-leg-dot" style="background:#ef4444;"></span> Crítico (≥95% ou ≥6,0 pac/colab)</span>
+            <span class="mapa-leg-item"><span class="mapa-leg-dot" style="background:#94a3b8;"></span> Sem Programação no Turno</span>
+        </div>
+    </div>
+
+    <!-- KPIS CONSOLIDADOS DO HOSPITAL -->
+    <div class="mapa-kpis-bar">
+        <div class="mapa-kpi-mini">
+            <span>Unidades Programadas</span>
+            <strong id="mkpi-programadas" style="color:#059669;">--</strong>
+        </div>
+        <div class="mapa-kpi-mini">
+            <span>Pendentes de Envio</span>
+            <strong id="mkpi-pendentes" style="color:#d97706;">--</strong>
+        </div>
+        <div class="mapa-kpi-mini">
+            <span>Pacientes Internados</span>
+            <strong id="mkpi-internados" style="color:#1e3a8a;">--</strong>
+        </div>
+        <div class="mapa-kpi-mini">
+            <span>Leitos Operacionais / Vagos</span>
+            <strong id="mkpi-leitos">--</strong>
+        </div>
+        <div class="mapa-kpi-mini">
+            <span>Colaboradores Efetivos</span>
+            <strong id="mkpi-colaboradores" style="color:#0284c7;">--</strong>
+        </div>
+    </div>
+
+    <!-- CONTAINER DO PRÉDIO INTERATIVO -->
+    <div id="mapa-predios-container">
+        <div style="text-align:center; padding: 40px; color:#64748b;">Carregando estrutura hospitalar...</div>
+    </div>
+</section>
+
+<!-- MODAL DETALHE EXECUTIVO DA UNIDADE (AO CLICAR NO APARTAMENTO DO PRÉDIO) -->
+<div id="modal-detalhe-unidade-mapa" class="modal-backdrop">
+    <div class="modal-card" style="max-width: 600px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div>
+                <h3 id="mu-titulo">--</h3>
+                <div class="modal-info" id="mu-subtitulo">--</div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalUnidadeMapa()">Fechar</button>
+        </div>
+
+        <div class="modal-body-scroll" id="mu-conteudo"></div>
+    </div>
+</div>
+
+<script>
+    let mapaAssistencialData = null;
+    let complexoSelecionadoMapa = "HB";
+    let unidadesMapaIndex = new Map();
+
+    function selecionarComplexoMapa(comp, btn) {
+        complexoSelecionadoMapa = comp;
+        document.querySelectorAll(".mapa-comp-btn").forEach(b => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
+        renderizarPredioMapa();
+    }
+
+    async function carregarMapaAssistencial() {
+        const container = document.getElementById("mapa-predios-container");
+        if (!container) return;
+
+        const inpData = document.getElementById("mapa-filtro-data");
+        const selTurno = document.getElementById("mapa-filtro-turno");
+        const params = new URLSearchParams();
+        if (inpData && inpData.value) params.set("data", inpData.value);
+        if (selTurno && selTurno.value) params.set("turno", selTurno.value);
+
+        container.innerHTML = '<div style="text-align:center; padding: 40px; color:#64748b;">Carregando andares e blocos...</div>';
+
+        try {
+            const res = await fetch(`/api/root/mapa-assistencial?${params.toString()}`, { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso) {
+                container.innerHTML = `<div style="text-align:center; padding: 32px; color:#dc2626;">${d.mensagem}</div>`;
+                return;
+            }
+
+            mapaAssistencialData = d;
+            if (inpData && !inpData.value && d.data_iso) {
+                inpData.value = d.data_iso;
+            }
+
+            const r = d.resumo || {};
+            document.getElementById("mkpi-programadas").innerText = `${r.unidades_programadas} / ${r.total_unidades}`;
+            document.getElementById("mkpi-pendentes").innerText = r.unidades_pendentes;
+            document.getElementById("mkpi-internados").innerText = r.total_internados;
+            document.getElementById("mkpi-leitos").innerText = `${r.total_leitos_operacionais} / ${r.total_leitos_vagos}`;
+            document.getElementById("mkpi-colaboradores").innerText = r.total_colab_efetivos;
+
+            document.getElementById("mapa-subtitulo-sync").innerText =
+                `Data: ${d.data_br} • Turno: ${d.turno}` +
+                (r.censo_atualizado_em ? ` • Último Censo MV: ${r.censo_atualizado_em}` : "");
+
+            renderizarPredioMapa();
+        } catch (err) {
+            container.innerHTML = '<div style="text-align:center; padding: 32px; color:#dc2626;">Erro ao carregar mapa assistencial.</div>';
+        }
+    }
+
+    function renderizarPredioMapa() {
+        const container = document.getElementById("mapa-predios-container");
+        if (!container || !mapaAssistencialData) return;
+
+        const termo = (document.getElementById("mapa-filtro-busca")?.value || "").toLowerCase().trim();
+        unidadesMapaIndex.clear();
+
+        const complexosFiltrados = (mapaAssistencialData.complexos || []).filter(c =>
+            complexoSelecionadoMapa === "TODOS" || c.complexo === complexoSelecionadoMapa
+        );
+
+        if (!complexosFiltrados.length) {
+            container.innerHTML = '<div style="text-align:center; padding: 32px; color:#64748b;">Nenhuma unidade encontrada para este complexo.</div>';
+            return;
+        }
+
+        const htmlComplexos = complexosFiltrados.map(comp => {
+            const andaresHtml = (comp.andares || []).map(andar => {
+                const blocosHtml = (andar.blocos || []).map(bloco => {
+                    const unidadesFiltradas = (bloco.unidades || []).filter(u =>
+                        !termo || u.nome_unidade.toLowerCase().includes(termo)
+                    );
+                    if (!unidadesFiltradas.length) return "";
+
+                    const cardsHtml = unidadesFiltradas.map(u => {
+                        unidadesMapaIndex.set(u.nome_unidade, u);
+
+                        const st = u.status_criticidade;
+                        let badgeCls = "pend", badgeTxt = "Pendente", barColor = "#94a3b8", barPct = 0;
+                        if (u.programado) {
+                            barPct = Math.min(100, Math.round(u.taxa_ocupacao));
+                            if (st === "CRITICO") {
+                                badgeCls = "crit"; badgeTxt = `${u.taxa_ocupacao}% • Crítico`; barColor = "#ef4444";
+                            } else if (st === "ATENCAO") {
+                                badgeCls = "warn"; badgeTxt = `${u.taxa_ocupacao}% • Atenção`; barColor = "#f59e0b";
+                            } else {
+                                badgeCls = "ok"; badgeTxt = `${u.taxa_ocupacao}% • Normal`; barColor = "#10b981";
+                            }
+                        }
+
+                        const leitosTxt = u.programado ? `${u.pacientes_internados}/${u.leitos_operacionais}` : `${u.pacientes_internados}/--`;
+                        const colabTxt = u.programado ? `${u.qtd_efetivos}` : "--";
+                        const ratioTxt = u.programado ? `${u.pacientes_por_colaborador}` : "--";
+
+                        return `
+                            <div class="unidade-room-card st-${st}" onclick="abrirDetalheUnidadeMapa('${u.nome_unidade.replace(/'/g, "\\'")}')">
+                                <div class="room-top-line">
+                                    <div class="room-name">${u.nome_unidade}</div>
+                                    <span class="room-badge ${badgeCls}">${badgeTxt}</span>
+                                </div>
+                                <div class="room-metrics-grid">
+                                    <div class="room-metric-cell">
+                                        <span>Intern/Leit</span>
+                                        <strong>${leitosTxt}</strong>
+                                    </div>
+                                    <div class="room-metric-cell">
+                                        <span>Equipe Efet.</span>
+                                        <strong>${colabTxt}</strong>
+                                    </div>
+                                    <div class="room-metric-cell">
+                                        <span>Pac/Colab</span>
+                                        <strong>${ratioTxt}</strong>
+                                    </div>
+                                </div>
+                                ${u.programado ? `<div class="room-progress-bar"><div class="room-progress-fill" style="width:${barPct}%; background:${barColor};"></div></div>` : ""}
+                            </div>
+                        `;
+                    }).join("");
+
+                    return `
+                        <div class="predio-bloco-box">
+                            <div class="bloco-header-bar bl-${bloco.bloco_cod}">${bloco.bloco_label}</div>
+                            <div class="bloco-unidades-list">${cardsHtml}</div>
+                        </div>
+                    `;
+                }).filter(Boolean).join("");
+
+                if (!blocosHtml) return "";
+
+                const andarExtraCls = andar.andar_cod === "TERREO"
+                    ? "is-terreo"
+                    : (andar.andar_cod === "SUBSOLO" ? "is-subsolo" : "");
+
+                const totalPacAndar = (andar.blocos || []).reduce(
+                    (acc, b) => acc + (b.unidades || []).reduce((s, u) => s + (u.pacientes_internados || 0), 0),
+                    0
+                );
+
+                return `
+                    <div class="predio-andar-row">
+                        <div class="andar-badge-col ${andarExtraCls}">
+                            <div class="andar-badge-num">${andar.andar_label}</div>
+                            <div class="andar-badge-sub">${totalPacAndar} pac.</div>
+                        </div>
+                        <div class="andar-blocos-grid">${blocosHtml}</div>
+                    </div>
+                `;
+            }).filter(Boolean).join("");
+
+            if (!andaresHtml) return "";
+
+            return `
+                <div class="predio-wrapper">
+                    <div class="predio-roof-banner">
+                        <div class="predio-roof-cross">+</div>
+                        <div>
+                            <div class="predio-roof-title">${comp.complexo_label}</div>
+                            <div class="predio-roof-sub">Programação Assistencial • ${mapaAssistencialData.data_br} (${mapaAssistencialData.turno})</div>
+                        </div>
+                    </div>
+                    <div class="predio-andares-stack">${andaresHtml}</div>
+                </div>
+            `;
+        }).filter(Boolean).join("");
+
+        container.innerHTML = htmlComplexos || '<div style="text-align:center; padding: 32px; color:#64748b;">Nenhuma unidade encontrada com o filtro aplicado.</div>';
+    }
+
+    function abrirDetalheUnidadeMapa(nomeUnidade) {
+        const u = unidadesMapaIndex.get(nomeUnidade);
+        if (!u) return;
+
+        document.getElementById("mu-titulo").innerText = u.nome_unidade;
+        document.getElementById("mu-subtitulo").innerText =
+            `${u.bloco_label} • ${mapaAssistencialData.data_br} (${mapaAssistencialData.turno})`;
+
+        const body = document.getElementById("mu-conteudo");
+        if (!u.programado) {
+            body.innerHTML = `
+                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:16px; color:#92400e; font-size:0.86rem; line-height:1.5;">
+                    <strong>Programação Assistencial ainda não lançada para este turno.</strong><br>
+                    Pacientes internados no Censo MV atual: <strong>${u.internados_censo_atual}</strong>.
+                </div>
+            `;
+        } else {
+            const remsHtml = (u.remanejamentos && u.remanejamentos.length)
+                ? u.remanejamentos.map(r => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; font-size:0.8rem;">
+                        <span><strong>${r.tipo === "EMPRESTIMO" ? "Emprestou para" : "Recebeu de"}:</strong> ${r.unidade_contraparte}</span>
+                        <span class="status-pill ${r.tipo === "EMPRESTIMO" ? "pill-pendente" : "pill-analisada"}">${r.quantidade} colab.</span>
+                    </div>
+                `).join("")
+                : '<div style="font-size:0.8rem; color:#64748b;">Sem remanejamentos registrados neste turno.</div>';
+
+            body.innerHTML = `
+                <div style="font-size:0.8rem; color:#475569; margin-bottom:12px;">
+                    Lançado por <strong>${u.gestor_nome}</strong> em ${u.atualizado_em}
+                </div>
+
+                <div class="detalhe-grid" style="margin-bottom:14px;">
+                    <div class="detalhe-item"><div class="detalhe-item-label">Pacientes Internados</div><div class="detalhe-item-val">${u.pacientes_internados}</div></div>
+                    <div class="detalhe-item"><div class="detalhe-item-label">Taxa de Ocupação</div><div class="detalhe-item-val">${u.taxa_ocupacao}%</div></div>
+                    <div class="detalhe-item"><div class="detalhe-item-label">Leitos Físicos / Bloq.</div><div class="detalhe-item-val">${u.leitos_fisicos} / ${u.leitos_bloqueados}</div></div>
+                    <div class="detalhe-item"><div class="detalhe-item-label">Leitos Operac. / Vagos</div><div class="detalhe-item-val">${u.leitos_operacionais} / ${u.leitos_vagos}</div></div>
+                    <div class="detalhe-item"><div class="detalhe-item-label">Equipe Prog. → Efetiva</div><div class="detalhe-item-val">${u.qtd_programados} → ${u.qtd_efetivos}</div></div>
+                    <div class="detalhe-item"><div class="detalhe-item-label">Pac/Colab • Leitos/Colab</div><div class="detalhe-item-val">${u.pacientes_por_colaborador} • ${u.leitos_por_colaborador}</div></div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.78rem; font-weight:800; color:#334155; margin-bottom:6px; text-transform:uppercase;">Remanejamentos no Turno</div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">${remsHtml}</div>
+                </div>
+
+                ${u.observacao ? `<div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font-size:0.82rem; color:#334155;"><strong>Observação do Gestor:</strong> ${u.observacao}</div>` : ""}
+            `;
+        }
+
+        document.getElementById("modal-detalhe-unidade-mapa").style.display = "flex";
+    }
+
+    function fecharModalUnidadeMapa() {
+        document.getElementById("modal-detalhe-unidade-mapa").style.display = "none";
+    }
+</script>

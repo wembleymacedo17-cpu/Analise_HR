@@ -1,0 +1,356 @@
+/* ==========================================================================
+   MAPA ASSISTENCIAL (VISÃO ARQUITETÔNICA DO PRÉDIO POR ANDAR E BLOCO - ROOT)
+   ========================================================================== */
+
+.mapa-toolbar-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.mapa-filtros-grupo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.mapa-complexo-tabs {
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 11px;
+    border: 1px solid #e2e8f0;
+    gap: 4px;
+}
+
+.mapa-comp-btn {
+    border: none;
+    background: transparent;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.mapa-comp-btn.active {
+    background: #1e3a8a;
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(30, 58, 138, 0.25);
+}
+
+.mapa-legenda-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.mapa-leg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mapa-leg-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* KPIs EXECUTIVOS DO HOSPITAL */
+.mapa-kpis-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.mapa-kpi-mini {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.mapa-kpi-mini span {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.mapa-kpi-mini strong {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+/* FACHADA DO PRÉDIO (ESTILO CORTE ARQUITETÔNICO DA IMAGEM) */
+.predio-wrapper {
+    background: #e2e8f0;
+    border: 3px solid #cbd5e1;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 45px -18px rgba(15, 23, 42, 0.28);
+    margin-bottom: 28px;
+}
+
+.predio-roof-banner {
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    border-bottom: 4px solid #1e3a8a;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+}
+
+.predio-roof-cross {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #1e3a8a;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    box-shadow: 0 6px 14px rgba(30, 58, 138, 0.28);
+    flex-shrink: 0;
+}
+
+.predio-roof-title {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #1e3a8a;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+}
+
+.predio-roof-sub {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #334155;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.predio-andares-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    background: #cbd5e1;
+}
+
+.predio-andar-row {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 8px;
+    align-items: stretch;
+}
+
+@media (max-width: 820px) {
+    .predio-andar-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* PLACA LATERAL DO ANDAR */
+.andar-badge-col {
+    border-radius: 12px;
+    padding: 12px 8px;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 900;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 10px rgba(15, 23, 42, 0.18);
+    background: linear-gradient(160deg, #1e3a8a 0%, #172554 100%);
+}
+
+.andar-badge-col.is-terreo {
+    background: linear-gradient(160deg, #b45309 0%, #78350f 100%);
+}
+
+.andar-badge-col.is-subsolo {
+    background: linear-gradient(160deg, #b91c1c 0%, #7f1d1d 100%);
+}
+
+.andar-badge-num {
+    font-size: 1.15rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.andar-badge-sub {
+    font-size: 0.65rem;
+    opacity: 0.85;
+    margin-top: 4px;
+    font-weight: 700;
+}
+
+/* COLUNAS DE BLOCOS DENTRO DO ANDAR */
+.andar-blocos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 8px;
+}
+
+.predio-bloco-box {
+    background: #1e293b;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+}
+
+.bloco-header-bar {
+    padding: 6px 12px;
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #ffffff;
+    text-align: center;
+    background: #1e3a8a;
+}
+
+/* CORES DOS CABEÇALHOS DE BLOCO IGUAIS À IMAGEM */
+.bloco-header-bar.bl-BLOCO_A { background: linear-gradient(90deg, #1e3a8a, #1d4ed8); }
+.bloco-header-bar.bl-BLOCO_B { background: linear-gradient(90deg, #365314, #4d7c0f); }
+.bloco-header-bar.bl-BLOCO_C { background: linear-gradient(90deg, #9a3412, #c2410c); }
+.bloco-header-bar.bl-BLOCO_D { background: linear-gradient(90deg, #581c87, #7e22ce); }
+.bloco-header-bar.bl-BLOCO_E { background: linear-gradient(90deg, #115e59, #0f766e); }
+.bloco-header-bar.bl-EMERGENCIA { background: linear-gradient(90deg, #991b1b, #dc2626); }
+.bloco-header-bar.bl-CENTRO_CIRURGICO { background: linear-gradient(90deg, #065f46, #059669); }
+.bloco-header-bar.bl-UTI { background: linear-gradient(90deg, #312e81, #4338ca); }
+.bloco-header-bar.bl-GERAL { background: linear-gradient(90deg, #334155, #475569); }
+
+.bloco-unidades-list {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* CARD INTERATIVO DA UNIDADE DENTRO DO BLOCO */
+.unidade-room-card {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-left-width: 5px;
+    border-radius: 10px;
+    padding: 9px 11px;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.unidade-room-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.unidade-room-card.st-NORMAL { border-left-color: #10b981; }
+.unidade-room-card.st-ATENCAO { border-left-color: #f59e0b; background: #fffbeb; }
+.unidade-room-card.st-CRITICO { border-left-color: #ef4444; background: #fef2f2; }
+.unidade-room-card.st-PENDENTE { border-left-color: #94a3b8; background: #f8fafc; opacity: 0.92; }
+
+.room-top-line {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.room-name {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.room-badge {
+    font-size: 0.64rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.room-badge.ok { background: #d1fae5; color: #065f46; }
+.room-badge.warn { background: #fef3c7; color: #92400e; }
+.room-badge.crit { background: #fee2e2; color: #991b1b; }
+.room-badge.pend { background: #e2e8f0; color: #475569; }
+
+.room-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    background: rgba(241, 245, 249, 0.85);
+    border-radius: 7px;
+    padding: 5px 6px;
+    text-align: center;
+}
+
+.room-metric-cell span {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.room-metric-cell strong {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+
+.room-progress-bar {
+    width: 100%;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.room-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}

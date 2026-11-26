@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/programacao_assistencial.css') }}">
     {% endif %}
     {% if perfil == 'ROOT' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mapa_assistencial.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/convite.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/gestao_perfis.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/integracao_senior.css') }}">
@@ -87,6 +88,25 @@
                     {% endif %}
 
                     {% if perfil == 'ROOT' %}
+                    <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-mapa-assistencial', this)">
+                        <span class="nav-icon-wrap">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+                                <path d="M9 22v-4h6v4"></path>
+                                <path d="M8 6h.01"></path>
+                                <path d="M16 6h.01"></path>
+                                <path d="M12 6h.01"></path>
+                                <path d="M12 10h.01"></path>
+                                <path d="M12 14h.01"></path>
+                                <path d="M16 10h.01"></path>
+                                <path d="M16 14h.01"></path>
+                                <path d="M8 10h.01"></path>
+                                <path d="M8 14h.01"></path>
+                            </svg>
+                        </span>
+                        <span>Mapa Assistencial</span>
+                    </button>
+
                     <button type="button" class="glass-nav-btn" onclick="trocarAba('aba-convites', this)">
                         <span class="nav-icon-wrap">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
@@ -152,25 +172,29 @@
         </div>
 
         <main class="container">
-            <section id="kpi-grid" class="kpi-grid">
-                <div class="kpi-card">
-                    <span class="kpi-label">Pendentes</span>
-                    <span class="kpi-value kpi-pendente" id="kpi-pendentes">--</span>
+            <section id="kpi-grid" class="premium-kpi-panel">
+                <div class="premium-kpi-header">Resumo Operacional de Faltas</div>
+                <div class="premium-kpi-rings">
+                    <div class="premium-kpi-ring-card ring-pendente">
+                        <span class="premium-kpi-num" id="kpi-pendentes">--</span>
+                        <span class="premium-kpi-lbl">Pendentes</span>
+                    </div>
+                    <div class="premium-kpi-ring-card ring-analisada">
+                        <span class="premium-kpi-num" id="kpi-analisadas">--</span>
+                        <span class="premium-kpi-lbl">Analisadas</span>
+                    </div>
+                    {% if perfil == 'ROOT' %}
+                    <div class="premium-kpi-ring-card ring-info">
+                        <span class="premium-kpi-num" id="kpi-gestores">--</span>
+                        <span class="premium-kpi-lbl">Gestores Ativos</span>
+                    </div>
+                    <div class="premium-kpi-ring-card ring-neutro">
+                        <span class="premium-kpi-num" id="kpi-convites">--</span>
+                        <span class="premium-kpi-lbl">Convites Ativos</span>
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="kpi-card">
-                    <span class="kpi-label">Analisadas</span>
-                    <span class="kpi-value kpi-analisada" id="kpi-analisadas">--</span>
-                </div>
-                {% if perfil == 'ROOT' %}
-                <div class="kpi-card">
-                    <span class="kpi-label">Gestores Ativos</span>
-                    <span class="kpi-value kpi-info" id="kpi-gestores">--</span>
-                </div>
-                <div class="kpi-card">
-                    <span class="kpi-label">Convites Ativos</span>
-                    <span class="kpi-value" id="kpi-convites">--</span>
-                </div>
-                {% endif %}
+                <div class="premium-kpi-footer-pill">Monitoramento em tempo real • FUNFARME</div>
             </section>
 
             <!-- TELA 1: VISÃO GLOBAL / ANÁLISE DE FALTAS -->
@@ -182,6 +206,9 @@
             {% endif %}
 
             {% if perfil == 'ROOT' %}
+            <!-- TELA ROOT: MAPA ASSISTENCIAL (PRÉDIO POR ANDAR E BLOCO) -->
+            {% include 'mapa_assistencial.html' %}
+
             <!-- TELA 2: CONVITES DE ACESSO -->
             {% include 'convite.html' %}
 
@@ -209,7 +236,6 @@
             </div>
 
             <div class="modal-body-scroll">
-                <!-- BLOCO CENTROS DE CUSTO VINCULADOS -->
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
                     <div style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: #475569; margin-bottom: 8px;">
                         {{ 'Acesso Global (Administrador)' if perfil == 'ROOT' else 'Centros de Custo Vinculados ao Meu Perfil' }}
@@ -219,7 +245,6 @@
                     </div>
                 </div>
 
-                <!-- FORMULÁRIO DE ALTERAÇÃO DE SENHA -->
                 <form id="form-alterar-propria-senha" onsubmit="salvarPropriaSenha(event)" style="display: flex; flex-direction: column; gap: 12px;">
                     <div style="font-size: 0.88rem; font-weight: 800; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
                         Alterar Minha Senha
@@ -457,9 +482,6 @@
             box.style.display = "block";
         }
 
-        // =====================================================================
-        // MEU PERFIL (VISUALIZAR CCs VINCULADOS & ALTERAR PRÓPRIA SENHA)
-        // =====================================================================
         function mascaraCpfPerfil(input) {
             let v = input.value.replace(/\D/g, "").slice(0, 11);
             v = v.replace(/(\d{3})(\d)/, "$1.$2");
@@ -612,7 +634,7 @@
             if (btn) btn.classList.add("active");
 
             const kpiGrid = document.getElementById("kpi-grid");
-            if (kpiGrid) kpiGrid.style.display = (idAba === "aba-faltas") ? "grid" : "none";
+            if (kpiGrid) kpiGrid.style.display = (idAba === "aba-faltas") ? "block" : "none";
 
             if (window.innerWidth <= 920) {
                 document.getElementById("sidebar").classList.remove("open");
@@ -620,6 +642,7 @@
             }
 
             if (idAba === "aba-faltas" && typeof carregarFaltas === "function") carregarFaltas();
+            else if (idAba === "aba-mapa-assistencial" && typeof carregarMapaAssistencial === "function") carregarMapaAssistencial();
             else if (idAba === "aba-convites" && typeof carregarCentrosCusto === "function") carregarCentrosCusto();
             else if (idAba === "aba-gestores" && typeof carregarGestores === "function") carregarGestores();
             else if (idAba === "aba-etl" && typeof iniciarMonitoramentoETL === "function") iniciarMonitoramentoETL();
