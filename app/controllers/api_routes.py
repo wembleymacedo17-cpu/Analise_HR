@@ -227,22 +227,27 @@ def obter_meu_perfil_api():
 
     db = get_db()
     try:
-        user = (
+        user_row = (
             db.query(
                 Usuario.id,
                 Usuario.role,
-                Colaborador.nome,
-                Colaborador.cracha,
-                CentroCusto.codigo_cc.label('cc_lotacao_cod'),
-                CentroCusto.nome.label('cc_lotacao_nome'),
+                Usuario.colaborador_id,
             )
-            .join(Colaborador, Usuario.colaborador_id == Colaborador.id)
-            .outerjoin(CentroCusto, Colaborador.centro_custo_id == CentroCusto.id)
             .filter(Usuario.id == int(id_user))
             .first()
         )
-        if not user:
+        if not user_row:
             return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+        colab_row = (
+            db.query(
+                Colaborador.nome,
+                Colaborador.cracha,
+                Colaborador.centro_custo_id,
+            )
+            .filter(Colaborador.id == user_row.colaborador_id)
+            .first()
+        )
 
         ccs_rows = (
             db.query(
@@ -250,7 +255,10 @@ def obter_meu_perfil_api():
                 CentroCusto.codigo_cc,
                 CentroCusto.nome,
             )
-            .join(UsuarioCentroCusto, UsuarioCentroCusto.centro_custo_id == CentroCusto.id)
+            .join(
+                UsuarioCentroCusto,
+                UsuarioCentroCusto.centro_custo_id == CentroCusto.id,
+            )
             .filter(
                 UsuarioCentroCusto.usuario_id == int(id_user),
                 CentroCusto.ativo.is_(True),
@@ -269,24 +277,29 @@ def obter_meu_perfil_api():
             for r in ccs_rows
         ]
 
-        cc_lotacao = (
-            f"{user.cc_lotacao_cod} - {user.cc_lotacao_nome}"
-            if user.cc_lotacao_cod and user.cc_lotacao_nome
-            else None
-        )
+        cc_lotacao = None
+        if colab_row and colab_row.centro_custo_id:
+            cc_lot_row = (
+                db.query(CentroCusto.codigo_cc, CentroCusto.nome)
+                .filter(CentroCusto.id == colab_row.centro_custo_id)
+                .first()
+            )
+            if cc_lot_row:
+                cc_lotacao = f"{cc_lot_row.codigo_cc} - {cc_lot_row.nome}"
 
         return jsonify({
             'sucesso': True,
             'perfil': {
-                'id': user.id,
-                'nome': user.nome or session.get('usuario_nome'),
-                'cracha': user.cracha or session.get('cracha'),
-                'role': (user.role or 'GESTOR').upper(),
+                'id': user_row.id,
+                'nome': colab_row.nome if colab_row else session.get('usuario_nome'),
+                'cracha': colab_row.cracha if colab_row else session.get('cracha'),
+                'role': (user_row.role or 'GESTOR').upper(),
                 'cc_lotacao': cc_lotacao,
                 'centros_custo': ccs_vinculados,
             }
         }), 200
     except Exception as e:
+        print(f"❌ [ERRO MEU PERFIL] {e}")
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao buscar perfil: {str(e)}'}), 500
 
 
@@ -298,7 +311,6 @@ def alterar_propria_senha_api():
 
     data = request.json or {}
     cpf_digits = ''.join(filter(str.isdigit, str(data.get('cpf', ''))))
-    cpf = cpf_digits.zfill(11) if cpf_digits else ''
     senha_antiga = str(data.get('senha_antiga') or '').strip()
     nova_senha = str(data.get('nova_senha') or '').strip()
     confirmar_senha = str(data.get('confirmar_senha') or '').strip()
@@ -314,37 +326,44 @@ def alterar_propria_senha_api():
 
     db = get_db()
     try:
-        row = (
-            db.query(
-                Usuario.id,
-                Usuario.senha_hash,
-                Colaborador.cpf,
-            )
-            .join(Colaborador, Usuario.colaborador_id == Colaborador.id)
+        usuario_obj = (
+            db.query(Usuario)
             .filter(Usuario.id == int(id_user))
-            .with_for_update(of=Usuario)
+            .with_for_update()
             .first()
         )
-        if not row:
+        if not usuario_obj:
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
 
-        cpf_cadastrado = ''.join(filter(str.isdigit, str(row.cpf or ''))).zfill(11)
-        if cpf_cadastrado != cpf:
+        colab_row = (
+            db.query(Colaborador.cpf)
+            .filter(Colaborador.id == usuario_obj.colaborador_id)
+            .first()
+        )
+        if not colab_row:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Colaborador não encontrado.'}), 404
+
+        cpf_db_digits = ''.join(filter(str.isdigit, str(colab_row.cpf or '')))
+        cpf_informado_11 = cpf_digits.zfill(11)
+        cpf_db_11 = cpf_db_digits.zfill(11) if cpf_db_digits else ''
+
+        if cpf_db_digits != cpf_digits and cpf_db_11 != cpf_informado_11:
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Cpf não conforme'}), 400
 
-        if not row.senha_hash or not check_password_hash(row.senha_hash, senha_antiga):
+        if not usuario_obj.senha_hash or not check_password_hash(usuario_obj.senha_hash, senha_antiga):
             db.rollback()
             return jsonify({'sucesso': False, 'mensagem': 'Senha não confere'}), 400
 
-        usuario_obj = db.query(Usuario).filter(Usuario.id == int(id_user)).first()
         usuario_obj.senha_hash = generate_password_hash(nova_senha)
         db.commit()
 
         return jsonify({'sucesso': True, 'mensagem': 'Senha alterada com sucesso!'}), 200
     except Exception as e:
         db.rollback()
+        print(f"❌ [ERRO ALTERAR SENHA] {e}")
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao alterar senha: {str(e)}'}), 500
 
 # ==============================================================================
