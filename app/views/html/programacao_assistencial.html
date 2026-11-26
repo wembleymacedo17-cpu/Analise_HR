@@ -17,7 +17,7 @@
                     </div>
                     <div>
                         <h2 class="prog-title">Programação Assistencial</h2>
-                        <p class="prog-subtitle">Dimensionamento, leitos e remanejamento por turno</p>
+                        <p class="prog-subtitle">Dimensionamento, leitos e cobertura por turno</p>
                     </div>
                 </div>
 
@@ -100,67 +100,178 @@
                 </div>
             </div>
 
-            <!-- STEP 2: DIMENSIONAMENTO DE COLABORADORES E LEITOS -->
+            <!-- STEP 2: EQUIPE, LEITOS E COLABORADORES NOVOS -->
             <div id="prog-step-2" class="prog-step-pane" style="display:none;">
-                <div class="prog-section">
-                    <div class="prog-section-title">Equipe e leitos</div>
+                <div class="prog-section" style="display:flex; flex-direction:column; gap:20px;">
+                    <div class="prog-section-title" style="margin-bottom:0;">Equipe e leitos</div>
 
-                    <div class="prog-grid-2-step2">
-                        <div class="prog-field">
-                            <label for="prog-qtd-programados">Aux/Tec Enfermagem *</label>
-                            <input
-                                type="number"
-                                id="prog-qtd-programados"
-                                class="prog-input-pill"
-                                min="1"
-                                step="1"
-                                placeholder="Ex: 10"
-                                oninput="recalcularIndicadoresProgramacao()"
-                            >
+                    <!-- 1. EQUIPE ASSISTENCIAL -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px 18px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+                            <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:800; color:#0f172a;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>Composição da equipe</span>
+                            </div>
+                            <span style="font-size:0.76rem; font-weight:800; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:4px 11px; border-radius:999px;">
+                                Total Aux/Téc: <strong id="lbl-total-aux-step2">0</strong>
+                            </span>
                         </div>
 
-                        <div class="prog-field">
-                            <label for="prog-busca-enfermeiro">Enfermeiro(a) — Crachá ou nome *</label>
-                            <div class="prog-autocomplete-wrap">
-                                <input
-                                    type="text"
-                                    id="prog-busca-enfermeiro"
-                                    class="prog-input-pill"
-                                    placeholder="Digite crachá ou nome..."
-                                    autocomplete="off"
-                                    oninput="buscarEnfermeiroProgDebounced()"
-                                >
-                                <div id="prog-resultados-enfermeiro" class="prog-autocomplete-results"></div>
+                        <div class="prog-grid-2-step2" style="margin-bottom:12px;">
+                            <div class="prog-field">
+                                <label for="prog-busca-enfermeiro">Enfermeiro(a) — Crachá ou nome *</label>
+                                <div class="prog-autocomplete-wrap">
+                                    <input
+                                        type="text"
+                                        id="prog-busca-enfermeiro"
+                                        class="prog-input-pill"
+                                        placeholder="Digite crachá ou nome..."
+                                        autocomplete="off"
+                                        oninput="buscarEnfermeiroProgDebounced()"
+                                    >
+                                    <div id="prog-resultados-enfermeiro" class="prog-autocomplete-results"></div>
+                                </div>
+                                <div id="prog-lista-enfermeiros" class="prog-chips-list"></div>
                             </div>
 
-                            <div id="prog-lista-enfermeiros" class="prog-chips-list"></div>
+                            <div class="prog-field">
+                                <label for="prog-aux-12h">Aux/Téc. Enfermagem — 12h *</label>
+                                <input
+                                    type="number"
+                                    id="prog-aux-12h"
+                                    class="prog-input-pill"
+                                    min="0"
+                                    step="1"
+                                    placeholder="Ex: 5"
+                                    oninput="atualizarTotalAuxiliaresStep2()"
+                                >
+                            </div>
                         </div>
 
-                        <div class="prog-field">
-                            <label for="prog-leitos-bloqueados">Leitos bloqueados</label>
-                            <input
-                                type="number"
-                                id="prog-leitos-bloqueados"
-                                class="prog-input-pill"
-                                min="0"
-                                step="1"
-                                value="0"
-                                placeholder="0"
-                                oninput="recalcularIndicadoresProgramacao()"
-                            >
+                        <div class="prog-grid-2-step2">
+                            <div class="prog-field">
+                                <label for="prog-aux-6h-manha">Aux/Téc. Enfermagem — 6h manhã</label>
+                                <input
+                                    type="number"
+                                    id="prog-aux-6h-manha"
+                                    class="prog-input-pill"
+                                    min="0"
+                                    step="1"
+                                    value="0"
+                                    placeholder="0"
+                                    oninput="atualizarTotalAuxiliaresStep2()"
+                                >
+                            </div>
+
+                            <div class="prog-field">
+                                <label for="prog-aux-6h-tarde">Aux/Téc. Enfermagem — 6h tarde</label>
+                                <input
+                                    type="number"
+                                    id="prog-aux-6h-tarde"
+                                    class="prog-input-pill"
+                                    min="0"
+                                    step="1"
+                                    value="0"
+                                    placeholder="0"
+                                    oninput="atualizarTotalAuxiliaresStep2()"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. LEITOS DA UNIDADE -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px 18px;">
+                        <div style="font-size:0.88rem; font-weight:800; color:#0f172a; margin-bottom:12px;">
+                            Leitos da unidade
                         </div>
 
-                        <div class="prog-field">
-                            <label for="prog-leitos-fisicos">Leitos disponíveis *</label>
-                            <input
-                                type="number"
-                                id="prog-leitos-fisicos"
-                                class="prog-input-pill"
-                                min="1"
-                                step="1"
-                                placeholder="Ex: 40"
-                                oninput="recalcularIndicadoresProgramacao()"
-                            >
+                        <div class="prog-grid-2-step2">
+                            <div class="prog-field">
+                                <label for="prog-leitos-fisicos">Leitos disponíveis *</label>
+                                <input
+                                    type="number"
+                                    id="prog-leitos-fisicos"
+                                    class="prog-input-pill"
+                                    min="1"
+                                    step="1"
+                                    placeholder="Ex: 40"
+                                    oninput="recalcularIndicadoresProgramacao()"
+                                >
+                            </div>
+
+                            <div class="prog-field">
+                                <label for="prog-leitos-bloqueados">Leitos bloqueados</label>
+                                <input
+                                    type="number"
+                                    id="prog-leitos-bloqueados"
+                                    class="prog-input-pill"
+                                    min="0"
+                                    step="1"
+                                    value="0"
+                                    placeholder="0"
+                                    oninput="recalcularIndicadoresProgramacao()"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. COLABORADORES NOVOS -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px 18px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:800; color:#0f172a;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="8.5" cy="7" r="4"></circle>
+                                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                                </svg>
+                                <span>Equipe tem colaboradores novos? *</span>
+                            </div>
+
+                            <div style="display:inline-flex; gap:8px;">
+                                <label class="prog-rem-choice-card choice-neutral" style="margin:0;">
+                                    <input type="radio" name="prog_tem_novos" value="0" checked onchange="aoMudarTemColabNovos()">
+                                    <div class="prog-rem-choice-body" style="padding: 7px 16px; border-radius:999px;">
+                                        <strong>Não</strong>
+                                    </div>
+                                </label>
+                                <label class="prog-rem-choice-card choice-in" style="margin:0;">
+                                    <input type="radio" name="prog_tem_novos" value="1" onchange="aoMudarTemColabNovos()">
+                                    <div class="prog-rem-choice-body" style="padding: 7px 16px; border-radius:999px;">
+                                        <strong>Sim</strong>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="box-colaboradores-novos" style="display:none; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                            <div class="prog-grid-2-step2" style="align-items:center; margin-bottom:12px;">
+                                <div class="prog-field">
+                                    <label for="prog-qtd-colab-novos">Quantidade de colaboradores novos *</label>
+                                    <input
+                                        type="number"
+                                        id="prog-qtd-colab-novos"
+                                        class="prog-input-pill"
+                                        min="1"
+                                        max="20"
+                                        step="1"
+                                        value="1"
+                                        oninput="renderizarCamposColabNovos()"
+                                    >
+                                </div>
+
+                                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between;">
+                                    <span style="font-size:0.78rem; font-weight:700; color:#065f46;">Pacientes atribuídos aos novos</span>
+                                    <strong id="lbl-total-pac-novos" style="font-size:1.05rem; font-weight:800; color:#059669;">0 pacientes</strong>
+                                </div>
+                            </div>
+
+                            <div id="grid-inputs-colab-novos" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(185px, 1fr)); gap:10px;"></div>
                         </div>
                     </div>
                 </div>
@@ -175,12 +286,12 @@
                 </div>
             </div>
 
-            <!-- STEP 3: REMANEJAMENTO -->
+            <!-- STEP 3: COBERTURA, REMANEJAMENTO E HORA EXTRA -->
             <div id="prog-step-3" class="prog-step-pane" style="display:none;">
                 <div class="prog-section">
-                    <div class="prog-section-title">Houve remanejamento no turno?</div>
+                    <div class="prog-section-title">Houve necessidade de cobertura ou remanejamento no turno?</div>
 
-                    <div class="prog-rem-choice-grid">
+                    <div class="prog-rem-choice-grid-2x2">
                         <label class="prog-rem-choice-card choice-neutral">
                             <input type="radio" name="prog_tipo_remanejamento" value="NENHUM" checked onchange="aoMudarTipoRemanejamento()">
                             <div class="prog-rem-choice-body">
@@ -227,17 +338,34 @@
                                 </div>
                             </div>
                         </label>
+
+                        <label class="prog-rem-choice-card choice-he">
+                            <input type="radio" name="prog_tipo_remanejamento" value="HORA_EXTRA" onchange="aoMudarTipoRemanejamento()">
+                            <div class="prog-rem-choice-body">
+                                <span class="prog-rem-choice-icon icon-he">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <strong>Hora Extra</strong>
+                                    <span>Cobertura com jornada adicional</span>
+                                </div>
+                            </div>
+                        </label>
                     </div>
 
+                    <!-- PAINEL: EMPRESTAR OU RECEBER -->
                     <div id="prog-box-remanejamento" class="prog-remanejamento-box mode-out" style="display:none;">
                         <div class="prog-rem-box-header">
                             <span id="badge-modo-remanejamento" class="prog-mode-badge badge-out">
                                 ↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)
                             </span>
-                            <span class="prog-rem-hint">Informe a quantidade e a unidade</span>
+                            <span class="prog-rem-hint">Informe a quantidade, a unidade e a justificativa</span>
                         </div>
 
-                        <div class="prog-grid-rem-form">
+                        <div class="prog-grid-2-step2" style="margin-bottom: 12px;">
                             <div class="prog-field">
                                 <label for="prog-rem-qtd">Quantidade *</label>
                                 <input type="number" id="prog-rem-qtd" class="prog-input-pill prog-control-h" min="1" step="1" value="1" oninput="atualizarPreviewRemanejamento()">
@@ -247,17 +375,30 @@
                                 <label id="lbl-prog-rem-unidade" for="prog-rem-unidade">Unidade de destino *</label>
                                 <select id="prog-rem-unidade" class="prog-input-pill prog-control-h" onchange="atualizarPreviewRemanejamento()"></select>
                             </div>
+                        </div>
 
-                            <div class="prog-field prog-field-btn">
-                                <button type="button" id="btn-add-remanejamento" class="prog-btn-add-action btn-mode-out" onclick="adicionarRemanejamentoLista()">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                    <span>Adicionar</span>
-                                </button>
+                        <!-- JUSTIFICATIVA DO REMANEJAMENTO (RECEBER / EMPRESTAR) -->
+                        <div class="prog-field" style="margin-bottom: 12px;">
+                            <label id="lbl-prog-rem-justificativa">Justificativa do remanejamento *</label>
+                            <div id="prog-rem-just-lista" class="prog-just-radio-list"></div>
+
+                            <div id="prog-rem-just-outro-wrap" style="display:none; margin-top: 8px;">
+                                <textarea
+                                    id="prog-rem-just-outro-texto"
+                                    class="textarea-control"
+                                    style="min-height: 76px;"
+                                    placeholder="Descreva detalhadamente o motivo (mínimo 10 caracteres)..."
+                                ></textarea>
                             </div>
                         </div>
+
+                        <button type="button" id="btn-add-remanejamento" class="prog-btn-add-action btn-mode-out" style="width:100%;" onclick="adicionarRemanejamentoLista()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span id="lbl-btn-add-rem">+ Adicionar movimentação</span>
+                        </button>
 
                         <div class="prog-flow-bar flow-out" id="box-flow-center">
                             <div class="prog-flow-unit">
@@ -270,6 +411,54 @@
                             <div class="prog-flow-unit text-right">
                                 <small>DESTINO</small>
                                 <strong id="lbl-flow-dir-nome">--</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PAINEL: REGISTRO DE HORA EXTRA -->
+                    <div id="prog-box-hora-extra" class="prog-remanejamento-box mode-he" style="display:none;">
+                        <div class="prog-rem-box-header">
+                            <span class="prog-mode-badge badge-he">
+                                🕒 REGISTRO DE HORA EXTRA
+                            </span>
+                            <span class="prog-rem-hint">Informe quem autorizou e a justificativa</span>
+                        </div>
+
+                        <div class="prog-field" style="margin-bottom: 12px;">
+                            <label>Quem autorizou a hora extra? *</label>
+                            <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:10px;">
+                                <label class="prog-rem-choice-card choice-he" style="margin:0;">
+                                    <input type="radio" name="prog_he_tipo_autorizador" value="PLANTAO_ADM" onchange="aoMudarTipoAutorizadorHE()">
+                                    <div class="prog-rem-choice-body" style="padding: 10px 14px; justify-content: center;">
+                                        <strong>Plantão Administrativo</strong>
+                                    </div>
+                                </label>
+                                <label class="prog-rem-choice-card choice-he" style="margin:0;">
+                                    <input type="radio" name="prog_he_tipo_autorizador" value="COORDENACAO" onchange="aoMudarTipoAutorizadorHE()">
+                                    <div class="prog-rem-choice-body" style="padding: 10px 14px; justify-content: center;">
+                                        <strong>Coordenação</strong>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div id="prog-he-select-autorizador-wrap" style="display:none;">
+                                <select id="prog-he-select-autorizador" class="prog-input-pill prog-control-h">
+                                    <option value="">Selecione o nome do responsável...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="prog-field">
+                            <label>Justificativa da hora extra *</label>
+                            <div id="prog-he-just-lista" class="prog-just-radio-list"></div>
+
+                            <div id="prog-he-just-outro-wrap" style="display:none; margin-top: 8px;">
+                                <textarea
+                                    id="prog-he-just-outro-texto"
+                                    class="textarea-control"
+                                    style="min-height: 82px;"
+                                    placeholder="Descreva detalhadamente o motivo da hora extra (mínimo 10 caracteres)..."
+                                ></textarea>
                             </div>
                         </div>
                     </div>
@@ -295,6 +484,7 @@
                 <div class="prog-section">
                     <div class="prog-section-title">Resumo do turno</div>
 
+                    <!-- CONTEXTO: UNIDADE, DATA/TURNO E ENFERMEIRO(A) -->
                     <div class="prog-resumo-contexto">
                         <div>
                             <span class="prog-resumo-lbl">Unidade</span>
@@ -310,10 +500,12 @@
                         </div>
                     </div>
 
+                    <!-- CARDS DE EQUIPE -->
                     <div class="prog-equipe-cards">
                         <div class="prog-mini-stat">
-                            <span class="prog-mini-lbl">Programados</span>
+                            <span class="prog-mini-lbl">Programados (12h / 6h)</span>
                             <strong class="prog-mini-val" id="stat-prog-base">0</strong>
+                            <small id="stat-prog-composicao-detalhe" style="display:block; font-size:0.7rem; color:#64748b; margin-top:3px;">12h: 0 • 6h M: 0 • 6h T: 0</small>
                         </div>
                         <div class="prog-mini-stat">
                             <span class="prog-mini-lbl">Emprestados</span>
@@ -329,6 +521,17 @@
                         </div>
                     </div>
 
+                    <!-- BLOCO NOVAS INFORMAÇÕES: COLABORADORES NOVOS -->
+                    <div id="resumo-box-novos" style="display:none; margin-top: 12px; padding: 12px 15px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.83rem; color: #065f46; line-height: 1.45;">
+                        <strong id="resumo-novos-texto">--</strong>
+                    </div>
+
+                    <!-- BLOCO NOVAS INFORMAÇÕES: HORA EXTRA / REMANEJAMENTOS E JUSTIFICATIVAS -->
+                    <div id="resumo-box-cobertura-extra" style="display:none; margin-top: 10px; padding: 12px 15px; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.83rem; color: #1e40af; line-height: 1.45;">
+                        <div id="resumo-cobertura-extra-texto">--</div>
+                    </div>
+
+                    <!-- INDICADORES DE LEITOS E RAZÕES -->
                     <div class="prog-kpi-grid" style="margin-top: 14px;">
                         <div class="prog-kpi-box">
                             <span class="prog-kpi-lbl">Leitos disponíveis</span>
@@ -381,10 +584,11 @@
                     </button>
                 </div>
             </div>
+
         </div>
 
         <!-- ================================================================== -->
-        <!-- VISÃO 2: CONSULTAR RELATÓRIOS (BENTO GRID POR DATA)                -->
+        <!-- VISÃO 2: CONSULTAR RELATÓRIOS (BENTO GRID POR DATA E TURNO)        -->
         <!-- ================================================================== -->
         <div id="view-prog-consultar" class="prog-card-main" style="display:none;">
             <div class="prog-header">
@@ -399,17 +603,22 @@
                     </div>
                     <div>
                         <h2 class="prog-title">Consultar Relatórios</h2>
-                        <p class="prog-subtitle">Selecione um cartão pela data para visualizar o relatório completo</p>
+                        <p class="prog-subtitle">Selecione um cartão pela data e turno para visualizar o relatório completo</p>
                     </div>
                 </div>
 
                 <div class="prog-header-actions">
+                    <select id="filtro-bento-turno" class="prog-input-pill" style="width: 145px; padding: 8px 12px; font-size: 0.82rem;" onchange="filtrarBentoRelatoriosProg()">
+                        <option value="TODOS">Todos turnos</option>
+                        <option value="DIURNO">Diurno</option>
+                        <option value="NOTURNO">Noturno</option>
+                    </select>
                     <input
                         type="text"
                         id="filtro-bento-relatorios"
                         class="prog-input-pill"
-                        style="width: 220px; padding: 8px 14px; font-size: 0.82rem;"
-                        placeholder="Filtrar data, unidade ou turno..."
+                        style="width: 210px; padding: 8px 14px; font-size: 0.82rem;"
+                        placeholder="Filtrar data ou unidade..."
                         oninput="filtrarBentoRelatoriosProg()"
                     >
                     <button type="button" class="btn btn-primary" onclick="alternarVisaoProgramacao('GERAR')">
@@ -447,6 +656,40 @@
 </div>
 
 <script>
+    const JUSTIFICATIVAS_ENTRADA_HE = [
+        "Ausência de colaborador",
+        "Licença médica de até 15 dias",
+        "Licença médica superior a 15 dias",
+        "Vaga não substituída",
+        "Aumento da demanda do setor",
+        "Outro"
+    ];
+
+    const JUSTIFICATIVAS_EMPRESTIMO = [
+        "Sobra de colaborador",
+        "Redução de ocupação",
+        "Outro"
+    ];
+
+    let progListasAutorizacao = {
+        PLANTAO_ADM: [
+            "Ana Paula Augusto Valverde",
+            "Débora Augusto Valverde",
+            "Janaina Souza de Lima",
+            "Kátia Luciana Franca Pereira",
+            "Rafaela Marqui",
+            "Suzilene Ribeiro",
+            "Juliane Cristina Souza Ferraroni"
+        ],
+        COORDENACAO: [
+            "Rafaela",
+            "Ana Paula",
+            "Bruna",
+            "Débora",
+            "Paula"
+        ]
+    };
+
     let progStepAtual = 1;
     let progTurnoAtual = "";
     let progTodasUnidadesCenso = [];
@@ -455,16 +698,203 @@
     let progEnfermeirosSelecionados = [];
     let progRelatoriosAnterioresCache = [];
     let timerBuscaEnfermeiroProg = null;
+    let _abortControllerProgCtx = null;
 
     const PROG_STEPS_META = {
         1: { titulo: "Etapa 1 de 4 • Unidade e Turno", pct: 25 },
         2: { titulo: "Etapa 2 de 4 • Equipe e Leitos", pct: 50 },
-        3: { titulo: "Etapa 3 de 4 • Remanejamento", pct: 75 },
+        3: { titulo: "Etapa 3 de 4 • Cobertura e Remanejamento", pct: 75 },
         4: { titulo: "Etapa 4 de 4 • Resumo", pct: 100 },
     };
 
+    function _setTextSafe(id, texto) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = texto;
+    }
+
     function formatarDecimalBR(valor) {
         return Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function obterTotalAuxiliaresStep2() {
+        const v12 = Math.max(0, parseInt(document.getElementById("prog-aux-12h")?.value || "0", 10));
+        const v6m = Math.max(0, parseInt(document.getElementById("prog-aux-6h-manha")?.value || "0", 10));
+        const v6t = Math.max(0, parseInt(document.getElementById("prog-aux-6h-tarde")?.value || "0", 10));
+        return v12 + v6m + v6t;
+    }
+
+    function atualizarTotalAuxiliaresStep2() {
+        const total = obterTotalAuxiliaresStep2();
+        _setTextSafe("lbl-total-aux-step2", total);
+        recalcularIndicadoresProgramacao();
+    }
+
+    // =========================================================================
+    // COLABORADORES NOVOS (STEP 2)
+    // =========================================================================
+    function aoMudarTemColabNovos() {
+        const val = document.querySelector('input[name="prog_tem_novos"]:checked')?.value || "0";
+        const box = document.getElementById("box-colaboradores-novos");
+        if (!box) return;
+        if (val === "1") {
+            box.style.display = "block";
+            renderizarCamposColabNovos();
+        } else {
+            box.style.display = "none";
+            const grid = document.getElementById("grid-inputs-colab-novos");
+            if (grid) grid.innerHTML = "";
+            _setTextSafe("lbl-total-pac-novos", "0 pacientes");
+        }
+    }
+
+    function renderizarCamposColabNovos(valoresAnteriores = null) {
+        const qtd = Math.min(20, Math.max(1, parseInt(document.getElementById("prog-qtd-colab-novos")?.value || "1", 10)));
+        const grid = document.getElementById("grid-inputs-colab-novos");
+        if (!grid) return;
+
+        const valoresAtuais = valoresAnteriores || Array.from(grid.querySelectorAll("input[data-colab-novo-idx]")).map(inp => inp.value);
+
+        grid.innerHTML = Array.from({ length: qtd }, (_, i) => {
+            const num = String(i + 1).padStart(2, "0");
+            const valPrevio = valoresAtuais[i] !== undefined ? valoresAtuais[i] : "";
+            return `
+                <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px 12px;">
+                    <label for="inp-colab-novo-${i}" style="display:block; font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:6px;">
+                        Colaborador ${num} *
+                    </label>
+                    <input
+                        type="number"
+                        id="inp-colab-novo-${i}"
+                        data-colab-novo-idx="${i}"
+                        class="prog-input-pill"
+                        style="padding: 8px 12px; font-size:0.86rem;"
+                        min="1"
+                        step="1"
+                        value="${valPrevio}"
+                        placeholder="Qtd. pacientes"
+                        oninput="atualizarSomaPacientesColabNovos()"
+                    >
+                    <span style="display:block; font-size:0.72rem; color:#64748b; margin-top:4px;">Pacientes atribuídos</span>
+                </div>
+            `;
+        }).join("");
+
+        atualizarSomaPacientesColabNovos();
+    }
+
+    function atualizarSomaPacientesColabNovos() {
+        const inputs = document.querySelectorAll("#grid-inputs-colab-novos input[data-colab-novo-idx]");
+        let total = 0;
+        inputs.forEach(inp => {
+            total += Math.max(0, parseInt(inp.value || "0", 10));
+        });
+        _setTextSafe("lbl-total-pac-novos", `${total} ${total === 1 ? "paciente" : "pacientes"}`);
+        return total;
+    }
+
+    function obterDetalheColabNovos() {
+        const temNovos = document.querySelector('input[name="prog_tem_novos"]:checked')?.value === "1";
+        if (!temNovos) return { tem_novos: false, lista: [], total_pacientes: 0 };
+
+        const inputs = Array.from(document.querySelectorAll("#grid-inputs-colab-novos input[data-colab-novo-idx]"));
+        const lista = inputs.map((inp, idx) => ({
+            colaborador: idx + 1,
+            pacientes: Math.max(0, parseInt(inp.value || "0", 10))
+        }));
+        const totalPac = lista.reduce((acc, item) => acc + item.pacientes, 0);
+        return { tem_novos: true, lista, total_pacientes: totalPac };
+    }
+
+    // =========================================================================
+    // JUSTIFICATIVAS E HORA EXTRA (STEP 3)
+    // =========================================================================
+    function renderizarRadiosJustificativa(containerId, radioName, opcoes, onChangeFnName) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = opcoes.map((op, idx) => `
+            <label class="prog-just-radio-item">
+                <input type="radio" name="${radioName}" value="${op}" ${idx === 0 ? "checked" : ""} onchange="${onChangeFnName}()">
+                <span>${op}</span>
+            </label>
+        `).join("");
+    }
+
+    function aoMudarJustificativaRemanejamento() {
+        const sel = document.querySelector('input[name="prog_rem_just_radio"]:checked')?.value || "";
+        const wrapOutro = document.getElementById("prog-rem-just-outro-wrap");
+        if (wrapOutro) {
+            wrapOutro.style.display = sel === "Outro" ? "block" : "none";
+        }
+    }
+
+    function obterJustificativaRemanejamentoSelecionada() {
+        const radioVal = document.querySelector('input[name="prog_rem_just_radio"]:checked')?.value || "";
+        if (!radioVal) return { ok: false, mensagem: "Selecione a justificativa do remanejamento." };
+        if (radioVal === "Outro") {
+            const txt = (document.getElementById("prog-rem-just-outro-texto")?.value || "").trim();
+            if (txt.length <= 10) {
+                return { ok: false, mensagem: "Na opção 'Outro', descreva o motivo com mais de 10 caracteres." };
+            }
+            return { ok: true, texto: `Outro: ${txt}` };
+        }
+        return { ok: true, texto: radioVal };
+    }
+
+    function aoMudarTipoAutorizadorHE() {
+        const tipo = document.querySelector('input[name="prog_he_tipo_autorizador"]:checked')?.value || "";
+        const wrap = document.getElementById("prog-he-select-autorizador-wrap");
+        const sel = document.getElementById("prog-he-select-autorizador");
+        if (!tipo) {
+            if (wrap) wrap.style.display = "none";
+            return;
+        }
+        const nomes = progListasAutorizacao[tipo] || [];
+        sel.innerHTML = '<option value="">Selecione quem autorizou...</option>' +
+            nomes.map(n => `<option value="${n}">${n}</option>`).join("");
+        if (wrap) wrap.style.display = "block";
+    }
+
+    function aoMudarJustificativaHE() {
+        const sel = document.querySelector('input[name="prog_he_just_radio"]:checked')?.value || "";
+        const wrapOutro = document.getElementById("prog-he-just-outro-wrap");
+        if (wrapOutro) {
+            wrapOutro.style.display = sel === "Outro" ? "block" : "none";
+        }
+    }
+
+    function obterDadosHoraExtraStep3() {
+        const modo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
+        if (modo !== "HORA_EXTRA") return { ativo: false };
+
+        const tipoAut = document.querySelector('input[name="prog_he_tipo_autorizador"]:checked')?.value || "";
+        if (!tipoAut) {
+            return { ativo: true, erro: "Selecione quem autorizou (Plantão Administrativo ou Coordenação)." };
+        }
+        const nomeAut = (document.getElementById("prog-he-select-autorizador")?.value || "").trim();
+        if (!nomeAut) {
+            return { ativo: true, erro: "Selecione o nome do responsável pela autorização da Hora Extra." };
+        }
+
+        const radioJust = document.querySelector('input[name="prog_he_just_radio"]:checked')?.value || "";
+        if (!radioJust) {
+            return { ativo: true, erro: "Selecione a justificativa da Hora Extra." };
+        }
+
+        let justFinal = radioJust;
+        if (radioJust === "Outro") {
+            const txtOutro = (document.getElementById("prog-he-just-outro-texto")?.value || "").trim();
+            if (txtOutro.length <= 10) {
+                return { ativo: true, erro: "Na justificativa 'Outro' da Hora Extra, escreva mais de 10 caracteres." };
+            }
+            justFinal = `Outro: ${txtOutro}`;
+        }
+
+        return {
+            ativo: true,
+            tipo_autorizador: tipoAut,
+            autorizador: nomeAut,
+            justificativa: justFinal,
+        };
     }
 
     async function alternarVisaoProgramacao(modo) {
@@ -488,18 +918,43 @@
     }
 
     function resetarWizardProgramacao() {
-        selecionarTurnoProgramacao("", false);
+        progTurnoAtual = "";
+        document.getElementById("btn-turno-pendente")?.classList.add("active");
+        document.getElementById("btn-turno-diurno")?.classList.remove("active");
+        document.getElementById("btn-turno-noturno")?.classList.remove("active");
+        const bannerEd = document.getElementById("prog-banner-edicao");
+        if (bannerEd) bannerEd.style.display = "none";
+
         progEnfermeirosSelecionados = [];
         renderizarEnfermeirosSelecionados();
         const inpEnf = document.getElementById("prog-busca-enfermeiro");
         if (inpEnf) inpEnf.value = "";
+
+        const inp12 = document.getElementById("prog-aux-12h");
+        const inp6m = document.getElementById("prog-aux-6h-manha");
+        const inp6t = document.getElementById("prog-aux-6h-tarde");
+        if (inp12) inp12.value = "";
+        if (inp6m) inp6m.value = "0";
+        if (inp6t) inp6t.value = "0";
+        atualizarTotalAuxiliaresStep2();
+
+        const radioNao = document.querySelector('input[name="prog_tem_novos"][value="0"]');
+        if (radioNao) radioNao.checked = true;
+        aoMudarTemColabNovos();
+
+        progRemanejamentosLista = [];
+        renderizarListaRemanejamentos();
+        const radioNenhum = document.querySelector('input[name="prog_tipo_remanejamento"][value="NENHUM"]');
+        if (radioNenhum) radioNenhum.checked = true;
+        aoMudarTipoRemanejamento();
+
         irParaStepProgramacao(1, true);
     }
 
     function validarStepProgramacao(step) {
         if (step === 1) {
-            const unidade = document.getElementById("prog-select-unidade").value;
-            const dataVal = document.getElementById("prog-data").value;
+            const unidade = document.getElementById("prog-select-unidade")?.value || "";
+            const dataVal = document.getElementById("prog-data")?.value || "";
             if (!unidade || !dataVal) {
                 mostrarToast("Selecione a unidade e a data antes de continuar.", true);
                 return false;
@@ -512,18 +967,32 @@
         }
 
         if (step === 2) {
-            const qtdProg = parseInt(document.getElementById("prog-qtd-programados").value || "0", 10);
-            const leitosFisicos = parseInt(document.getElementById("prog-leitos-fisicos").value || "0", 10);
-            const leitosBloq = parseInt(document.getElementById("prog-leitos-bloqueados").value || "0", 10);
+            const qtdProg = obterTotalAuxiliaresStep2();
+            const leitosFisicos = parseInt(document.getElementById("prog-leitos-fisicos")?.value || "0", 10);
+            const leitosBloq = parseInt(document.getElementById("prog-leitos-bloqueados")?.value || "0", 10);
 
             if (qtdProg < 1) {
-                mostrarToast("Informe a quantidade de Aux/Tec Enfermagem.", true);
+                mostrarToast("Informe a quantidade de Aux/Téc. Enfermagem (12h ou 6h).", true);
                 return false;
             }
             if (progEnfermeirosSelecionados.length === 0) {
                 mostrarToast("Selecione pelo menos um(a) Enfermeiro(a) pelo crachá.", true);
                 return false;
             }
+
+            const infoNovos = obterDetalheColabNovos();
+            if (infoNovos.tem_novos) {
+                if (!infoNovos.lista.length) {
+                    mostrarToast("Informe a quantidade de colaboradores novos.", true);
+                    return false;
+                }
+                const incompleto = infoNovos.lista.find(item => item.pacientes < 1);
+                if (incompleto) {
+                    mostrarToast(`Informe a quantidade de pacientes do Colaborador ${String(incompleto.colaborador).padStart(2, "0")}.`, true);
+                    return false;
+                }
+            }
+
             if (leitosFisicos < 1) {
                 mostrarToast("Informe a quantidade de leitos disponíveis.", true);
                 return false;
@@ -537,11 +1006,20 @@
 
         if (step === 3) {
             const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
+            if (tipo === "HORA_EXTRA") {
+                const heData = obterDadosHoraExtraStep3();
+                if (heData.erro) {
+                    mostrarToast(heData.erro, true);
+                    return false;
+                }
+                return true;
+            }
+
             if (tipo !== "NENHUM" && progRemanejamentosLista.length === 0) {
-                mostrarToast("Adicione o remanejamento ou selecione 'Sem remanejamento'.", true);
+                mostrarToast("Adicione a movimentação ou selecione 'Sem remanejamento'.", true);
                 return false;
             }
-            const qtdProg = parseInt(document.getElementById("prog-qtd-programados").value || "0", 10);
+            const qtdProg = obterTotalAuxiliaresStep2();
             const emp = progRemanejamentosLista.filter(r => r.tipo === "EMPRESTIMO").reduce((a, b) => a + b.quantidade, 0);
             const rec = progRemanejamentosLista.filter(r => r.tipo === "RECEBIMENTO").reduce((a, b) => a + b.quantidade, 0);
             if ((qtdProg - emp + rec) < 1) {
@@ -573,39 +1051,84 @@
         }
 
         const meta = PROG_STEPS_META[destino] || PROG_STEPS_META[1];
-        document.getElementById("lbl-prog-step-titulo").innerText = meta.titulo;
-        document.getElementById("lbl-prog-step-pct").innerText = `${meta.pct}% concluído`;
-        document.getElementById("barra-prog-step-fill").style.width = `${meta.pct}%`;
+        _setTextSafe("lbl-prog-step-titulo", meta.titulo);
+        _setTextSafe("lbl-prog-step-pct", `${meta.pct}% concluído`);
+        const barraFill = document.getElementById("barra-prog-step-fill");
+        if (barraFill) barraFill.style.width = `${meta.pct}%`;
 
         if (destino === 4) {
-            recalcularIndicadoresProgramacao();
             atualizarResumoCabecalhoStep4();
+            recalcularIndicadoresProgramacao();
         }
     }
 
     function atualizarResumoCabecalhoStep4() {
-        const unidade = document.getElementById("prog-select-unidade").value || "--";
-        const dataIso = document.getElementById("prog-data").value || "";
+        const selUnidade = document.getElementById("prog-select-unidade");
+        const unidade = (selUnidade && selUnidade.value) ? selUnidade.value : "--";
+        const dataIso = document.getElementById("prog-data")?.value || "";
         const dataBr = dataIso ? dataIso.split("-").reverse().join("/") : "--";
         const enfTexto = progEnfermeirosSelecionados.length
             ? progEnfermeirosSelecionados.map(e => `${e.cracha} - ${e.nome}`).join(" | ")
             : "--";
 
-        document.getElementById("resumo-unidade-nome").innerText = unidade;
-        document.getElementById("resumo-data-turno").innerText = `${dataBr} • ${progTurnoAtual}`;
-        document.getElementById("resumo-enfermeiros-nomes").innerText = enfTexto;
+        _setTextSafe("resumo-unidade-nome", unidade);
+        _setTextSafe("resumo-data-turno", `${dataBr} • ${progTurnoAtual || "--"}`);
+        _setTextSafe("resumo-enfermeiros-nomes", enfTexto);
+
+        // Colaboradores novos
+        const boxNovos = document.getElementById("resumo-box-novos");
+        const infoNovos = obterDetalheColabNovos();
+        if (boxNovos) {
+            if (infoNovos.tem_novos && infoNovos.lista.length) {
+                const detStr = infoNovos.lista
+                    .map(c => `Colaborador ${String(c.colaborador).padStart(2, "0")}: ${c.pacientes} pac.`)
+                    .join(" • ");
+                _setTextSafe(
+                    "resumo-novos-texto",
+                    `Colaboradores novos (${infoNovos.lista.length}): ${infoNovos.total_pacientes} pacientes atribuídos (${detStr})`
+                );
+                boxNovos.style.display = "block";
+            } else {
+                boxNovos.style.display = "none";
+            }
+        }
+
+        // Hora Extra ou Remanejamentos com justificativas
+        const boxExtra = document.getElementById("resumo-box-cobertura-extra");
+        const extraEl = document.getElementById("resumo-cobertura-extra-texto");
+        if (boxExtra && extraEl) {
+            const heInfo = obterDadosHoraExtraStep3();
+            if (heInfo.ativo && !heInfo.erro) {
+                const grupoLbl = heInfo.tipo_autorizador === "PLANTAO_ADM" ? "Plantão Administrativo" : "Coordenação";
+                extraEl.innerHTML =
+                    `<strong>Hora Extra solicitada:</strong> Autorizada por <strong>${heInfo.autorizador}</strong> (${grupoLbl})<br>` +
+                    `<strong>Justificativa:</strong> ${heInfo.justificativa}`;
+                boxExtra.style.display = "block";
+            } else if (progRemanejamentosLista.length) {
+                extraEl.innerHTML = progRemanejamentosLista
+                    .map(r => {
+                        const tipoLbl = r.tipo === "EMPRESTIMO" ? "Empréstimo (Saída)" : "Recebimento (Entrada)";
+                        return `<div><strong>${tipoLbl}:</strong> ${r.quantidade} colab. (${r.unidade_contraparte}) — <em>${r.justificativa || "Sem justificativa"}</em></div>`;
+                    })
+                    .join("");
+                boxExtra.style.display = "block";
+            } else {
+                boxExtra.style.display = "none";
+            }
+        }
     }
 
     function selecionarTurnoProgramacao(turno, recarregarContexto = true) {
-        progTurnoAtual = turno;
-        document.getElementById("btn-turno-pendente").classList.toggle("active", turno === "");
-        document.getElementById("btn-turno-diurno").classList.toggle("active", turno === "DIURNO");
-        document.getElementById("btn-turno-noturno").classList.toggle("active", turno === "NOTURNO");
+        progTurnoAtual = (turno || "").trim().toUpperCase();
+        document.getElementById("btn-turno-pendente")?.classList.toggle("active", progTurnoAtual === "");
+        document.getElementById("btn-turno-diurno")?.classList.toggle("active", progTurnoAtual === "DIURNO");
+        document.getElementById("btn-turno-noturno")?.classList.toggle("active", progTurnoAtual === "NOTURNO");
 
-        if (recarregarContexto && (turno === "DIURNO" || turno === "NOTURNO")) {
+        if (recarregarContexto && (progTurnoAtual === "DIURNO" || progTurnoAtual === "NOTURNO")) {
             carregarContextoProgramacao();
-        } else if (turno === "") {
-            document.getElementById("prog-banner-edicao").style.display = "none";
+        } else if (progTurnoAtual === "") {
+            const bannerEd = document.getElementById("prog-banner-edicao");
+            if (bannerEd) bannerEd.style.display = "none";
         }
     }
 
@@ -707,6 +1230,7 @@
         if (atual && filtradas.some(u => u.nome_unidade === atual)) {
             sel.value = atual;
         } else if (filtradas.length) {
+            sel.value = filtradas[0].nome_unidade;
             carregarContextoProgramacao();
         }
     }
@@ -714,31 +1238,65 @@
     async function carregarContextoProgramacao() {
         const selUnidade = document.getElementById("prog-select-unidade");
         const inpData = document.getElementById("prog-data");
+        if (!selUnidade || !inpData) return;
+
         const nomeUnidade = selUnidade.value || "";
         const dataVal = inpData.value || "";
+
+        const unidadeCache = progTodasUnidadesCenso.find(u => u.nome_unidade === nomeUnidade);
+        if (unidadeCache) {
+            progPacientesInternadosAtual = Number(unidadeCache.qtd_internacao || 0);
+            _setTextSafe("lbl-prog-censo-sync", `Censo MV: ${progPacientesInternadosAtual} internados`);
+            recalcularIndicadoresProgramacao();
+        }
+
+        if (_abortControllerProgCtx) {
+            _abortControllerProgCtx.abort();
+        }
+        _abortControllerProgCtx = new AbortController();
+        const { signal } = _abortControllerProgCtx;
 
         const params = new URLSearchParams();
         if (nomeUnidade) params.set("nome_unidade", nomeUnidade);
         if (dataVal) params.set("data", dataVal);
-        params.set("turno", progTurnoAtual || "DIURNO");
+        if (progTurnoAtual) params.set("turno", progTurnoAtual);
 
         try {
-            const res = await fetch(`/api/programacao-assistencial/contexto?${params.toString()}`, { cache: "no-store" });
+            const res = await fetch(`/api/programacao-assistencial/contexto?${params.toString()}`, {
+                cache: "no-store",
+                signal,
+            });
             const d = await res.json();
             if (!d.sucesso) {
+                _setTextSafe("lbl-prog-censo-sync", "Censo: indisponível");
                 mostrarToast(d.mensagem || "Erro ao carregar unidade.", true);
                 return;
             }
 
+            if (d.listas_autorizacao) {
+                progListasAutorizacao = d.listas_autorizacao;
+            }
+
             progTodasUnidadesCenso = d.unidades || [];
 
-            if (!selUnidade.options.length && progTodasUnidadesCenso.length) {
-                selUnidade.innerHTML = progTodasUnidadesCenso
+            if (progTodasUnidadesCenso.length) {
+                const valorAntes = selUnidade.value;
+                const filtroTexto = (document.getElementById("prog-filtro-unidade")?.value || "").toLowerCase().trim();
+                const listaRender = filtroTexto
+                    ? progTodasUnidadesCenso.filter(u => u.nome_unidade.toLowerCase().includes(filtroTexto))
+                    : progTodasUnidadesCenso;
+
+                selUnidade.innerHTML = listaRender
                     .map(u => `<option value="${u.nome_unidade}">${u.nome_unidade}</option>`)
                     .join("");
-            }
-            if (d.unidade_selecionada && selUnidade.value !== d.unidade_selecionada) {
-                selUnidade.value = d.unidade_selecionada;
+
+                if (valorAntes && listaRender.some(u => u.nome_unidade === valorAntes)) {
+                    selUnidade.value = valorAntes;
+                } else if (d.unidade_selecionada && listaRender.some(u => u.nome_unidade === d.unidade_selecionada)) {
+                    selUnidade.value = d.unidade_selecionada;
+                } else if (listaRender.length) {
+                    selUnidade.value = listaRender[0].nome_unidade;
+                }
             }
 
             if (!inpData.value && d.data_padrao) {
@@ -747,17 +1305,29 @@
 
             const censo = d.censo || {};
             progPacientesInternadosAtual = Number(censo.qtd_internacao || 0);
-            const lblSync = document.getElementById("lbl-prog-censo-sync");
-            if (lblSync) {
-                lblSync.innerText = censo.atualizado_em
+            _setTextSafe(
+                "lbl-prog-censo-sync",
+                censo.atualizado_em
                     ? `Censo MV: ${progPacientesInternadosAtual} internados (${censo.atualizado_em})`
-                    : `Censo MV: ${progPacientesInternadosAtual} internados`;
-            }
+                    : `Censo MV: ${progPacientesInternadosAtual} internados`
+            );
 
             const bannerEdicao = document.getElementById("prog-banner-edicao");
             if (progTurnoAtual && d.programacao_existente) {
                 const pe = d.programacao_existente;
-                document.getElementById("prog-qtd-programados").value = pe.qtd_colaboradores_programados;
+                document.getElementById("prog-aux-12h").value = pe.qtd_aux_12h ?? pe.qtd_colaboradores_programados;
+                document.getElementById("prog-aux-6h-manha").value = pe.qtd_aux_6h_manha ?? 0;
+                document.getElementById("prog-aux-6h-tarde").value = pe.qtd_aux_6h_tarde ?? 0;
+                atualizarTotalAuxiliaresStep2();
+
+                const radioNovos = document.querySelector(`input[name="prog_tem_novos"][value="${pe.tem_colaboradores_novos ? "1" : "0"}"]`);
+                if (radioNovos) radioNovos.checked = true;
+                aoMudarTemColabNovos();
+                if (pe.tem_colaboradores_novos && pe.detalhe_colaboradores_novos?.length) {
+                    document.getElementById("prog-qtd-colab-novos").value = pe.detalhe_colaboradores_novos.length;
+                    renderizarCamposColabNovos(pe.detalhe_colaboradores_novos.map(x => x.pacientes));
+                }
+
                 document.getElementById("prog-leitos-fisicos").value = pe.leitos_fisicos;
                 document.getElementById("prog-leitos-bloqueados").value = pe.leitos_bloqueados;
                 document.getElementById("prog-observacao").value = pe.observacao || "";
@@ -765,6 +1335,7 @@
                     tipo: r.tipo,
                     quantidade: r.quantidade,
                     unidade_contraparte: r.unidade_contraparte,
+                    justificativa: "",
                 }));
 
                 const radioAlvo = progRemanejamentosLista.length
@@ -774,16 +1345,19 @@
                 if (radioEl) radioEl.checked = true;
                 aoMudarTipoRemanejamento();
 
-                bannerEdicao.style.display = "block";
-                document.getElementById("lbl-prog-banner-edicao").innerText =
-                    `Relatório já salvo (${pe.atualizado_em}). Salvar irá atualizar este turno.`;
+                if (bannerEdicao) bannerEdicao.style.display = "block";
+                _setTextSafe(
+                    "lbl-prog-banner-edicao",
+                    `Relatório ${progTurnoAtual} já salvo (${pe.atualizado_em}). Salvar irá atualizar este turno.`
+                );
             } else {
                 progRemanejamentosLista = [];
-                document.getElementById("prog-observacao").value = "";
+                const obsEl = document.getElementById("prog-observacao");
+                if (obsEl) obsEl.value = "";
                 const radioNenhum = document.querySelector('input[name="prog_tipo_remanejamento"][value="NENHUM"]');
                 if (radioNenhum) radioNenhum.checked = true;
                 aoMudarTipoRemanejamento();
-                bannerEdicao.style.display = "none";
+                if (bannerEdicao) bannerEdicao.style.display = "none";
             }
 
             popularSelectUnidadesContraparte();
@@ -791,12 +1365,13 @@
             recalcularIndicadoresProgramacao();
             if (progStepAtual === 4) atualizarResumoCabecalhoStep4();
         } catch (err) {
+            if (err.name === "AbortError") return;
             mostrarToast("Falha ao carregar Programação Assistencial.", true);
         }
     }
 
     function popularSelectUnidadesContraparte() {
-        const atualNome = document.getElementById("prog-select-unidade").value || "";
+        const atualNome = document.getElementById("prog-select-unidade")?.value || "";
         const selContra = document.getElementById("prog-rem-unidade");
         if (!selContra) return;
         selContra.innerHTML = progTodasUnidadesCenso
@@ -808,9 +1383,22 @@
 
     function aoMudarTipoRemanejamento() {
         const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        const box = document.getElementById("prog-box-remanejamento");
+        const boxRem = document.getElementById("prog-box-remanejamento");
+        const boxHE = document.getElementById("prog-box-hora-extra");
+
+        if (tipo === "HORA_EXTRA") {
+            if (boxRem) boxRem.style.display = "none";
+            if (boxHE) boxHE.style.display = "block";
+            renderizarRadiosJustificativa("prog-he-just-lista", "prog_he_just_radio", JUSTIFICATIVAS_ENTRADA_HE, "aoMudarJustificativaHE");
+            aoMudarJustificativaHE();
+            recalcularIndicadoresProgramacao();
+            return;
+        }
+
+        if (boxHE) boxHE.style.display = "none";
+
         if (tipo === "NENHUM") {
-            box.style.display = "none";
+            if (boxRem) boxRem.style.display = "none";
             progRemanejamentosLista = [];
             renderizarListaRemanejamentos();
             recalcularIndicadoresProgramacao();
@@ -818,17 +1406,30 @@
         }
 
         const isEmp = tipo === "EMPRESTIMO";
-        box.style.display = "block";
-        box.className = `prog-remanejamento-box ${isEmp ? "mode-out" : "mode-in"}`;
+        if (boxRem) {
+            boxRem.style.display = "block";
+            boxRem.className = `prog-remanejamento-box ${isEmp ? "mode-out" : "mode-in"}`;
+        }
 
         const badge = document.getElementById("badge-modo-remanejamento");
-        badge.className = `prog-mode-badge ${isEmp ? "badge-out" : "badge-in"}`;
-        badge.innerText = isEmp
-            ? "↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)"
-            : "↙ RECEBIMENTO DE COLABORADOR (ENTRADA)";
+        if (badge) {
+            badge.className = `prog-mode-badge ${isEmp ? "badge-out" : "badge-in"}`;
+            badge.innerText = isEmp
+                ? "↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)"
+                : "↙ RECEBIMENTO DE COLABORADOR (ENTRADA)";
+        }
+
+        const opcoesJust = isEmp ? JUSTIFICATIVAS_EMPRESTIMO : JUSTIFICATIVAS_ENTRADA_HE;
+        _setTextSafe("lbl-prog-rem-justificativa", isEmp ? "Justificativa do empréstimo *" : "Justificativa do recebimento *");
+        _setTextSafe("lbl-btn-add-rem", isEmp ? "Adicionar empréstimo" : "Adicionar recebimento");
+
+        renderizarRadiosJustificativa("prog-rem-just-lista", "prog_rem_just_radio", opcoesJust, "aoMudarJustificativaRemanejamento");
+        const txtOutro = document.getElementById("prog-rem-just-outro-texto");
+        if (txtOutro) txtOutro.value = "";
+        aoMudarJustificativaRemanejamento();
 
         const btnAdd = document.getElementById("btn-add-remanejamento");
-        btnAdd.className = `prog-btn-add-action ${isEmp ? "btn-mode-out" : "btn-mode-in"}`;
+        if (btnAdd) btnAdd.className = `prog-btn-add-action ${isEmp ? "btn-mode-out" : "btn-mode-in"}`;
 
         popularSelectUnidadesContraparte();
         atualizarPreviewRemanejamento();
@@ -836,44 +1437,46 @@
 
     function atualizarPreviewRemanejamento() {
         const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        if (tipo === "NENHUM") return;
+        if (tipo !== "EMPRESTIMO" && tipo !== "RECEBIMENTO") return;
 
         const selUnidade = document.getElementById("prog-select-unidade");
         const selContra = document.getElementById("prog-rem-unidade");
-        const qtd = Math.max(1, parseInt(document.getElementById("prog-rem-qtd").value || "1", 10));
+        const qtd = Math.max(1, parseInt(document.getElementById("prog-rem-qtd")?.value || "1", 10));
 
-        const nomeMinha = selUnidade.value || "Minha Unidade";
-        const nomeContra = selContra.value || "Outra Unidade";
-
-        const lblUnidade = document.getElementById("lbl-prog-rem-unidade");
-        const esqNome = document.getElementById("lbl-flow-esq-nome");
-        const dirNome = document.getElementById("lbl-flow-dir-nome");
+        const nomeMinha = selUnidade?.value || "Minha Unidade";
+        const nomeContra = selContra?.value || "Outra Unidade";
         const centerBox = document.getElementById("box-flow-center");
 
         if (tipo === "EMPRESTIMO") {
-            lblUnidade.innerText = "Unidade de destino *";
-            esqNome.innerText = nomeMinha;
-            dirNome.innerText = nomeContra;
-            centerBox.className = "prog-flow-bar flow-out";
-            document.getElementById("lbl-flow-qtd").innerText = `-${qtd} colab. →`;
+            _setTextSafe("lbl-prog-rem-unidade", "Unidade de destino *");
+            _setTextSafe("lbl-flow-esq-nome", nomeMinha);
+            _setTextSafe("lbl-flow-dir-nome", nomeContra);
+            if (centerBox) centerBox.className = "prog-flow-bar flow-out";
+            _setTextSafe("lbl-flow-qtd", `-${qtd} colab. →`);
         } else {
-            lblUnidade.innerText = "Unidade de origem *";
-            esqNome.innerText = nomeContra;
-            dirNome.innerText = nomeMinha;
-            centerBox.className = "prog-flow-bar flow-in";
-            document.getElementById("lbl-flow-qtd").innerText = `+${qtd} colab. →`;
+            _setTextSafe("lbl-prog-rem-unidade", "Unidade de origem *");
+            _setTextSafe("lbl-flow-esq-nome", nomeContra);
+            _setTextSafe("lbl-flow-dir-nome", nomeMinha);
+            if (centerBox) centerBox.className = "prog-flow-bar flow-in";
+            _setTextSafe("lbl-flow-qtd", `+${qtd} colab. →`);
         }
     }
 
     function adicionarRemanejamentoLista() {
         const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        if (tipo === "NENHUM") return;
+        if (tipo !== "EMPRESTIMO" && tipo !== "RECEBIMENTO") return;
 
-        const qtd = parseInt(document.getElementById("prog-rem-qtd").value || "0", 10);
-        const contraNome = document.getElementById("prog-rem-unidade").value || "";
+        const qtd = parseInt(document.getElementById("prog-rem-qtd")?.value || "0", 10);
+        const contraNome = document.getElementById("prog-rem-unidade")?.value || "";
 
         if (!qtd || qtd < 1 || !contraNome) {
             mostrarToast("Informe a quantidade e a unidade.", true);
+            return;
+        }
+
+        const justRes = obterJustificativaRemanejamentoSelecionada();
+        if (!justRes.ok) {
+            mostrarToast(justRes.mensagem, true);
             return;
         }
 
@@ -881,7 +1484,11 @@
             tipo,
             quantidade: qtd,
             unidade_contraparte: contraNome,
+            justificativa: justRes.texto,
         });
+
+        const txtOutro = document.getElementById("prog-rem-just-outro-texto");
+        if (txtOutro) txtOutro.value = "";
 
         renderizarListaRemanejamentos();
         recalcularIndicadoresProgramacao();
@@ -896,6 +1503,8 @@
     function renderizarListaRemanejamentos() {
         const wrap = document.getElementById("prog-lista-remanejamentos-wrap");
         const listEl = document.getElementById("prog-lista-remanejamentos");
+        if (!wrap || !listEl) return;
+
         if (!progRemanejamentosLista.length) {
             wrap.style.display = "none";
             listEl.innerHTML = "";
@@ -913,6 +1522,7 @@
                         </span>
                         <div class="prog-rem-dest">
                             <strong>${isEmp ? "Destino" : "Origem"}:</strong> ${r.unidade_contraparte}
+                            ${r.justificativa ? `<span style="display:block; font-size:0.75rem; color:#64748b;">Motivo: ${r.justificativa}</span>` : ""}
                         </div>
                     </div>
                     <button type="button" class="prog-btn-del" onclick="removerRemanejamentoLista(${idx})" title="Remover movimentação">
@@ -927,9 +1537,13 @@
     }
 
     function recalcularIndicadoresProgramacao() {
-        const qtdProg = Math.max(0, parseInt(document.getElementById("prog-qtd-programados").value || "0", 10));
-        const leitosFisicos = Math.max(0, parseInt(document.getElementById("prog-leitos-fisicos").value || "0", 10));
-        const leitosBloq = Math.max(0, parseInt(document.getElementById("prog-leitos-bloqueados").value || "0", 10));
+        const qtd12h = Math.max(0, parseInt(document.getElementById("prog-aux-12h")?.value || "0", 10));
+        const qtd6m = Math.max(0, parseInt(document.getElementById("prog-aux-6h-manha")?.value || "0", 10));
+        const qtd6t = Math.max(0, parseInt(document.getElementById("prog-aux-6h-tarde")?.value || "0", 10));
+        const qtdProg = qtd12h + qtd6m + qtd6t;
+
+        const leitosFisicos = Math.max(0, parseInt(document.getElementById("prog-leitos-fisicos")?.value || "0", 10));
+        const leitosBloq = Math.max(0, parseInt(document.getElementById("prog-leitos-bloqueados")?.value || "0", 10));
 
         const emprestados = progRemanejamentosLista
             .filter(r => r.tipo === "EMPRESTIMO")
@@ -948,49 +1562,78 @@
         const pacPorColab = efetivos > 0 ? (progPacientesInternadosAtual / efetivos) : 0;
         const leitosPorColab = efetivos > 0 ? (leitosOperacionais / efetivos) : 0;
 
-        document.getElementById("stat-prog-base").innerText = qtdProg;
-        document.getElementById("stat-prog-emp").innerText = `-${emprestados}`;
-        document.getElementById("stat-prog-rec").innerText = `+${recebidos}`;
-        document.getElementById("stat-prog-efetivos").innerText = efetivos;
+        _setTextSafe("stat-prog-base", qtdProg);
+        _setTextSafe("stat-prog-composicao-detalhe", `12h: ${qtd12h} • 6h M: ${qtd6m} • 6h T: ${qtd6t}`);
+        _setTextSafe("stat-prog-emp", `-${emprestados}`);
+        _setTextSafe("stat-prog-rec", `+${recebidos}`);
+        _setTextSafe("stat-prog-efetivos", efetivos);
 
-        document.getElementById("ind-leitos-fisicos").innerText = leitosFisicos;
-        document.getElementById("ind-pacientes-internados").innerText = progPacientesInternadosAtual;
-        document.getElementById("ind-leitos-vagos").innerText = leitosVagos;
-        document.getElementById("ind-taxa-ocupacao").innerText = `${formatarDecimalBR(taxaOcupacao)}%`;
-        document.getElementById("ind-pac-por-colab").innerText = formatarDecimalBR(pacPorColab);
-        document.getElementById("ind-leitos-por-colab").innerText = formatarDecimalBR(leitosPorColab);
+        _setTextSafe("ind-leitos-fisicos", leitosFisicos);
+        _setTextSafe("ind-pacientes-internados", progPacientesInternadosAtual);
+        _setTextSafe("ind-leitos-vagos", leitosVagos);
+        _setTextSafe("ind-taxa-ocupacao", `${formatarDecimalBR(taxaOcupacao)}%`);
+        _setTextSafe("ind-pac-por-colab", formatarDecimalBR(pacPorColab));
+        _setTextSafe("ind-leitos-por-colab", formatarDecimalBR(leitosPorColab));
 
-        document.getElementById("lbl-ocupacao-detalhe").innerText =
+        _setTextSafe(
+            "lbl-ocupacao-detalhe",
             `${progPacientesInternadosAtual} pacientes / ${leitosOperacionais} leitos`
-            + (leitosBloq > 0 ? ` (${leitosBloq} bloq.)` : "");
+            + (leitosBloq > 0 ? ` (${leitosBloq} bloq.)` : "")
+        );
 
         const pctBarra = Math.min(100, Math.max(0, taxaOcupacao));
         const barra = document.getElementById("barra-ocupacao-fill");
-        barra.style.width = `${pctBarra}%`;
-        barra.style.background = taxaOcupacao > 100 ? "#dc2626" : "#10b981";
+        if (barra) {
+            barra.style.width = `${pctBarra}%`;
+            barra.style.background = taxaOcupacao > 100 ? "#dc2626" : "#10b981";
+        }
     }
 
     async function salvarProgramacaoAssistencial() {
-        const nomeUnidade = document.getElementById("prog-select-unidade").value || "";
-        const dataProg = document.getElementById("prog-data").value;
-        const qtdProg = parseInt(document.getElementById("prog-qtd-programados").value || "0", 10);
-        const leitosFisicos = parseInt(document.getElementById("prog-leitos-fisicos").value || "0", 10);
-        const leitosBloq = parseInt(document.getElementById("prog-leitos-bloqueados").value || "0", 10);
-        const obsLivre = document.getElementById("prog-observacao").value.trim();
+        const nomeUnidade = document.getElementById("prog-select-unidade")?.value || "";
+        const dataProg = document.getElementById("prog-data")?.value || "";
+        const turnoSalvar = (progTurnoAtual || "").trim().toUpperCase();
+        const qtd12h = Math.max(0, parseInt(document.getElementById("prog-aux-12h")?.value || "0", 10));
+        const qtd6m = Math.max(0, parseInt(document.getElementById("prog-aux-6h-manha")?.value || "0", 10));
+        const qtd6t = Math.max(0, parseInt(document.getElementById("prog-aux-6h-tarde")?.value || "0", 10));
+        const qtdProg = qtd12h + qtd6m + qtd6t;
+        const leitosFisicos = parseInt(document.getElementById("prog-leitos-fisicos")?.value || "0", 10);
+        const leitosBloq = parseInt(document.getElementById("prog-leitos-bloqueados")?.value || "0", 10);
+        const obsLivre = (document.getElementById("prog-observacao")?.value || "").trim();
 
-        if (!nomeUnidade || !dataProg || !progTurnoAtual || qtdProg < 1 || leitosFisicos < 1) {
-            mostrarToast("Preencha unidade, data, turno, Aux/Tec Enfermagem e leitos.", true);
+        if (!nomeUnidade || !dataProg || (turnoSalvar !== "DIURNO" && turnoSalvar !== "NOTURNO") || qtdProg < 1 || leitosFisicos < 1) {
+            mostrarToast("Preencha unidade, data, turno, Aux/Téc. Enfermagem e leitos.", true);
             return;
         }
 
+        const heInfo = obterDadosHoraExtraStep3();
+        if (heInfo.erro) {
+            mostrarToast(heInfo.erro, true);
+            return;
+        }
+
+        const infoNovos = obterDetalheColabNovos();
         const enfResumo = progEnfermeirosSelecionados.length
             ? `Enfermeiro(a): ${progEnfermeirosSelecionados.map(e => `${e.cracha} - ${e.nome}`).join(", ")}`
             : "";
-        const observacaoFinal = [enfResumo, obsLivre].filter(Boolean).join(" | ");
+        const compResumo = `Composição: ${qtd12h} (12h), ${qtd6m} (6h manhã), ${qtd6t} (6h tarde)`;
+        const novosResumo = infoNovos.tem_novos
+            ? `Novos (${infoNovos.lista.length}): ${infoNovos.total_pacientes} pac.`
+            : "";
+        const heResumo = heInfo.ativo
+            ? `Hora Extra autorizada por ${heInfo.autorizador} (${heInfo.tipo_autorizador === "PLANTAO_ADM" ? "Plantão Adm" : "Coordenação"}): ${heInfo.justificativa}`
+            : "";
+        const remResumo = progRemanejamentosLista.length
+            ? `Movimentações: ${progRemanejamentosLista.map(r => `${r.tipo === "EMPRESTIMO" ? "Empréstimo" : "Recebimento"} ${r.quantidade} (${r.unidade_contraparte}) - ${r.justificativa || ""}`).join("; ")}`
+            : "";
+
+        const observacaoFinal = [enfResumo, compResumo, novosResumo, heResumo, remResumo, obsLivre].filter(Boolean).join(" | ");
 
         const btn = document.getElementById("btn-salvar-programacao");
-        btn.disabled = true;
-        btn.innerText = "Salvando...";
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+        }
 
         try {
             const res = await fetch("/api/programacao-assistencial", {
@@ -999,11 +1642,17 @@
                 body: JSON.stringify({
                     nome_unidade: nomeUnidade,
                     data_programacao: dataProg,
-                    turno: progTurnoAtual,
+                    turno: turnoSalvar,
                     qtd_colaboradores_programados: qtdProg,
+                    qtd_aux_12h: qtd12h,
+                    qtd_aux_6h_manha: qtd6m,
+                    qtd_aux_6h_tarde: qtd6t,
+                    tem_colaboradores_novos: infoNovos.tem_novos,
+                    detalhe_colaboradores_novos: infoNovos.lista,
                     leitos_fisicos: leitosFisicos,
                     leitos_bloqueados: leitosBloq,
                     remanejamentos: progRemanejamentosLista,
+                    hora_extra: heInfo,
                     enfermeiros: progEnfermeirosSelecionados,
                     observacao: observacaoFinal,
                 }),
@@ -1011,18 +1660,22 @@
             const d = await res.json();
             mostrarToast(d.mensagem, !d.sucesso);
             if (d.sucesso) {
+                const filtroTurno = document.getElementById("filtro-bento-turno");
+                if (filtroTurno) filtroTurno.value = "TODOS";
                 await alternarVisaoProgramacao("CONSULTAR");
             }
         } catch (err) {
             mostrarToast("Erro ao salvar relatório.", true);
         } finally {
-            btn.disabled = false;
-            btn.innerText = "Salvar Relatório";
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Salvar Relatório";
+            }
         }
     }
 
     // =========================================================================
-    // CONSULTAR RELATÓRIOS — BENTO GRID POR DATA + MODAL COMPLETO
+    // CONSULTAR RELATÓRIOS — BENTO GRID POR DATA E TURNO + MODAL COMPLETO
     // =========================================================================
     async function carregarBentoRelatoriosProg() {
         const grid = document.getElementById("grid-bento-relatorios-prog");
@@ -1044,13 +1697,18 @@
 
     function filtrarBentoRelatoriosProg() {
         const termo = (document.getElementById("filtro-bento-relatorios")?.value || "").toLowerCase().trim();
-        const lista = termo
-            ? progRelatoriosAnterioresCache.filter(r =>
+        const turnoFiltro = (document.getElementById("filtro-bento-turno")?.value || "TODOS").toUpperCase();
+
+        const lista = progRelatoriosAnterioresCache.filter(r => {
+            const turnoItem = (r.turno || "").trim().toUpperCase();
+            if (turnoFiltro !== "TODOS" && turnoItem !== turnoFiltro) return false;
+            if (!termo) return true;
+            return (
                 r.data_br.toLowerCase().includes(termo) ||
                 r.nome_unidade.toLowerCase().includes(termo) ||
-                r.turno.toLowerCase().includes(termo)
-            )
-            : progRelatoriosAnterioresCache;
+                turnoItem.toLowerCase().includes(termo)
+            );
+        });
 
         renderizarBentoRelatoriosProg(lista);
     }
@@ -1064,12 +1722,13 @@
 
         grid.innerHTML = lista.map((r) => {
             const idxReal = progRelatoriosAnterioresCache.indexOf(r);
-            const isDiurno = r.turno === "DIURNO";
+            const turnoNorm = (r.turno || "DIURNO").trim().toUpperCase();
+            const isNoturno = turnoNorm === "NOTURNO";
             return `
                 <div class="prog-bento-card" onclick="abrirModalDetalheRelatorioProg(${idxReal})">
                     <div class="prog-bento-top">
                         <span class="prog-bento-date">${r.data_br}</span>
-                        <span class="prog-bento-turno ${isDiurno ? "turno-diurno" : "turno-noturno"}">${r.turno}</span>
+                        <span class="prog-bento-turno ${isNoturno ? "turno-noturno" : "turno-diurno"}">${turnoNorm}</span>
                     </div>
 
                     <div class="prog-bento-unidade">${r.nome_unidade}</div>
@@ -1098,8 +1757,9 @@
         const r = progRelatoriosAnterioresCache[idx];
         if (!r) return;
 
-        document.getElementById("det-rel-titulo").innerText = `${r.nome_unidade} • ${r.data_br} (${r.turno})`;
-        document.getElementById("det-rel-subtitulo").innerText = `Registrado por ${r.gestor_nome} • Atualizado em ${r.atualizado_em}`;
+        const turnoNorm = (r.turno || "DIURNO").trim().toUpperCase();
+        _setTextSafe("det-rel-titulo", `${r.nome_unidade} • ${r.data_br} (${turnoNorm})`);
+        _setTextSafe("det-rel-subtitulo", `Registrado por ${r.gestor_nome} • Atualizado em ${r.atualizado_em}`);
 
         const remHtml = (r.remanejamentos && r.remanejamentos.length)
             ? r.remanejamentos.map(rem => {
@@ -1119,11 +1779,19 @@
             }).join("")
             : '<div style="font-size:0.83rem; color:#64748b;">Sem remanejamento registrado neste turno.</div>';
 
+        const novosHtml = (r.tem_colaboradores_novos && r.detalhe_colaboradores_novos?.length)
+            ? `<div style="margin-top: 14px; padding: 11px 14px; border-radius: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; font-size: 0.83rem; color: #065f46;">
+                   <strong>Colaboradores Novos (${r.qtd_colaboradores_novos} • ${r.pacientes_colaboradores_novos} pacientes):</strong>
+                   ${r.detalhe_colaboradores_novos.map(c => `Colaborador ${String(c.colaborador).padStart(2, "0")}: ${c.pacientes} pac.`).join(" • ")}
+               </div>`
+            : "";
+
         document.getElementById("det-rel-conteudo").innerHTML = `
             <div class="prog-equipe-cards" style="margin-top:0;">
                 <div class="prog-mini-stat">
                     <span class="prog-mini-lbl">Programados</span>
                     <strong class="prog-mini-val">${r.qtd_programados}</strong>
+                    <small style="font-size:0.68rem; color:#64748b;">12h: ${r.qtd_aux_12h || 0} | 6h M: ${r.qtd_aux_6h_manha || 0} | 6h T: ${r.qtd_aux_6h_tarde || 0}</small>
                 </div>
                 <div class="prog-mini-stat">
                     <span class="prog-mini-lbl">Emprestados</span>
@@ -1138,6 +1806,8 @@
                     <strong class="prog-mini-val val-blue">${r.qtd_efetivos}</strong>
                 </div>
             </div>
+
+            ${novosHtml}
 
             <div class="prog-kpi-grid" style="margin-top: 14px;">
                 <div class="prog-kpi-box">
@@ -1193,7 +1863,7 @@
             filtrarSelectUnidadesProg();
             document.getElementById("prog-select-unidade").value = r.nome_unidade;
             document.getElementById("prog-data").value = r.data_iso;
-            selecionarTurnoProgramacao(r.turno);
+            selecionarTurnoProgramacao(turnoNorm);
             irParaStepProgramacao(1, true);
         };
 
@@ -1203,4 +1873,11 @@
     function fecharModalDetalheRelatorioProg() {
         document.getElementById("modal-detalhe-relatorio-prog").style.display = "none";
     }
+
+    // Carrega automaticamente a lista de unidades assim que a página é carregada
+    document.addEventListener("DOMContentLoaded", () => {
+        if (document.getElementById("prog-select-unidade")) {
+            carregarContextoProgramacao();
+        }
+    });
 </script>

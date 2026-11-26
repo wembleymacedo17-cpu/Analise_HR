@@ -260,14 +260,19 @@ class ProgramacaoAssistencial(Base):
     gestor_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
     data_programacao = Column(Date, nullable=False, index=True)
     turno = Column(String(15), nullable=False)
-
     qtd_colaboradores_programados = Column(Integer, nullable=False)
     leitos_fisicos = Column(Integer, nullable=False)
     leitos_bloqueados = Column(Integer, default=0, nullable=False)
-
     qtd_emprestados = Column(Integer, default=0, nullable=False)
     qtd_recebidos = Column(Integer, default=0, nullable=False)
     qtd_colaboradores_efetivos = Column(Integer, nullable=False)
+    qtd_aux_12h = Column(Integer, default=0, nullable=False)
+    qtd_aux_6h_manha = Column(Integer, default=0, nullable=False)
+    qtd_aux_6h_tarde = Column(Integer, default=0, nullable=False)
+    tem_colaboradores_novos = Column(Boolean, default=False, nullable=False)
+    qtd_colaboradores_novos = Column(Integer, default=0, nullable=False)
+    pacientes_colaboradores_novos = Column(Integer, default=0, nullable=False)
+    detalhe_colaboradores_novos = Column(Text, nullable=True)
 
     pacientes_internados = Column(Integer, default=0, nullable=False)
     leitos_operacionais = Column(Integer, default=0, nullable=False)
@@ -275,7 +280,6 @@ class ProgramacaoAssistencial(Base):
     taxa_ocupacao = Column(Numeric(6, 2), default=0, nullable=False)
     pacientes_por_colaborador = Column(Numeric(6, 2), default=0, nullable=False)
     leitos_por_colaborador = Column(Numeric(6, 2), default=0, nullable=False)
-
     observacao = Column(Text, nullable=True)
     criado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     atualizado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
