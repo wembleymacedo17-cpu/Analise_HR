@@ -7,6 +7,13 @@
             </div>
         </div>
 
+        {% if perfil != 'ROOT' %}
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:9px 14px; margin-bottom:14px; font-size:0.8rem; color:#334155;">
+            <strong style="color:var(--funfarme-blue);">Meus Centros de Custo:</strong>
+            <span id="lbl-gestor-ccs-vinculados">Carregando...</span>
+        </div>
+        {% endif %}
+
         <div id="banner-gestor-selecionado" class="gestor-detalhe-banner">
             <div>
                 <strong id="lbl-vg-gestor-nome" style="color:var(--funfarme-blue); font-size:0.95rem;">--</strong>
@@ -409,8 +416,9 @@
         document.getElementById("grid-gestores-global").style.display = "none";
         document.getElementById("banner-gestor-selecionado").style.display = "flex";
         document.getElementById("lbl-vg-gestor-nome").innerText = `${g.nome} (Crachá ${g.cracha})`;
+        const ccsTexto = (g.centros_custo || []).join(" • ") || "Sem CC vinculado";
         document.getElementById("lbl-vg-gestor-resumo").innerText =
-            `Análises feitas: ${g.analises_feitas} • Pendentes: ${g.pendentes}`;
+            `Análises feitas: ${g.analises_feitas} • Pendentes: ${g.pendentes} | Setores: ${ccsTexto}`;
 
         document.getElementById("grid-faltas-bento").style.display = "grid";
         aplicarFiltroNoGestorSelecionado();
@@ -442,24 +450,34 @@
             return;
         }
 
-        grid.innerHTML = lista.map(g => `
-            <div class="gestor-global-card" onclick="selecionarGestorVisaoGlobal(${g.id})" title="Clique para ver análises e pendências deste gestor">
-                <div>
-                    <div class="gestor-global-nome">${g.nome}</div>
-                    <div class="gestor-global-sub">Crachá: ${g.cracha}</div>
-                </div>
-                <div class="gestor-global-stats">
-                    <div class="gestor-stat-box gestor-stat-feitas">
-                        <span class="gestor-stat-num">${g.analises_feitas}</span>
-                        <span class="gestor-stat-lbl">Análises Feitas</span>
+        grid.innerHTML = lista.map(g => {
+            const ccsLista = g.centros_custo || [];
+            const ccsHtml = ccsLista.length
+                ? `<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                       ${ccsLista.map(cc => `<span style="font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:999px; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe;">${cc}</span>`).join("")}
+                   </div>`
+                : '<div style="font-size:0.72rem; color:#94a3b8; margin-top:4px;">Sem CC vinculado</div>';
+
+            return `
+                <div class="gestor-global-card" onclick="selecionarGestorVisaoGlobal(${g.id})" title="Clique para ver análises e pendências deste gestor">
+                    <div>
+                        <div class="gestor-global-nome">${g.nome}</div>
+                        <div class="gestor-global-sub">Crachá: ${g.cracha}</div>
+                        ${ccsHtml}
                     </div>
-                    <div class="gestor-stat-box gestor-stat-pend">
-                        <span class="gestor-stat-num">${g.pendentes}</span>
-                        <span class="gestor-stat-lbl">Pendentes</span>
+                    <div class="gestor-global-stats">
+                        <div class="gestor-stat-box gestor-stat-feitas">
+                            <span class="gestor-stat-num">${g.analises_feitas}</span>
+                            <span class="gestor-stat-lbl">Análises Feitas</span>
+                        </div>
+                        <div class="gestor-stat-box gestor-stat-pend">
+                            <span class="gestor-stat-num">${g.pendentes}</span>
+                            <span class="gestor-stat-lbl">Pendentes</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join("");
+            `;
+        }).join("");
     }
 
     async function carregarFaltas() {

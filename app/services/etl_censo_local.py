@@ -208,3 +208,5 @@ def iniciar_daemon_censo_30min():
         except Exception as e:
             print(f"❌ Erro no job do censo: {e}")
         time.sleep(INTERVALO_MINUTOS * 60)
+
+

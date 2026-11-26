@@ -219,6 +219,134 @@ def primeiro_acesso_api():
         return jsonify({'sucesso': False, 'mensagem': f'Erro interno ao ativar acesso: {str(e)}'}), 500
 
 
+@api_bp.route('/meu-perfil', methods=['GET'])
+def obter_meu_perfil_api():
+    id_user = session.get('usuario_id')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    db = get_db()
+    try:
+        user = (
+            db.query(
+                Usuario.id,
+                Usuario.role,
+                Colaborador.nome,
+                Colaborador.cracha,
+                CentroCusto.codigo_cc.label('cc_lotacao_cod'),
+                CentroCusto.nome.label('cc_lotacao_nome'),
+            )
+            .join(Colaborador, Usuario.colaborador_id == Colaborador.id)
+            .outerjoin(CentroCusto, Colaborador.centro_custo_id == CentroCusto.id)
+            .filter(Usuario.id == int(id_user))
+            .first()
+        )
+        if not user:
+            return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+        ccs_rows = (
+            db.query(
+                CentroCusto.id,
+                CentroCusto.codigo_cc,
+                CentroCusto.nome,
+            )
+            .join(UsuarioCentroCusto, UsuarioCentroCusto.centro_custo_id == CentroCusto.id)
+            .filter(
+                UsuarioCentroCusto.usuario_id == int(id_user),
+                CentroCusto.ativo.is_(True),
+            )
+            .order_by(CentroCusto.nome.asc())
+            .all()
+        )
+
+        ccs_vinculados = [
+            {
+                'id': r.id,
+                'codigo_cc': r.codigo_cc,
+                'nome': r.nome,
+                'label': f"{r.codigo_cc} - {r.nome}",
+            }
+            for r in ccs_rows
+        ]
+
+        cc_lotacao = (
+            f"{user.cc_lotacao_cod} - {user.cc_lotacao_nome}"
+            if user.cc_lotacao_cod and user.cc_lotacao_nome
+            else None
+        )
+
+        return jsonify({
+            'sucesso': True,
+            'perfil': {
+                'id': user.id,
+                'nome': user.nome or session.get('usuario_nome'),
+                'cracha': user.cracha or session.get('cracha'),
+                'role': (user.role or 'GESTOR').upper(),
+                'cc_lotacao': cc_lotacao,
+                'centros_custo': ccs_vinculados,
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao buscar perfil: {str(e)}'}), 500
+
+
+@api_bp.route('/meu-perfil/alterar-senha', methods=['PUT'])
+def alterar_propria_senha_api():
+    id_user = session.get('usuario_id')
+    if not id_user:
+        return jsonify({'sucesso': False, 'mensagem': 'Não autenticado.'}), 401
+
+    data = request.json or {}
+    cpf_digits = ''.join(filter(str.isdigit, str(data.get('cpf', ''))))
+    cpf = cpf_digits.zfill(11) if cpf_digits else ''
+    senha_antiga = str(data.get('senha_antiga') or '').strip()
+    nova_senha = str(data.get('nova_senha') or '').strip()
+    confirmar_senha = str(data.get('confirmar_senha') or '').strip()
+
+    if not cpf_digits or not senha_antiga or not nova_senha or not confirmar_senha:
+        return jsonify({'sucesso': False, 'mensagem': 'Preencha todos os campos obrigatórios.'}), 400
+
+    if nova_senha != confirmar_senha:
+        return jsonify({'sucesso': False, 'mensagem': 'Senha não combina'}), 400
+
+    if len(nova_senha) < 6:
+        return jsonify({'sucesso': False, 'mensagem': 'A nova senha deve ter no mínimo 6 caracteres.'}), 400
+
+    db = get_db()
+    try:
+        row = (
+            db.query(
+                Usuario.id,
+                Usuario.senha_hash,
+                Colaborador.cpf,
+            )
+            .join(Colaborador, Usuario.colaborador_id == Colaborador.id)
+            .filter(Usuario.id == int(id_user))
+            .with_for_update(of=Usuario)
+            .first()
+        )
+        if not row:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Usuário não encontrado.'}), 404
+
+        cpf_cadastrado = ''.join(filter(str.isdigit, str(row.cpf or ''))).zfill(11)
+        if cpf_cadastrado != cpf:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Cpf não conforme'}), 400
+
+        if not row.senha_hash or not check_password_hash(row.senha_hash, senha_antiga):
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': 'Senha não confere'}), 400
+
+        usuario_obj = db.query(Usuario).filter(Usuario.id == int(id_user)).first()
+        usuario_obj.senha_hash = generate_password_hash(nova_senha)
+        db.commit()
+
+        return jsonify({'sucesso': True, 'mensagem': 'Senha alterada com sucesso!'}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao alterar senha: {str(e)}'}), 500
+
 # ==============================================================================
 # BUSCA DE COLABORADOR PARA COBERTURA & TRANSFERÊNCIA DE CENTRO DE CUSTO
 # ==============================================================================
