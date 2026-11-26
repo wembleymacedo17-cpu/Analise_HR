@@ -32,9 +32,18 @@
                 <nav class="glass-menu">
                     <button type="button" class="glass-nav-btn active" onclick="trocarAba('aba-faltas', this)">
                         <span class="nav-icon-wrap">
+                            {% if perfil == 'ROOT' %}
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>
+                            {% else %}
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <line x1="18" y1="8" x2="23" y2="13"></line>
+                                <line x1="23" y1="8" x2="18" y2="13"></line>
+                            </svg>
+                            {% endif %}
                         </span>
-                        <span>{{ 'Visão Global' if perfil == 'ROOT' else 'Ocorrências' }}</span>
+                        <span>{{ 'Visão Global' if perfil == 'ROOT' else 'Análise de Faltas' }}</span>
                     </button>
 
                     {% if perfil == 'GESTOR' %}
@@ -155,7 +164,7 @@
                 {% endif %}
             </section>
 
-            <!-- TELA 1: VISÃO GLOBAL / OCORRÊNCIAS -->
+            <!-- TELA 1: VISÃO GLOBAL / ANÁLISE DE FALTAS -->
             {% include 'visao_global.html' %}
 
             {% if perfil == 'GESTOR' %}

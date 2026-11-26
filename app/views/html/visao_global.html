@@ -1,7 +1,7 @@
 <section id="aba-faltas" class="tab-content active">
     <div class="panel">
         <div class="panel-header">
-            <h2 class="panel-title" id="titulo-aba-faltas">{{ 'Visão Global por Gestor' if perfil == 'ROOT' else 'Ocorrências' }}</h2>
+            <h2 class="panel-title" id="titulo-aba-faltas">{{ 'Visão Global por Gestor' if perfil == 'ROOT' else 'Análise de Faltas' }}</h2>
             <div class="filters-row">
                 <button type="button" class="btn btn-primary" onclick="carregarFaltas()">Atualizar</button>
             </div>
@@ -84,7 +84,7 @@
 
 <!-- MODAL DETALHES, MOVER CC, DEVOLVER CC & DESFAZER ANÁLISE -->
 <div id="modal-detalhes-ocorrencia" class="modal-backdrop">
-    <div class="modal-card">
+    <div class="modal-card" onclick="event.stopPropagation()">
         <div class="modal-header">
             <h3>Detalhes da Ocorrência</h3>
             <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalDetalhesOcorrencia()">Fechar</button>
@@ -170,7 +170,7 @@
 
 <!-- MODAL ANÁLISE OPERACIONAL -->
 <div id="modal-analise" class="modal-backdrop">
-    <div class="modal-card" style="overflow-x: hidden;">
+    <div class="modal-card" style="overflow-x: hidden;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div><h3>Análise Operacional</h3><div class="modal-info" id="modal-subtitulo">Colaborador • Data</div></div>
             <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalAnalise()">Fechar</button>
@@ -767,7 +767,7 @@
         }).join("");
     }
 
-    async function abrirModalDetalhesOcorrencia(id) {
+    function abrirModalDetalhesOcorrencia(id) {
         const falta = listaFaltasCache.find(i => i.id === id); if (!falta) return;
         ocorrenciaDetalheAtual = falta;
         const av = document.getElementById("det-hero-avatar");
@@ -807,7 +807,16 @@
         toggleDesfazerBox(false);
         toggleMoverCCBox(false);
 
-        document.getElementById("btn-iniciar-analise-det").onclick = () => { fecharModalDetalhesOcorrencia(); abrirModalAnalise(falta.id); };
+        const btnIniciar = document.getElementById("btn-iniciar-analise-det");
+        btnIniciar.onclick = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const idAlvo = falta.id;
+            fecharModalDetalhesOcorrencia();
+            abrirModalAnalise(idAlvo);
+        };
         document.getElementById("modal-detalhes-ocorrencia").style.display = "flex";
     }
     function fecharModalDetalhesOcorrencia() {
@@ -881,13 +890,15 @@
     }
 
     // =========================================================================
-    // MODAL ANÁLISE OPERACIONAL (NOVO FLUXO + MÚLTIPLOS CCs)
+    // MODAL ANÁLISE OPERACIONAL (ABERTURA SÍNCRONA ESTÁVEL + MÚLTIPLOS CCs)
     // =========================================================================
-    async function abrirModalAnalise(id) {
+    function abrirModalAnalise(id) {
         const falta = listaFaltasCache.find(i => i.id === id);
         if (!falta) return;
 
-        document.getElementById("form-analise-falta").reset();
+        const formEl = document.getElementById("form-analise-falta");
+        if (formEl) formEl.reset();
+
         document.getElementById("analise-ocorrencia-id").value = falta.id;
         document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
         document.getElementById("analise-faltante-cc-codigo").value = falta.codigo_cc || "";
@@ -908,11 +919,16 @@
         document.getElementById("box-adequacao-remanejamento").style.display = "none";
         document.getElementById("input-filtro-cc-remanejamento").value = "";
 
-        const ccs = await garantirCCsCarregados();
-        renderizarSelectCCRemanejamento(ccs);
-
         irStepAnalise(1);
-        document.getElementById("modal-analise").style.display = "flex";
+
+        const modalAnaliseEl = document.getElementById("modal-analise");
+        modalAnaliseEl.style.display = "flex";
+
+        if (listaCCsGlobal.length > 0) {
+            renderizarSelectCCRemanejamento(listaCCsGlobal);
+        } else {
+            garantirCCsCarregados().then(ccs => renderizarSelectCCRemanejamento(ccs));
+        }
     }
 
     function fecharModalAnalise() {
