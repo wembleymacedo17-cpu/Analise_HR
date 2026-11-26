@@ -999,31 +999,60 @@ def analisar_falta():
                     'mensagem': 'O número de pacientes e de colaboradores devem ser maiores que zero.'
                 }), 400
         else:
-            try:
-                qtd_colaboradores = int(data.get('qtd_colaboradores') or 0)
-            except (TypeError, ValueError):
-                qtd_colaboradores = 0
+            remanejamentos_setores = data.get('remanejamentos_setores') or []
+            itens_validos = []
 
-            cc_origem_rem_id = data.get('cc_origem_remanejamento_id')
-            justificativa_texto = str(data.get('justificativa_nao_redimensionada') or '').strip()
+            for item in remanejamentos_setores:
+                try:
+                    cc_id_item = int(item.get('cc_id') or 0)
+                    qtd_item = int(item.get('qtd') or 0)
+                except (TypeError, ValueError):
+                    continue
+                if cc_id_item > 0 and qtd_item > 0:
+                    itens_validos.append((cc_id_item, qtd_item))
 
-            if qtd_colaboradores < 1 or not cc_origem_rem_id or not justificativa_texto:
-                db.rollback()
-                return jsonify({
-                    'sucesso': False,
-                    'mensagem': 'Informe o número de colaboradores e o Centro de Custo de origem.'
-                }), 400
+            if itens_validos:
+                cc_ids_req = [cc_id for cc_id, _ in itens_validos]
+                ccs_db = {
+                    row.id: f"{row.codigo_cc} - {row.nome}"
+                    for row in db.query(CentroCusto.id, CentroCusto.codigo_cc, CentroCusto.nome)
+                    .filter(CentroCusto.id.in_(cc_ids_req), CentroCusto.ativo.is_(True))
+                    .all()
+                }
+                if len(ccs_db) != len(set(cc_ids_req)):
+                    db.rollback()
+                    return jsonify({'sucesso': False, 'mensagem': 'Um ou mais Centros de Custo informados são inválidos.'}), 400
 
-            cc_origem_existe = (
-                db.query(CentroCusto.id)
-                .filter(CentroCusto.id == int(cc_origem_rem_id), CentroCusto.ativo.is_(True))
-                .first()
-            )
-            if not cc_origem_existe:
-                db.rollback()
-                return jsonify({'sucesso': False, 'mensagem': 'Centro de Custo de origem inválido.'}), 400
+                qtd_colaboradores = sum(qtd for _, qtd in itens_validos)
+                cobridor_cc_id = itens_validos[0][0]
+                partes_desc = [f"{qtd} colab. de {ccs_db[cc_id]}" for cc_id, qtd in itens_validos]
+                justificativa_texto = f"Remanejamento entre setores ({qtd_colaboradores} colab.): {'; '.join(partes_desc)}"
+            else:
+                try:
+                    qtd_colaboradores = int(data.get('qtd_colaboradores') or 0)
+                except (TypeError, ValueError):
+                    qtd_colaboradores = 0
 
-            cobridor_cc_id = int(cc_origem_rem_id)
+                cc_origem_rem_id = data.get('cc_origem_remanejamento_id')
+                justificativa_texto = str(data.get('justificativa_nao_redimensionada') or '').strip()
+
+                if qtd_colaboradores < 1 or not cc_origem_rem_id or not justificativa_texto:
+                    db.rollback()
+                    return jsonify({
+                        'sucesso': False,
+                        'mensagem': 'Adicione pelo menos um Centro de Custo de origem e a quantidade de colaboradores.'
+                    }), 400
+
+                cc_origem_existe = (
+                    db.query(CentroCusto.id)
+                    .filter(CentroCusto.id == int(cc_origem_rem_id), CentroCusto.ativo.is_(True))
+                    .first()
+                )
+                if not cc_origem_existe:
+                    db.rollback()
+                    return jsonify({'sucesso': False, 'mensagem': 'Centro de Custo de origem inválido.'}), 400
+
+                cobridor_cc_id = int(cc_origem_rem_id)
 
     nova_analise = AnaliseFalta(
         ocorrencia_id=ocorrencia.id,
