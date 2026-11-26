@@ -170,7 +170,7 @@
 
 <!-- MODAL ANÁLISE OPERACIONAL -->
 <div id="modal-analise" class="modal-backdrop">
-    <div class="modal-card">
+    <div class="modal-card" style="overflow-x: hidden;">
         <div class="modal-header">
             <div><h3>Análise Operacional</h3><div class="modal-info" id="modal-subtitulo">Colaborador • Data</div></div>
             <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalAnalise()">Fechar</button>
@@ -182,15 +182,15 @@
             </div>
             <div class="progress-track"><div class="progress-fill" id="barra-progresso-fill" style="width: 25%;"></div></div>
         </div>
-        <form id="form-analise-falta" class="modal-body-scroll">
+        <form id="form-analise-falta" class="modal-body-scroll" style="overflow-x: hidden; max-width: 100%; box-sizing: border-box;">
             <input type="hidden" id="analise-ocorrencia-id">
             <input type="hidden" id="analise-faltante-id">
             <input type="hidden" id="analise-faltante-cc-codigo">
             <input type="hidden" id="cobridor-colaborador-id">
 
             <!-- ETAPA 1 -->
-            <div id="an-step-pane-1" class="step-pane active">
-                <div class="single-question-card">
+            <div id="an-step-pane-1" class="step-pane active" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
+                <div class="single-question-card" style="max-width: 100%; box-sizing: border-box;">
                     <div class="single-question-title">1. Ausência programada pelo supervisor?</div>
                     <div class="choice-cards-grid">
                         <label class="choice-card"><input type="radio" name="q_programada" value="1" onchange="atualizarAcaoStep1()"><span>Sim</span></label>
@@ -205,8 +205,8 @@
             </div>
 
             <!-- ETAPA 2 -->
-            <div id="an-step-pane-2" class="step-pane">
-                <div class="single-question-card">
+            <div id="an-step-pane-2" class="step-pane" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
+                <div class="single-question-card" style="max-width: 100%; box-sizing: border-box;">
                     <div class="single-question-title">2. A falta foi comunicada com 2h de antecedência?</div>
                     <div class="choice-cards-grid">
                         <label class="choice-card"><input type="radio" name="q_comunicada" value="1"><span>Sim</span></label>
@@ -220,15 +220,15 @@
             </div>
 
             <!-- ETAPA 3 -->
-            <div id="an-step-pane-3" class="step-pane">
-                <div class="single-question-card">
+            <div id="an-step-pane-3" class="step-pane" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
+                <div class="single-question-card" style="max-width: 100%; box-sizing: border-box;">
                     <div class="single-question-title">3. Foi autorizado horas extras para a cobertura?</div>
                     <div class="choice-cards-grid">
                         <label class="choice-card"><input type="radio" name="q_aut_he" value="1" onchange="atualizarSubpergunta3a()"><span>Sim</span></label>
                         <label class="choice-card"><input type="radio" name="q_aut_he" value="0" onchange="atualizarSubpergunta3a()"><span>Não</span></label>
                     </div>
 
-                    <div id="bloco-pergunta-3a" class="sub-question-block">
+                    <div id="bloco-pergunta-3a" class="sub-question-block" style="max-width: 100%; box-sizing: border-box;">
                         <div class="sub-question-title">3a. Quem autorizou?</div>
                         <div class="choice-cards-grid" style="margin-bottom: 12px;">
                             <label class="choice-card">
@@ -241,24 +241,24 @@
                             </label>
                         </div>
 
-                        <div id="box-select-autorizador" class="field-group" style="display:none; margin-bottom: 16px;">
+                        <div id="box-select-autorizador" class="field-group" style="display:none; margin-bottom: 16px; max-width: 100%; min-width: 0;">
                             <label id="lbl-select-autorizador" for="select-autorizador-he" style="font-size:0.82rem; font-weight:700; color:#334155;">Selecione o responsável *</label>
-                            <select id="select-autorizador-he" class="select-control" style="width: 100%;" onchange="aoSelecionarAutorizador()">
+                            <select id="select-autorizador-he" class="select-control" style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis;" onchange="aoSelecionarAutorizador()">
                                 <option value="">Selecione...</option>
                             </select>
                         </div>
 
-                        <div id="bloco-pergunta-3b" style="display:none; padding-top: 14px; border-top: 1px dashed #cbd5e1;">
+                        <div id="bloco-pergunta-3b" style="display:none; padding-top: 14px; border-top: 1px dashed #cbd5e1; max-width: 100%; box-sizing: border-box;">
                             <div class="sub-question-title">3b. Conseguiu cobertura para esta ausência?</div>
                             <div class="choice-cards-grid">
                                 <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()"><span>Sim</span></label>
                                 <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()"><span>Não</span></label>
                             </div>
 
-                            <div class="cobertura-box" id="box-origem-cobertura">
+                            <div class="cobertura-box" id="box-origem-cobertura" style="max-width: 100%; box-sizing: border-box;">
                                 <label class="cobertura-label" for="input-busca-cobridor">Informe o crachá ou nome de quem cobriu *</label>
-                                <div class="autocomplete-wrap">
-                                    <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
+                                <div class="autocomplete-wrap" style="max-width: 100%;">
+                                    <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%; box-sizing: border-box;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
                                     <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
                                 </div>
                                 <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
@@ -277,44 +277,63 @@
             </div>
 
             <!-- ETAPA 4: REDIMENSIONAMENTO INTERNO OU REMANEJAMENTO ENTRE SETORES -->
-            <div id="an-step-pane-4" class="step-pane">
-                <div class="single-question-card">
+            <div id="an-step-pane-4" class="step-pane" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
+                <div class="single-question-card" style="max-width: 100%; overflow: hidden; box-sizing: border-box;">
                     <div class="single-question-title">4. Adequação da equipe na ausência</div>
                     <div class="choice-cards-grid">
-                        <label class="choice-card">
+                        <label class="choice-card" style="min-width: 0;">
                             <input type="radio" name="q_tipo_adequacao" value="INTERNO" onchange="atualizarDetalhesStep4()">
                             <span>Redimensionamento interno</span>
                         </label>
-                        <label class="choice-card">
+                        <label class="choice-card" style="min-width: 0;">
                             <input type="radio" name="q_tipo_adequacao" value="REMANEJAMENTO" onchange="atualizarDetalhesStep4()">
                             <span>Remanejamento entre setores</span>
                         </label>
                     </div>
 
                     <!-- OPÇÃO A: REDIMENSIONAMENTO INTERNO -->
-                    <div id="box-adequacao-interno" class="redivisao-detalhes-box">
+                    <div id="box-adequacao-interno" class="redivisao-detalhes-box" style="max-width: 100%; box-sizing: border-box;">
                         <div class="redivisao-grid">
-                            <div class="field-group">
+                            <div class="field-group" style="min-width: 0;">
                                 <label for="input-qtd-pacientes">Número de Pacientes *</label>
-                                <input type="number" id="input-qtd-pacientes" class="input-control" min="1" step="1" placeholder="Ex: 18">
+                                <input type="number" id="input-qtd-pacientes" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" placeholder="Ex: 18">
                             </div>
-                            <div class="field-group">
+                            <div class="field-group" style="min-width: 0;">
                                 <label for="input-qtd-colaboradores">Número de Colaboradores *</label>
-                                <input type="number" id="input-qtd-colaboradores" class="input-control" min="1" step="1" placeholder="Ex: 4">
+                                <input type="number" id="input-qtd-colaboradores" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" placeholder="Ex: 4">
                             </div>
                         </div>
                     </div>
 
-                    <!-- OPÇÃO B: REMANEJAMENTO ENTRE SETORES -->
-                    <div id="box-adequacao-remanejamento" class="redivisao-detalhes-box">
-                        <div class="field-group" style="margin-bottom: 12px;">
-                            <label for="input-qtd-colab-remanejado">Número de Colaboradores *</label>
-                            <input type="number" id="input-qtd-colab-remanejado" class="input-control" min="1" step="1" placeholder="Ex: 1">
+                    <!-- OPÇÃO B: REMANEJAMENTO ENTRE SETORES (MÚLTIPLOS CCs + EXCLUSÃO) -->
+                    <div id="box-adequacao-remanejamento" class="redivisao-detalhes-box" style="max-width: 100%; overflow: hidden; box-sizing: border-box;">
+                        <div style="display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 10px; align-items: end; margin-bottom: 10px;">
+                            <div class="field-group" style="margin-bottom: 0; min-width: 0;">
+                                <label for="input-qtd-colab-remanejado">Qtd. Colab. *</label>
+                                <input type="number" id="input-qtd-colab-remanejado" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" value="1" placeholder="1">
+                            </div>
+
+                            <div class="field-group" style="margin-bottom: 0; min-width: 0;">
+                                <label for="input-filtro-cc-remanejamento">Filtrar Centro de Custo</label>
+                                <input type="text" id="input-filtro-cc-remanejamento" class="input-control" style="width: 100%; box-sizing: border-box;" placeholder="Código ou nome..." oninput="filtrarSelectCCRemanejamento()">
+                            </div>
                         </div>
-                        <div class="field-group">
+
+                        <div class="field-group" style="margin-bottom: 10px; min-width: 0; max-width: 100%;">
                             <label for="select-cc-origem-remanejamento">Centro de Custo de origem (de quem veio) *</label>
-                            <input type="text" id="input-filtro-cc-remanejamento" class="input-control" style="margin-bottom: 6px; font-size: 0.82rem;" placeholder="Filtrar centro de custo..." oninput="filtrarSelectCCRemanejamento()">
-                            <select id="select-cc-origem-remanejamento" class="select-control" style="width: 100%;"></select>
+                            <select id="select-cc-origem-remanejamento" class="select-control" style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></select>
+                        </div>
+
+                        <button type="button" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; margin-bottom: 12px;" onclick="adicionarCCRemanejamentoFalta()">
+                            + Adicionar Centro de Custo
+                        </button>
+
+                        <div id="wrap-lista-ccs-remanejados" style="display: none; border-top: 1px dashed #cbd5e1; padding-top: 10px; max-width: 100%;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #475569;">Centros de Custo adicionados:</span>
+                                <span id="lbl-total-colab-remanejados" class="status-pill pill-analisada" style="font-size: 0.72rem;">Total: 0 colab.</span>
+                            </div>
+                            <div id="lista-ccs-remanejados" style="display: flex; flex-direction: column; gap: 6px; max-width: 100%;"></div>
                         </div>
                     </div>
                 </div>
@@ -351,6 +370,8 @@
     let usuarioProprioId = null;
     let listaHistoricoGestorCache = [];
     let cobridorSelecionadoObj = null;
+    let autorizadorHeSelecionadoAtual = "";
+    let listaCCsRemanejadosFalta = [];
     let ocorrenciaDetalheAtual = null, ocorrenciaExternaSelecionada = null;
     let timerBuscaCobridor = null, timerBuscaExterna = null;
     let dataOcorrenciaAtual = "", faltanteCrachaAtual = "";
@@ -860,7 +881,7 @@
     }
 
     // =========================================================================
-    // MODAL ANÁLISE OPERACIONAL (NOVO FLUXO)
+    // MODAL ANÁLISE OPERACIONAL (NOVO FLUXO + MÚLTIPLOS CCs)
     // =========================================================================
     async function abrirModalAnalise(id) {
         const falta = listaFaltasCache.find(i => i.id === id);
@@ -874,7 +895,11 @@
         faltanteCrachaAtual = falta.cracha || "";
         document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
 
+        autorizadorHeSelecionadoAtual = "";
+        listaCCsRemanejadosFalta = [];
+        renderizarListaCCsRemanejadosFalta();
         limparCobridorSelecionado();
+
         document.getElementById("bloco-pergunta-3a").style.display = "none";
         document.getElementById("box-select-autorizador").style.display = "none";
         document.getElementById("bloco-pergunta-3b").style.display = "none";
@@ -911,6 +936,75 @@
             ? listaCCsGlobal.filter(c => c.codigo_cc.toLowerCase().includes(termo) || c.nome.toLowerCase().includes(termo))
             : listaCCsGlobal;
         renderizarSelectCCRemanejamento(filtrados);
+    }
+
+    function adicionarCCRemanejamentoFalta() {
+        const qtdInput = document.getElementById("input-qtd-colab-remanejado");
+        const selCC = document.getElementById("select-cc-origem-remanejamento");
+        const qtd = parseInt(qtdInput?.value || "0", 10);
+        const ccId = parseInt(selCC?.value || "0", 10);
+        const ccLabel = selCC?.options[selCC.selectedIndex]?.getAttribute("data-label") || "";
+
+        if (qtd < 1) {
+            mostrarToast("Informe a quantidade de colaboradores (mínimo 1).", true);
+            qtdInput?.focus();
+            return;
+        }
+        if (!ccId || !ccLabel) {
+            mostrarToast("Selecione um Centro de Custo de origem.", true);
+            selCC?.focus();
+            return;
+        }
+
+        const existente = listaCCsRemanejadosFalta.find(item => item.cc_id === ccId);
+        if (existente) {
+            existente.qtd += qtd;
+        } else {
+            listaCCsRemanejadosFalta.push({
+                cc_id: ccId,
+                cc_label: ccLabel,
+                qtd: qtd
+            });
+        }
+
+        qtdInput.value = "1";
+        selCC.value = "";
+        renderizarListaCCsRemanejadosFalta();
+    }
+
+    function removerCCRemanejamentoFalta(idx) {
+        listaCCsRemanejadosFalta.splice(idx, 1);
+        renderizarListaCCsRemanejadosFalta();
+    }
+
+    function renderizarListaCCsRemanejadosFalta() {
+        const wrap = document.getElementById("wrap-lista-ccs-remanejados");
+        const listEl = document.getElementById("lista-ccs-remanejados");
+        const lblTotal = document.getElementById("lbl-total-colab-remanejados");
+        if (!wrap || !listEl) return;
+
+        if (!listaCCsRemanejadosFalta.length) {
+            wrap.style.display = "none";
+            listEl.innerHTML = "";
+            return;
+        }
+
+        const totalColab = listaCCsRemanejadosFalta.reduce((acc, item) => acc + item.qtd, 0);
+        if (lblTotal) {
+            lblTotal.innerText = `Total: ${totalColab} colab.`;
+        }
+
+        wrap.style.display = "block";
+        listEl.innerHTML = listaCCsRemanejadosFalta.map((item, idx) => `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; border-radius:10px; background:#f8fafc; border:1px solid #cbd5e1; max-width:100%; box-sizing:border-box;">
+                <div style="font-size:0.82rem; color:#0f172a; min-width:0; word-break:break-word;">
+                    <strong>${item.qtd} colab.</strong> • ${item.cc_label}
+                </div>
+                <button type="button" class="btn btn-danger btn-sm" style="padding:3px 9px; font-size:0.75rem; flex-shrink:0;" onclick="removerCCRemanejamentoFalta(${idx})" title="Excluir Centro de Custo">
+                    Excluir
+                </button>
+            </div>
+        `).join("");
     }
 
     function atualizarBarraProgressoAnalise(step, pctCustom = null, labelCustom = null) {
@@ -974,6 +1068,7 @@
             aoMudarTipoAutorizador();
         } else {
             bloco3a.style.display = "none";
+            autorizadorHeSelecionadoAtual = "";
             limparCobridorSelecionado();
             document.getElementById("btn-step3-next").style.display = "inline-flex";
             document.getElementById("btn-step3-salvar").style.display = "none";
@@ -995,7 +1090,7 @@
             return;
         }
 
-        const valorAnterior = selectEl.value;
+        const candidato = selectEl.value || autorizadorHeSelecionadoAtual;
         const lista = tipoAut === "PLANTAO_ADM" ? LISTA_PLANTAO_ADM : LISTA_COORDENACAO;
         lblSelect.innerText = tipoAut === "PLANTAO_ADM"
             ? "Selecione quem autorizou (Plantão Administrativo) *"
@@ -1004,8 +1099,12 @@
         selectEl.innerHTML = '<option value="">Selecione...</option>' +
             lista.map(nome => `<option value="${nome}">${nome}</option>`).join("");
 
-        if (valorAnterior && lista.includes(valorAnterior)) {
-            selectEl.value = valorAnterior;
+        if (candidato && lista.includes(candidato)) {
+            selectEl.value = candidato;
+            autorizadorHeSelecionadoAtual = candidato;
+        } else {
+            selectEl.value = "";
+            autorizadorHeSelecionadoAtual = "";
         }
 
         boxSelect.style.display = "block";
@@ -1014,6 +1113,7 @@
 
     function aoSelecionarAutorizador() {
         const nomeAut = document.getElementById("select-autorizador-he").value.trim();
+        autorizadorHeSelecionadoAtual = nomeAut;
         const bloco3b = document.getElementById("bloco-pergunta-3b");
 
         if (!nomeAut) {
@@ -1051,7 +1151,8 @@
                 mostrarToast("Selecione Plantão Administrativo ou Coordenação.", true);
                 return;
             }
-            if (!document.getElementById("select-autorizador-he").value.trim()) {
+            const nomeAut = (document.getElementById("select-autorizador-he").value || autorizadorHeSelecionadoAtual).trim();
+            if (!nomeAut) {
                 mostrarToast("Selecione o nome de quem autorizou.", true);
                 return;
             }
@@ -1133,7 +1234,7 @@
 
             const autHe = q3.value === "1";
             const tipoAut = autHe ? (document.querySelector('input[name="q_tipo_autorizador"]:checked')?.value || null) : null;
-            const autNome = autHe ? document.getElementById("select-autorizador-he").value.trim() : null;
+            const autNome = autHe ? (document.getElementById("select-autorizador-he").value || autorizadorHeSelecionadoAtual).trim() : null;
             const consHe = autHe ? document.querySelector('input[name="q_cons_he"]:checked')?.value === "1" : false;
 
             if (autHe && (!tipoAut || !autNome)) {
@@ -1180,15 +1281,15 @@
                         justificativa_nao_redimensionada: null
                     });
                 } else {
-                    const qtdColabRem = parseInt(document.getElementById("input-qtd-colab-remanejado").value || "0", 10);
-                    const selCC = document.getElementById("select-cc-origem-remanejamento");
-                    const ccOrigemId = parseInt(selCC.value || "0", 10);
-                    const ccOrigemLabel = selCC.options[selCC.selectedIndex]?.getAttribute("data-label") || "";
-
-                    if (qtdColabRem < 1 || !ccOrigemId) {
-                        mostrarToast("Informe o número de colaboradores e o Centro de Custo de origem.", true);
+                    if (!listaCCsRemanejadosFalta.length) {
+                        mostrarToast("Adicione pelo menos um Centro de Custo de origem.", true);
                         return;
                     }
+
+                    const totalColabRem = listaCCsRemanejadosFalta.reduce((acc, item) => acc + item.qtd, 0);
+                    const detalhesCCs = listaCCsRemanejadosFalta
+                        .map(item => `${item.qtd} colab. de ${item.cc_label}`)
+                        .join("; ");
 
                     Object.assign(payload, {
                         comunicada_2h_antecedencia: q2.value === "1",
@@ -1198,9 +1299,10 @@
                         conseguiu_he_cobertura: false,
                         redividiu_equipe: false,
                         qtd_pacientes: null,
-                        qtd_colaboradores: qtdColabRem,
-                        cc_origem_remanejamento_id: ccOrigemId,
-                        justificativa_nao_redimensionada: `Remanejamento entre setores: ${qtdColabRem} colaborador(es) vindo(s) de ${ccOrigemLabel}`
+                        qtd_colaboradores: totalColabRem,
+                        cc_origem_remanejamento_id: listaCCsRemanejadosFalta[0].cc_id,
+                        remanejamentos_setores: listaCCsRemanejadosFalta,
+                        justificativa_nao_redimensionada: `Remanejamento entre setores (${totalColabRem} colab.): ${detalhesCCs}`
                     });
                 }
             }
