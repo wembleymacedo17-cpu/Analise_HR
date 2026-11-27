@@ -302,14 +302,14 @@
                 <div class="prog-section">
                     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
                         <div class="prog-section-title" id="lbl-step3-subtitulo" style="margin-bottom:0;">
-                            Etapa 3.1 • Houve necessidade de remanejamento no turno?
+                            Etapa 3.1 • Necessidade de Readequação da Equipe
                         </div>
                         <span id="badge-step3-subetapa" style="font-size:0.74rem; font-weight:800; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; padding:4px 12px; border-radius:999px;">
-                            Passo 1 de 2 • Remanejamento
+                            Passo 1 de 2 • Readequação
                         </span>
                     </div>
 
-                    <!-- SUB-ETAPA 3.1: REMANEJAMENTO -->
+                    <!-- SUB-ETAPA 3.1: READEQUAÇÃO / REMANEJAMENTO -->
                     <div id="prog-substep-3-1">
                         <!-- PERGUNTA INICIAL (OCULTADA AUTOMATICAMENTE AO ESCOLHER EMPRESTAR OU RECEBER) -->
                         <div id="prog-substep-3-1-pergunta">
@@ -430,7 +430,7 @@
                             </div>
 
                             <div id="prog-lista-remanejamentos-wrap" style="margin-top: 14px; display:none;">
-                                <div class="prog-lista-header">Colaboradores confirmados no remanejamento</div>
+                                <div class="prog-lista-header">Colaboradores confirmados na readequação</div>
                                 <div id="prog-lista-remanejamentos" class="prog-rem-items"></div>
                             </div>
                         </div>
@@ -534,7 +534,7 @@
 
                         <div class="prog-footer-actions prog-footer-between" style="margin-top: 18px;">
                             <button type="button" class="btn btn-secondary" onclick="voltarParaSubstep3Remanejamento()">
-                                ← Voltar para Remanejamento
+                                ← Voltar para Readequação
                             </button>
                             <button type="button" class="btn btn-primary" onclick="avancarStepProgramacao(3)">
                                 Ver Resumo →
@@ -1016,7 +1016,7 @@
     }
 
     // =========================================================================
-    // SUB-ETAPA 3.1: REMANEJAMENTO (OCULTA PERGUNTA 3.1 AO ESCOLHER TIPO)
+    // SUB-ETAPA 3.1: READEQUAÇÃO / REMANEJAMENTO (OCULTA PERGUNTA 3.1 AO ESCOLHER TIPO)
     // =========================================================================
     function irParaSubstep3(sub) {
         progSubstep3Atual = sub;
@@ -1200,7 +1200,7 @@
         const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
         if (!tipoMov) {
             marcarErroCampo("grid-tipo-mov-rem");
-            mostrarToast("Selecione o tipo de remanejamento (Emprestar ou Receber).", true);
+            mostrarToast("Selecione o tipo de readequação (Emprestar ou Receber).", true);
             return;
         }
 
@@ -1271,7 +1271,7 @@
         const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
         if (!tipoMov) {
             marcarErroCampo("grid-tipo-mov-rem");
-            mostrarToast("Selecione se o remanejamento foi Emprestar ou Receber.", true);
+            mostrarToast("Selecione se a readequação foi Emprestar ou Receber.", true);
             return;
         }
 
@@ -1375,7 +1375,7 @@
 
         const tipoAut = document.querySelector('input[name="prog_he_tipo_autorizador"]:checked')?.value || "";
         if (!tipoAut) {
-            return { ativo: true, campo_erro: "prog-he-grupo-wrap", erro: "Selecione quem autorizou a hora extra (Plantão Adm ou Coordenação)." };
+            return { ativo: true, campo_erro: "prog-he-grupo-wrap", erro: "Selecione quem autorizou a hora extra (PLANTÃO ADM ou GER/COORD/SUP)." };
         }
         const selAut = document.getElementById("prog-he-select-autorizador");
         const nomeAut = (selAut?.value || "").trim();
@@ -1894,15 +1894,17 @@
                 const pe = d.programacao_existente;
                 const parsedObs = _parsearBlocosObservacaoSalva(pe.observacao || "");
 
-                // Restaura enfermeiros sem duplicar na observação livre
+                // 1. Enfermeiros (sem duplicar na caixa de texto livre)
                 progEnfermeirosSelecionados = parsedObs.enfermeirosLista || [];
                 renderizarEnfermeirosSelecionados();
 
+                // 2. Composição da equipe
                 document.getElementById("prog-aux-12h").value = pe.qtd_aux_12h ?? pe.qtd_colaboradores_programados;
                 document.getElementById("prog-aux-6h-manha").value = pe.qtd_aux_6h_manha ?? 0;
                 document.getElementById("prog-aux-6h-tarde").value = pe.qtd_aux_6h_tarde ?? 0;
                 atualizarTotalAuxiliaresStep2();
 
+                // 3. Colaboradores novos
                 const radioNovos = document.querySelector(`input[name="prog_tem_novos"][value="${pe.tem_colaboradores_novos ? "1" : "0"}"]`);
                 if (radioNovos) radioNovos.checked = true;
                 aoMudarTemColabNovos();
@@ -1911,13 +1913,13 @@
                     renderizarCamposColabNovos(pe.detalhe_colaboradores_novos.map(x => x.pacientes));
                 }
 
+                // 4. Leitos e Observação Livre (sobrescrita limpa)
                 document.getElementById("prog-leitos-fisicos").value = pe.leitos_fisicos;
                 document.getElementById("prog-leitos-bloqueados").value = pe.leitos_bloqueados;
-
-                // Coloca apenas a observação livre (sem os blocos estruturados)
                 document.getElementById("prog-observacao").value = parsedObs.obsLivre.join("\n");
                 atualizarPreviewObservacaoResumo();
 
+                // 5. Readequações / Remanejamentos
                 progRemanejamentosLista = (pe.remanejamentos || []).map((r, rIdx) => ({
                     card_idx: rIdx,
                     colaborador_num: String(rIdx + 1).padStart(2, "0"),
@@ -1934,7 +1936,7 @@
                 if (bannerEdicao) bannerEdicao.style.display = "block";
                 _setTextSafe(
                     "lbl-prog-banner-edicao",
-                    `Relatório ${progTurnoAtual} já salvo (${pe.atualizado_em}). Salvar irá atualizar e sobrescrever este turno.`
+                    `Relatório ${progTurnoAtual} já salvo (${pe.atualizado_em}). Salvar irá sobrescrever este turno.`
                 );
             } else {
                 if (forcarLimpeza || progTurnoAtual) {
@@ -2090,7 +2092,7 @@
             : "";
         const obsAdicional = obsLivre ? `Obs: ${obsLivre}` : "";
 
-        // Sobrescreve completamente a observação estruturada
+        // Sobrescreve sempre a coluna observacao no banco
         const observacaoFinal = [enfResumo, heResumo, remResumo, obsAdicional].filter(Boolean).join(" | ");
         const infoNovos = obterDetalheColabNovos();
 
@@ -2258,7 +2260,7 @@
                     </div>
                 `;
             }).join("")
-            : '<div style="font-size:0.83rem; color:#64748b;">Sem readequação registrado neste turno.</div>';
+            : '<div style="font-size:0.83rem; color:#64748b;">Sem readequação registrada neste turno.</div>';
 
         const novosHtml = (r.tem_colaboradores_novos && r.detalhe_colaboradores_novos?.length)
             ? `<div style="margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #ffffff; border: 1px solid #a7f3d0;">

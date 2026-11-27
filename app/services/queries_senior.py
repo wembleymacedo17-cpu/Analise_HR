@@ -94,7 +94,7 @@ LISTA_PLANTAO_ADM = {
     "Juliane Cristina Souza Ferraroni",
 }
 
-LISTA_COORDENACAO = {
+LISTA_COORDENACAO = [
     "Rafaela Marqui",
     "Ana Paula Valverde",
     "Bruna Barozzi",
@@ -104,5 +104,5 @@ LISTA_COORDENACAO = {
     "Daniele Pontão",
     "Gedalia Pettinelli",
     "Samantha Melara",
-    "Cleber Candido"
-}
+    "Cleber Candido",
+]

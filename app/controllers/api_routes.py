@@ -978,6 +978,10 @@ def listar_faltas():
         }
     }), 200
 
+def _normalizar_nome_lista(texto: str) -> str:
+    return unicodedata.normalize('NFC', str(texto or '')).strip()
+
+
 @api_bp.route('/analisar-falta', methods=['POST'])
 def analisar_falta():
     id_user = session.get('usuario_id')
@@ -1050,16 +1054,26 @@ def analisar_falta():
     cobridor_id_raw = data.get('cobridor_colaborador_id')
 
     if autorizado_he:
-        permitidos = set(LISTA_PLANTAO_ADM) | set(LISTA_COORDENACAO)
-        if not autorizador_he_nome or autorizador_he_nome not in permitidos:
+        autorizador_he_norm = _normalizar_nome_lista(autorizador_he_nome)
+        permitidos_norm = {
+            _normalizar_nome_lista(nome).upper(): nome
+            for nome in (set(LISTA_PLANTAO_ADM) | set(LISTA_COORDENACAO))
+        }
+        chave_busca = autorizador_he_norm.upper()
+        if not chave_busca or chave_busca not in permitidos_norm:
             db.rollback()
-            return jsonify({'sucesso': False, 'mensagem': 'Selecione o responsável que autorizou as horas extras.'}), 400
+            return jsonify({
+                'sucesso': False,
+                'mensagem': f'Responsável inválido ({autorizador_he_norm or "vazio"}). Volte à Etapa 3 e selecione um nome.'
+            }), 400
+
+        nome_canonico = permitidos_norm[chave_busca]
         if tipo_autorizador_he == 'PLANTAO_ADM':
-            autorizador_he_nome_salvo = f"[Plantão Adm] {autorizador_he_nome}"
+            autorizador_he_nome_salvo = f"[Plantão Adm] {nome_canonico}"
         elif tipo_autorizador_he == 'COORDENACAO':
-            autorizador_he_nome_salvo = f"[Coordenação] {autorizador_he_nome}"
+            autorizador_he_nome_salvo = f"[GER/COORD/SUP] {nome_canonico}"
         else:
-            autorizador_he_nome_salvo = autorizador_he_nome
+            autorizador_he_nome_salvo = nome_canonico
     else:
         autorizador_he_nome_salvo = None
 
@@ -1222,8 +1236,6 @@ def analisar_falta():
     db.commit()
 
     return jsonify({'sucesso': True, 'mensagem': 'Análise registrada com sucesso!'}), 200
-
-# ==============================================================================
 # ADMINISTRAÇÃO ROOT (VALIDAÇÃO CRACHÁ, CONVITES, GESTORES, ETL E MÉTRICAS)
 # ==============================================================================
 @api_bp.route('/colaboradores/<string:cracha>', methods=['GET'])

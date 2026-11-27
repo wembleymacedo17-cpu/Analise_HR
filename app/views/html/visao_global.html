@@ -1,3 +1,21 @@
+<style>
+    @keyframes anShakeErro {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+    }
+    .campo-erro-destaque {
+        border: 2px solid #dc2626 !important;
+        background-color: #fef2f2 !important;
+        border-radius: 12px;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.16) !important;
+        animation: anShakeErro 0.25s ease;
+    }
+    .choice-cards-grid.campo-erro-destaque {
+        padding: 6px;
+    }
+</style>
+
 <section id="aba-faltas" class="tab-content active">
     <div class="panel">
         <div class="panel-header">
@@ -121,7 +139,7 @@
             <label for="input-motivo-desfazer" style="display:block; font-size:0.82rem; font-weight:700; color:#b91c1c; margin-bottom:6px;">
                 Qual o motivo de estar desfazendo esta análise? *
             </label>
-            <textarea id="input-motivo-desfazer" class="textarea-control" style="min-height:70px; margin-bottom:10px;" placeholder="Ex: Lançamento incorreto, troca de informação do gestor..."></textarea>
+            <textarea id="input-motivo-desfazer" class="textarea-control" style="min-height:70px; margin-bottom:10px;" placeholder="Ex: Lançamento incorreto, troca de informação do gestor..." oninput="limparErroAnalise(this)"></textarea>
             <div style="display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDesfazerBox(false)">Cancelar</button>
                 <button type="button" class="btn btn-danger btn-sm" id="btn-confirmar-desfazer" onclick="confirmarDesfazerAnalise()">Confirmar Desfazer</button>
@@ -135,7 +153,7 @@
         <div id="det-mover-cc-box" class="mover-cc-box">
             <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--funfarme-blue); margin-bottom:8px;">Enviar ocorrência para qual Centro de Custo?</label>
             <input type="text" id="input-busca-cc-destino" class="input-control" style="width: 100%; margin-bottom: 8px;" placeholder="Filtrar setor de destino..." oninput="filtrarSelectCCDestino()">
-            <select id="select-cc-destino" class="select-control" style="width: 100%; margin-bottom: 10px;"></select>
+            <select id="select-cc-destino" class="select-control" style="width: 100%; margin-bottom: 10px;" onchange="limparErroAnalise(this)"></select>
             <div style="display:flex; justify-content:flex-end; gap:8px;">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="toggleMoverCCBox(false)">Cancelar</button>
                 <button type="button" class="btn btn-primary btn-sm" id="btn-confirmar-mover-cc" onclick="confirmarMoverCentroCusto()">Confirmar Transferência</button>
@@ -189,19 +207,20 @@
             </div>
             <div class="progress-track"><div class="progress-fill" id="barra-progresso-fill" style="width: 25%;"></div></div>
         </div>
-        <form id="form-analise-falta" class="modal-body-scroll" style="overflow-x: hidden; max-width: 100%; box-sizing: border-box;">
+        <form id="form-analise-falta" onsubmit="event.preventDefault(); return false;" class="modal-body-scroll" style="overflow-x: hidden; max-width: 100%; box-sizing: border-box;">
             <input type="hidden" id="analise-ocorrencia-id">
             <input type="hidden" id="analise-faltante-id">
             <input type="hidden" id="analise-faltante-cc-codigo">
             <input type="hidden" id="cobridor-colaborador-id">
+            <input type="hidden" id="hidden-autorizador-he-nome">
 
             <!-- ETAPA 1 -->
             <div id="an-step-pane-1" class="step-pane active" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
                 <div class="single-question-card" style="max-width: 100%; box-sizing: border-box;">
                     <div class="single-question-title">1. Ausência programada pelo supervisor?</div>
-                    <div class="choice-cards-grid">
-                        <label class="choice-card"><input type="radio" name="q_programada" value="1" onchange="atualizarAcaoStep1()"><span>Sim</span></label>
-                        <label class="choice-card"><input type="radio" name="q_programada" value="0" onchange="atualizarAcaoStep1()"><span>Não</span></label>
+                    <div id="grid-q-programada" class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_programada" value="1" onchange="limparErroAnalise('grid-q-programada'); atualizarAcaoStep1()"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_programada" value="0" onchange="limparErroAnalise('grid-q-programada'); atualizarAcaoStep1()"><span>Não</span></label>
                     </div>
                 </div>
                 <div class="modal-actions" style="justify-content: flex-end;">
@@ -215,9 +234,9 @@
             <div id="an-step-pane-2" class="step-pane" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
                 <div class="single-question-card" style="max-width: 100%; box-sizing: border-box;">
                     <div class="single-question-title">2. A falta foi comunicada com 2h de antecedência?</div>
-                    <div class="choice-cards-grid">
-                        <label class="choice-card"><input type="radio" name="q_comunicada" value="1"><span>Sim</span></label>
-                        <label class="choice-card"><input type="radio" name="q_comunicada" value="0"><span>Não</span></label>
+                    <div id="grid-q-comunicada" class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_comunicada" value="1" onchange="limparErroAnalise('grid-q-comunicada')"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_comunicada" value="0" onchange="limparErroAnalise('grid-q-comunicada')"><span>Não</span></label>
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -230,42 +249,42 @@
             <div id="an-step-pane-3" class="step-pane" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
                 <div class="single-question-card" style="max-width: 100%; box-sizing: border-box;">
                     <div class="single-question-title">3. Foi autorizado horas extras para a cobertura?</div>
-                    <div class="choice-cards-grid">
-                        <label class="choice-card"><input type="radio" name="q_aut_he" value="1" onchange="atualizarSubpergunta3a()"><span>Sim</span></label>
-                        <label class="choice-card"><input type="radio" name="q_aut_he" value="0" onchange="atualizarSubpergunta3a()"><span>Não</span></label>
+                    <div id="grid-q-aut-he" class="choice-cards-grid">
+                        <label class="choice-card"><input type="radio" name="q_aut_he" value="1" onchange="limparErroAnalise('grid-q-aut-he'); atualizarSubpergunta3a()"><span>Sim</span></label>
+                        <label class="choice-card"><input type="radio" name="q_aut_he" value="0" onchange="limparErroAnalise('grid-q-aut-he'); atualizarSubpergunta3a()"><span>Não</span></label>
                     </div>
 
                     <div id="bloco-pergunta-3a" class="sub-question-block" style="max-width: 100%; box-sizing: border-box;">
                         <div class="sub-question-title">3a. Quem autorizou?</div>
-                        <div class="choice-cards-grid" style="margin-bottom: 12px;">
+                        <div id="grid-q-tipo-autorizador" class="choice-cards-grid" style="margin-bottom: 12px;">
                             <label class="choice-card">
-                                <input type="radio" name="q_tipo_autorizador" value="PLANTAO_ADM" onchange="aoMudarTipoAutorizador()">
+                                <input type="radio" name="q_tipo_autorizador" value="PLANTAO_ADM" onchange="limparErroAnalise('grid-q-tipo-autorizador'); aoMudarTipoAutorizador()">
                                 <span>Plantão Administrativo</span>
                             </label>
                             <label class="choice-card">
-                                <input type="radio" name="q_tipo_autorizador" value="COORDENACAO" onchange="aoMudarTipoAutorizador()">
+                                <input type="radio" name="q_tipo_autorizador" value="COORDENACAO" onchange="limparErroAnalise('grid-q-tipo-autorizador'); aoMudarTipoAutorizador()">
                                 <span>GER/COORD/SUP</span>
                             </label>
                         </div>
 
                         <div id="box-select-autorizador" class="field-group" style="display:none; margin-bottom: 16px; max-width: 100%; min-width: 0;">
                             <label id="lbl-select-autorizador" for="select-autorizador-he" style="font-size:0.82rem; font-weight:700; color:#334155;">Selecione o responsável *</label>
-                            <select id="select-autorizador-he" class="select-control" style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis;" onchange="aoSelecionarAutorizador()">
+                            <select id="select-autorizador-he" class="select-control" style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis;" onchange="limparErroAnalise(this); aoSelecionarAutorizador()">
                                 <option value="">Selecione...</option>
                             </select>
                         </div>
 
                         <div id="bloco-pergunta-3b" style="display:none; padding-top: 14px; border-top: 1px dashed #cbd5e1; max-width: 100%; box-sizing: border-box;">
                             <div class="sub-question-title">3b. Conseguiu cobertura para esta ausência?</div>
-                            <div class="choice-cards-grid">
-                                <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="atualizarCampoCobridor3a()"><span>Sim</span></label>
-                                <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="atualizarCampoCobridor3a()"><span>Não</span></label>
+                            <div id="grid-q-cons-he" class="choice-cards-grid">
+                                <label class="choice-card"><input type="radio" name="q_cons_he" value="1" onchange="limparErroAnalise('grid-q-cons-he'); atualizarCampoCobridor3a()"><span>Sim</span></label>
+                                <label class="choice-card"><input type="radio" name="q_cons_he" value="0" onchange="limparErroAnalise('grid-q-cons-he'); atualizarCampoCobridor3a()"><span>Não</span></label>
                             </div>
 
                             <div class="cobertura-box" id="box-origem-cobertura" style="max-width: 100%; box-sizing: border-box;">
                                 <label class="cobertura-label" for="input-busca-cobridor">Informe o crachá ou nome de quem cobriu *</label>
                                 <div class="autocomplete-wrap" style="max-width: 100%;">
-                                    <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%; box-sizing: border-box;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="buscarCobridorDebounced()">
+                                    <input type="text" id="input-busca-cobridor" class="input-control" style="width: 100%; box-sizing: border-box;" placeholder="Digite o crachá ou nome..." autocomplete="off" oninput="limparErroAnalise(this); buscarCobridorDebounced()">
                                     <div id="lista-resultados-cobridor" class="autocomplete-results"></div>
                                 </div>
                                 <div id="card-cobridor-selecionado" class="cobridor-selecionado-card">
@@ -287,13 +306,13 @@
             <div id="an-step-pane-4" class="step-pane" style="max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
                 <div class="single-question-card" style="max-width: 100%; overflow: hidden; box-sizing: border-box;">
                     <div class="single-question-title">4. Adequação da equipe na ausência</div>
-                    <div class="choice-cards-grid">
+                    <div id="grid-q-tipo-adequacao" class="choice-cards-grid">
                         <label class="choice-card" style="min-width: 0;">
-                            <input type="radio" name="q_tipo_adequacao" value="INTERNO" onchange="atualizarDetalhesStep4()">
+                            <input type="radio" name="q_tipo_adequacao" value="INTERNO" onchange="limparErroAnalise('grid-q-tipo-adequacao'); atualizarDetalhesStep4()">
                             <span>Redimensionamento interno</span>
                         </label>
                         <label class="choice-card" style="min-width: 0;">
-                            <input type="radio" name="q_tipo_adequacao" value="REMANEJAMENTO" onchange="atualizarDetalhesStep4()">
+                            <input type="radio" name="q_tipo_adequacao" value="REMANEJAMENTO" onchange="limparErroAnalise('grid-q-tipo-adequacao'); atualizarDetalhesStep4()">
                             <span>Remanejamento entre setores</span>
                         </label>
                     </div>
@@ -303,21 +322,21 @@
                         <div class="redivisao-grid">
                             <div class="field-group" style="min-width: 0;">
                                 <label for="input-qtd-pacientes">Número de Pacientes *</label>
-                                <input type="number" id="input-qtd-pacientes" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" placeholder="Ex: 18">
+                                <input type="number" id="input-qtd-pacientes" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" placeholder="Ex: 18" oninput="limparErroAnalise(this)">
                             </div>
                             <div class="field-group" style="min-width: 0;">
                                 <label for="input-qtd-colaboradores">Número de Colaboradores *</label>
-                                <input type="number" id="input-qtd-colaboradores" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" placeholder="Ex: 4">
+                                <input type="number" id="input-qtd-colaboradores" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" placeholder="Ex: 4" oninput="limparErroAnalise(this)">
                             </div>
                         </div>
                     </div>
 
-                    <!-- OPÇÃO B: REMANEJAMENTO ENTRE SETORES (MÚLTIPLOS CCs + EXCLUSÃO) -->
+                    <!-- OPÇÃO B: REMANEJAMENTO ENTRE SETORES -->
                     <div id="box-adequacao-remanejamento" class="redivisao-detalhes-box" style="max-width: 100%; overflow: hidden; box-sizing: border-box;">
                         <div style="display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 10px; align-items: end; margin-bottom: 10px;">
                             <div class="field-group" style="margin-bottom: 0; min-width: 0;">
                                 <label for="input-qtd-colab-remanejado">Qtd. Colab. *</label>
-                                <input type="number" id="input-qtd-colab-remanejado" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" value="1" placeholder="1">
+                                <input type="number" id="input-qtd-colab-remanejado" class="input-control" style="width: 100%; box-sizing: border-box;" min="1" step="1" value="1" placeholder="1" oninput="limparErroAnalise(this)">
                             </div>
 
                             <div class="field-group" style="margin-bottom: 0; min-width: 0;">
@@ -328,7 +347,7 @@
 
                         <div class="field-group" style="margin-bottom: 10px; min-width: 0; max-width: 100%;">
                             <label for="select-cc-origem-remanejamento">Centro de Custo de origem (de quem veio) *</label>
-                            <select id="select-cc-origem-remanejamento" class="select-control" style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></select>
+                            <select id="select-cc-origem-remanejamento" class="select-control" style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onchange="limparErroAnalise(this)"></select>
                         </div>
 
                         <button type="button" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; margin-bottom: 12px;" onclick="adicionarCCRemanejamentoFalta()">
@@ -388,6 +407,24 @@
     let timerBuscaCobridor = null, timerBuscaExterna = null;
     let dataOcorrenciaAtual = "", faltanteCrachaAtual = "";
     let _abortControllerFaltas = null;
+
+    function marcarErroAnalise(elOrId) {
+        const el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
+        if (!el) return;
+        el.classList.remove("campo-erro-destaque");
+        void el.offsetWidth;
+        el.classList.add("campo-erro-destaque");
+        if (typeof el.focus === "function") el.focus();
+    }
+
+    function limparErroAnalise(elOrId) {
+        const el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
+        if (el) el.classList.remove("campo-erro-destaque");
+    }
+
+    function limparTodosErrosAnalise() {
+        document.querySelectorAll(".campo-erro-destaque").forEach(el => el.classList.remove("campo-erro-destaque"));
+    }
 
     function atualizarVisibilidadeFiltrosRoot(exibir) {
         if (PERFIL_LOGADO !== "ROOT") return;
@@ -645,9 +682,6 @@
         }).join("");
     }
 
-    // =========================================================================
-    // DEVOLVER CENTRO DE CUSTO (DESFAZ MOVIMENTAÇÃO E ANÁLISES DO COLABORADOR)
-    // =========================================================================
     function solicitarDevolucaoCC() {
         if (!ocorrenciaDetalheAtual) return;
         const destinoTxt = ocorrenciaDetalheAtual.cc_origem_nome || "setor de origem";
@@ -684,10 +718,11 @@
 
     async function confirmarDesfazerAnalise() {
         if (!ocorrenciaDetalheAtual) return;
-        const motivo = document.getElementById("input-motivo-desfazer").value.trim();
+        const inpMotivo = document.getElementById("input-motivo-desfazer");
+        const motivo = inpMotivo.value.trim();
         if (!motivo) {
+            marcarErroAnalise(inpMotivo);
             mostrarToast("Informe o motivo para desfazer a análise.", true);
-            document.getElementById("input-motivo-desfazer").focus();
             return;
         }
 
@@ -866,8 +901,13 @@
     }
     async function confirmarMoverCentroCusto() {
         if (!ocorrenciaDetalheAtual) return;
-        const novoCcId = parseInt(document.getElementById("select-cc-destino").value, 10);
-        if (!novoCcId) { mostrarToast("Selecione o destino.", true); return; }
+        const selDest = document.getElementById("select-cc-destino");
+        const novoCcId = parseInt(selDest.value, 10);
+        if (!novoCcId) {
+            marcarErroAnalise(selDest);
+            mostrarToast("Selecione o destino.", true);
+            return;
+        }
         const res = await fetch(`/api/faltas/${ocorrenciaDetalheAtual.id}/mover-cc`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ centro_custo_id: novoCcId, novo_centro_custo_id: novoCcId }) });
         const d = await res.json(); mostrarToast(d.mensagem, !d.sucesso);
         if (d.sucesso) { fecharModalDetalhesOcorrencia(); await carregarFaltas(); await carregarMetricasRoot(); }
@@ -913,18 +953,20 @@
     }
 
     // =========================================================================
-    // MODAL ANÁLISE OPERACIONAL (ABERTURA SÍNCRONA ESTÁVEL + MÚLTIPLOS CCs)
+    // MODAL ANÁLISE OPERACIONAL
     // =========================================================================
     function abrirModalAnalise(id) {
         const falta = listaFaltasCache.find(i => i.id === id);
         if (!falta) return;
 
+        limparTodosErrosAnalise();
         const formEl = document.getElementById("form-analise-falta");
         if (formEl) formEl.reset();
 
         document.getElementById("analise-ocorrencia-id").value = falta.id;
         document.getElementById("analise-faltante-id").value = falta.colaborador_id || "";
         document.getElementById("analise-faltante-cc-codigo").value = falta.codigo_cc || "";
+        document.getElementById("hidden-autorizador-he-nome").value = "";
         dataOcorrenciaAtual = falta.data_ocorrencia || "";
         faltanteCrachaAtual = falta.cracha || "";
         document.getElementById("modal-subtitulo").innerText = `${falta.colaborador_nome} (${falta.cracha}) • ${falta.data_ocorrencia}`;
@@ -955,6 +997,7 @@
     }
 
     function fecharModalAnalise() {
+        limparTodosErrosAnalise();
         document.getElementById("modal-analise").style.display = "none";
     }
 
@@ -985,13 +1028,13 @@
         const ccLabel = selCC?.options[selCC.selectedIndex]?.getAttribute("data-label") || "";
 
         if (qtd < 1) {
+            marcarErroAnalise(qtdInput);
             mostrarToast("Informe a quantidade de colaboradores (mínimo 1).", true);
-            qtdInput?.focus();
             return;
         }
         if (!ccId || !ccLabel) {
+            marcarErroAnalise(selCC);
             mostrarToast("Selecione um Centro de Custo de origem.", true);
-            selCC?.focus();
             return;
         }
 
@@ -1008,6 +1051,8 @@
 
         qtdInput.value = "1";
         selCC.value = "";
+        limparErroAnalise(qtdInput);
+        limparErroAnalise(selCC);
         renderizarListaCCsRemanejadosFalta();
     }
 
@@ -1055,6 +1100,7 @@
     }
 
     function irStepAnalise(step) {
+        limparTodosErrosAnalise();
         [1, 2, 3, 4].forEach(i => document.getElementById(`an-step-pane-${i}`)?.classList.toggle("active", i === step));
         if (step === 1) atualizarAcaoStep1();
         else if (step === 3) atualizarSubpergunta3a();
@@ -1078,6 +1124,7 @@
     function avancarDoStep1() {
         const q1 = document.querySelector('input[name="q_programada"]:checked');
         if (!q1) {
+            marcarErroAnalise("grid-q-programada");
             mostrarToast("Selecione Sim ou Não.", true);
             return;
         }
@@ -1091,13 +1138,14 @@
     // ETAPA 2
     function avancarDoStep2() {
         if (!document.querySelector('input[name="q_comunicada"]:checked')) {
+            marcarErroAnalise("grid-q-comunicada");
             mostrarToast("Selecione Sim ou Não.", true);
             return;
         }
         irStepAnalise(3);
     }
 
-    // ETAPA 3 (3 -> 3a Plantão Adm / Coordenação -> 3b Conseguiu cobertura)
+    // ETAPA 3
     function atualizarSubpergunta3a() {
         const q3 = document.querySelector('input[name="q_aut_he"]:checked');
         const bloco3a = document.getElementById("bloco-pergunta-3a");
@@ -1108,6 +1156,7 @@
         } else {
             bloco3a.style.display = "none";
             autorizadorHeSelecionadoAtual = "";
+            document.getElementById("hidden-autorizador-he-nome").value = "";
             limparCobridorSelecionado();
             document.getElementById("btn-step3-next").style.display = "inline-flex";
             document.getElementById("btn-step3-salvar").style.display = "none";
@@ -1119,6 +1168,7 @@
         const tipoAut = document.querySelector('input[name="q_tipo_autorizador"]:checked')?.value || "";
         const boxSelect = document.getElementById("box-select-autorizador");
         const selectEl = document.getElementById("select-autorizador-he");
+        const hiddenEl = document.getElementById("hidden-autorizador-he-nome");
         const lblSelect = document.getElementById("lbl-select-autorizador");
 
         if (!tipoAut) {
@@ -1129,20 +1179,22 @@
             return;
         }
 
-        const candidato = selectEl.value || autorizadorHeSelecionadoAtual;
+        const candidato = (selectEl.value || hiddenEl.value || autorizadorHeSelecionadoAtual).trim();
         const lista = tipoAut === "PLANTAO_ADM" ? LISTA_PLANTAO_ADM : LISTA_COORDENACAO;
         lblSelect.innerText = tipoAut === "PLANTAO_ADM"
             ? "Selecione quem autorizou (Plantão Administrativo) *"
-            : "Selecione quem autorizou (Coordenação) *";
+            : "Selecione quem autorizou (GER/COORD/SUP) *";
 
         selectEl.innerHTML = '<option value="">Selecione...</option>' +
             lista.map(nome => `<option value="${nome}">${nome}</option>`).join("");
 
         if (candidato && lista.includes(candidato)) {
             selectEl.value = candidato;
+            hiddenEl.value = candidato;
             autorizadorHeSelecionadoAtual = candidato;
         } else {
             selectEl.value = "";
+            hiddenEl.value = "";
             autorizadorHeSelecionadoAtual = "";
         }
 
@@ -1151,8 +1203,10 @@
     }
 
     function aoSelecionarAutorizador() {
-        const nomeAut = document.getElementById("select-autorizador-he").value.trim();
+        const selectEl = document.getElementById("select-autorizador-he");
+        const nomeAut = (selectEl?.value || "").trim();
         autorizadorHeSelecionadoAtual = nomeAut;
+        document.getElementById("hidden-autorizador-he-nome").value = nomeAut;
         const bloco3b = document.getElementById("bloco-pergunta-3b");
 
         if (!nomeAut) {
@@ -1177,9 +1231,16 @@
         atualizarBarraProgressoAnalise(3, isSim ? 100 : 75, isSim ? "Etapa 3 • Cobertura confirmada" : "Etapa 3 de 4");
     }
 
+    function obterNomeAutorizadorAtivo() {
+        const selVal = (document.getElementById("select-autorizador-he")?.value || "").trim();
+        const hidVal = (document.getElementById("hidden-autorizador-he-nome")?.value || "").trim();
+        return selVal || hidVal || (autorizadorHeSelecionadoAtual || "").trim();
+    }
+
     function avancarDoStep3() {
         const q3 = document.querySelector('input[name="q_aut_he"]:checked');
         if (!q3) {
+            marcarErroAnalise("grid-q-aut-he");
             mostrarToast("Selecione Sim ou Não na pergunta 3.", true);
             return;
         }
@@ -1187,16 +1248,19 @@
         if (q3.value === "1") {
             const tipoAut = document.querySelector('input[name="q_tipo_autorizador"]:checked');
             if (!tipoAut) {
-                mostrarToast("Selecione Plantão Administrativo ou Coordenação.", true);
+                marcarErroAnalise("grid-q-tipo-autorizador");
+                mostrarToast("Selecione Plantão Administrativo ou GER/COORD/SUP.", true);
                 return;
             }
-            const nomeAut = (document.getElementById("select-autorizador-he").value || autorizadorHeSelecionadoAtual).trim();
+            const nomeAut = obterNomeAutorizadorAtivo();
             if (!nomeAut) {
+                marcarErroAnalise("select-autorizador-he");
                 mostrarToast("Selecione o nome de quem autorizou.", true);
                 return;
             }
             const q3b = document.querySelector('input[name="q_cons_he"]:checked');
             if (!q3b) {
+                marcarErroAnalise("grid-q-cons-he");
                 mostrarToast("Informe se conseguiu cobertura para esta ausência.", true);
                 return;
             }
@@ -1236,7 +1300,9 @@
         document.getElementById("cobridor-colaborador-id").value = c.id;
         document.getElementById("lbl-cobridor-nome").innerText = `${c.cracha} — ${c.nome}`;
         document.getElementById("lbl-cobridor-cc").innerText = `${c.codigo_cc} - ${c.centro_custo}`;
-        document.getElementById("input-busca-cobridor").style.display = "none";
+        const inp = document.getElementById("input-busca-cobridor");
+        limparErroAnalise(inp);
+        inp.style.display = "none";
         document.getElementById("lista-resultados-cobridor").style.display = "none";
         document.getElementById("card-cobridor-selecionado").style.display = "flex";
     }
@@ -1251,8 +1317,11 @@
     }
 
     async function salvarAnaliseCompleta() {
+        limparTodosErrosAnalise();
         const q1 = document.querySelector('input[name="q_programada"]:checked');
         if (!q1) {
+            irStepAnalise(1);
+            marcarErroAnalise("grid-q-programada");
             mostrarToast("Selecione Sim ou Não na pergunta 1.", true);
             return;
         }
@@ -1266,23 +1335,41 @@
         if (!prog) {
             const q2 = document.querySelector('input[name="q_comunicada"]:checked');
             const q3 = document.querySelector('input[name="q_aut_he"]:checked');
-            if (!q2 || !q3) {
-                mostrarToast("Responda todas as perguntas obrigatórias.", true);
+            if (!q2) {
+                irStepAnalise(2);
+                marcarErroAnalise("grid-q-comunicada");
+                mostrarToast("Responda se a falta foi comunicada com 2h de antecedência.", true);
+                return;
+            }
+            if (!q3) {
+                irStepAnalise(3);
+                marcarErroAnalise("grid-q-aut-he");
+                mostrarToast("Responda se foi autorizado horas extras.", true);
                 return;
             }
 
             const autHe = q3.value === "1";
             const tipoAut = autHe ? (document.querySelector('input[name="q_tipo_autorizador"]:checked')?.value || null) : null;
-            const autNome = autHe ? (document.getElementById("select-autorizador-he").value || autorizadorHeSelecionadoAtual).trim() : null;
+            const autNome = autHe ? obterNomeAutorizadorAtivo() : null;
             const consHe = autHe ? document.querySelector('input[name="q_cons_he"]:checked')?.value === "1" : false;
 
-            if (autHe && (!tipoAut || !autNome)) {
-                mostrarToast("Selecione o tipo e o nome de quem autorizou.", true);
+            if (autHe && !tipoAut) {
+                irStepAnalise(3);
+                marcarErroAnalise("grid-q-tipo-autorizador");
+                mostrarToast("Selecione Plantão Administrativo ou GER/COORD/SUP.", true);
+                return;
+            }
+            if (autHe && !autNome) {
+                irStepAnalise(3);
+                marcarErroAnalise("select-autorizador-he");
+                mostrarToast("Selecione o nome de quem autorizou na Etapa 3.", true);
                 return;
             }
 
             if (autHe && consHe) {
                 if (!cobridorSelecionadoObj) {
+                    irStepAnalise(3);
+                    marcarErroAnalise("input-busca-cobridor");
                     mostrarToast("Selecione quem cobriu a ausência.", true);
                     return;
                 }
@@ -1297,15 +1384,24 @@
             } else {
                 const tipoAdeq = document.querySelector('input[name="q_tipo_adequacao"]:checked')?.value || "";
                 if (!tipoAdeq) {
+                    marcarErroAnalise("grid-q-tipo-adequacao");
                     mostrarToast("Selecione Redimensionamento interno ou Remanejamento entre setores.", true);
                     return;
                 }
 
                 if (tipoAdeq === "INTERNO") {
-                    const qtdP = parseInt(document.getElementById("input-qtd-pacientes").value || "0", 10);
-                    const qtdC = parseInt(document.getElementById("input-qtd-colaboradores").value || "0", 10);
-                    if (qtdP < 1 || qtdC < 1) {
-                        mostrarToast("Informe o número de pacientes e o número de colaboradores.", true);
+                    const inpPac = document.getElementById("input-qtd-pacientes");
+                    const inpCol = document.getElementById("input-qtd-colaboradores");
+                    const qtdP = parseInt(inpPac.value || "0", 10);
+                    const qtdC = parseInt(inpCol.value || "0", 10);
+                    if (qtdP < 1) {
+                        marcarErroAnalise(inpPac);
+                        mostrarToast("Informe o número de pacientes.", true);
+                        return;
+                    }
+                    if (qtdC < 1) {
+                        marcarErroAnalise(inpCol);
+                        mostrarToast("Informe o número de colaboradores.", true);
                         return;
                     }
                     Object.assign(payload, {
@@ -1321,6 +1417,7 @@
                     });
                 } else {
                     if (!listaCCsRemanejadosFalta.length) {
+                        marcarErroAnalise("select-cc-origem-remanejamento");
                         mostrarToast("Adicione pelo menos um Centro de Custo de origem.", true);
                         return;
                     }
@@ -1362,9 +1459,4 @@
             mostrarToast(d.mensagem || "Erro ao salvar.", true);
         }
     }
-
-    document.getElementById("form-analise-falta")?.addEventListener("submit", (e) => {
-        e.preventDefault();
-        salvarAnaliseCompleta();
-    });
 </script>
