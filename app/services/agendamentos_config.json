@@ -3,7 +3,7 @@
     "ativo": false,
     "intervalo_horas": 2.0,
     "proxima_execucao": null,
-    "ultima_execucao": "2026-11-26T07:29:05.367407"
+    "ultima_execucao": "2026-11-27T07:37:11.417204"
   },
   "estrutura": {
     "ativo": false,
@@ -14,7 +14,7 @@
   "censo": {
     "ativo": true,
     "intervalo_horas": 0.5,
-    "proxima_execucao": "2026-11-26T16:52:58.876388",
-    "ultima_execucao": "2026-11-26T16:22:58.875994"
+    "proxima_execucao": "2026-11-27T09:56:19.463526",
+    "ultima_execucao": "2026-11-27T09:26:19.462534"
   }
 }

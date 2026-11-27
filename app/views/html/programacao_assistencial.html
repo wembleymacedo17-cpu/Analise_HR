@@ -52,7 +52,9 @@
                 <span id="lbl-prog-banner-edicao">Relatório existente carregado. Salvar irá atualizar este turno.</span>
             </div>
 
-            <!-- STEP 1: UNIDADE E TURNO -->
+            <!-- ============================================================== -->
+            <!-- STEP 1: UNIDADE, DATA E TURNO                                  -->
+            <!-- ============================================================== -->
             <div id="prog-step-1" class="prog-step-pane active">
                 <div class="prog-section">
                     <div class="prog-section-title">Unidade, data e turno</div>
@@ -100,9 +102,11 @@
                 </div>
             </div>
 
-            <!-- STEP 2: EQUIPE, LEITOS E COLABORADORES NOVOS -->
+            <!-- ============================================================== -->
+            <!-- STEP 2: EQUIPE, LEITOS E COLABORADORES NOVOS                   -->
+            <!-- ============================================================== -->
             <div id="prog-step-2" class="prog-step-pane" style="display:none;">
-                <div class="prog-section" style="display:flex; flex-direction:column; gap:20px;">
+                <div class="prog-section" style="display:flex; flex-direction:column; gap:18px;">
                     <div class="prog-section-title" style="margin-bottom:0;">Equipe e leitos</div>
 
                     <!-- 1. EQUIPE ASSISTENCIAL -->
@@ -140,7 +144,7 @@
                             </div>
 
                             <div class="prog-field">
-                                <label for="prog-aux-12h">Aux/Téc. Enfermagem — 12h *</label>
+                                <label for="prog-aux-12h">Aux/Téc. Enfermagem — Plantão 12h *</label>
                                 <input
                                     type="number"
                                     id="prog-aux-12h"
@@ -155,7 +159,7 @@
 
                         <div class="prog-grid-2-step2">
                             <div class="prog-field">
-                                <label for="prog-aux-6h-manha">Aux/Téc. Enfermagem — 6h manhã</label>
+                                <label for="prog-aux-6h-manha">Aux/Téc. Enfermagem — 6h Manhã</label>
                                 <input
                                     type="number"
                                     id="prog-aux-6h-manha"
@@ -169,7 +173,7 @@
                             </div>
 
                             <div class="prog-field">
-                                <label for="prog-aux-6h-tarde">Aux/Téc. Enfermagem — 6h tarde</label>
+                                <label for="prog-aux-6h-tarde">Aux/Téc. Enfermagem — 6h Tarde</label>
                                 <input
                                     type="number"
                                     id="prog-aux-6h-tarde"
@@ -222,7 +226,7 @@
 
                     <!-- 3. COLABORADORES NOVOS -->
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px 18px;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
                             <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:800; color:#0f172a;">
                                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -249,7 +253,7 @@
                             </div>
                         </div>
 
-                        <div id="box-colaboradores-novos" style="display:none; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                        <div id="box-colaboradores-novos" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed #cbd5e1;">
                             <div class="prog-grid-2-step2" style="align-items:center; margin-bottom:12px;">
                                 <div class="prog-field">
                                     <label for="prog-qtd-colab-novos">Quantidade de colaboradores novos *</label>
@@ -286,291 +290,376 @@
                 </div>
             </div>
 
-            <!-- STEP 3: COBERTURA, REMANEJAMENTO E HORA EXTRA -->
+            <!-- ============================================================== -->
+            <!-- STEP 3: COBERTURA EM 2 PASSOS COMPACTOS (3.1 -> 3.2)           -->
+            <!-- ============================================================== -->
             <div id="prog-step-3" class="prog-step-pane" style="display:none;">
                 <div class="prog-section">
-                    <div class="prog-section-title">Houve necessidade de cobertura ou remanejamento no turno?</div>
-
-                    <div class="prog-rem-choice-grid-2x2">
-                        <label class="prog-rem-choice-card choice-neutral">
-                            <input type="radio" name="prog_tipo_remanejamento" value="NENHUM" checked onchange="aoMudarTipoRemanejamento()">
-                            <div class="prog-rem-choice-body">
-                                <span class="prog-rem-choice-icon icon-neutral">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
-                                </span>
-                                <div>
-                                    <strong>Sem remanejamento</strong>
-                                    <span>Manter equipe original</span>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="prog-rem-choice-card choice-out">
-                            <input type="radio" name="prog_tipo_remanejamento" value="EMPRESTIMO" onchange="aoMudarTipoRemanejamento()">
-                            <div class="prog-rem-choice-body">
-                                <span class="prog-rem-choice-icon icon-out">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="7" y1="17" x2="17" y2="7"></line>
-                                        <polyline points="7 7 17 7 17 17"></polyline>
-                                    </svg>
-                                </span>
-                                <div>
-                                    <strong>Emprestar</strong>
-                                    <span>Ceder para outra unidade</span>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="prog-rem-choice-card choice-in">
-                            <input type="radio" name="prog_tipo_remanejamento" value="RECEBIMENTO" onchange="aoMudarTipoRemanejamento()">
-                            <div class="prog-rem-choice-body">
-                                <span class="prog-rem-choice-icon icon-in">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="17" y1="7" x2="7" y2="17"></line>
-                                        <polyline points="17 17 7 17 7 7"></polyline>
-                                    </svg>
-                                </span>
-                                <div>
-                                    <strong>Receber</strong>
-                                    <span>Apoio de outra unidade</span>
-                                </div>
-                            </div>
-                        </label>
-
-                        <label class="prog-rem-choice-card choice-he">
-                            <input type="radio" name="prog_tipo_remanejamento" value="HORA_EXTRA" onchange="aoMudarTipoRemanejamento()">
-                            <div class="prog-rem-choice-body">
-                                <span class="prog-rem-choice-icon icon-he">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12 6 12 12 16 14"></polyline>
-                                    </svg>
-                                </span>
-                                <div>
-                                    <strong>Hora Extra</strong>
-                                    <span>Cobertura com jornada adicional</span>
-                                </div>
-                            </div>
-                        </label>
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+                        <div class="prog-section-title" id="lbl-step3-subtitulo" style="margin-bottom:0;">
+                            Etapa 3.1 • Houve necessidade de remanejamento no turno?
+                        </div>
+                        <span id="badge-step3-subetapa" style="font-size:0.74rem; font-weight:800; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; padding:4px 12px; border-radius:999px;">
+                            Passo 1 de 2 • Remanejamento
+                        </span>
                     </div>
 
-                    <!-- PAINEL: EMPRESTAR OU RECEBER -->
-                    <div id="prog-box-remanejamento" class="prog-remanejamento-box mode-out" style="display:none;">
-                        <div class="prog-rem-box-header">
-                            <span id="badge-modo-remanejamento" class="prog-mode-badge badge-out">
-                                ↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)
-                            </span>
-                            <span class="prog-rem-hint">Informe a quantidade, a unidade e a justificativa</span>
+                    <!-- SUB-ETAPA 3.1: REMANEJAMENTO -->
+                    <div id="prog-substep-3-1">
+                        <div class="prog-grid-2-step2" style="margin-bottom: 14px;">
+                            <label class="prog-rem-choice-card choice-neutral">
+                                <input type="radio" name="prog_houve_remanejamento" value="NAO" checked onchange="aoMudarHouveRemanejamento()">
+                                <div class="prog-rem-choice-body">
+                                    <span class="prog-rem-choice-icon icon-neutral">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <strong>Sem remanejamento</strong>
+                                        <span>Avançar direto para Hora Extra</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="prog-rem-choice-card choice-in">
+                                <input type="radio" name="prog_houve_remanejamento" value="SIM" onchange="aoMudarHouveRemanejamento()">
+                                <div class="prog-rem-choice-body">
+                                    <span class="prog-rem-choice-icon icon-in">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="17 1 21 5 17 9"></polyline>
+                                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                            <polyline points="7 23 3 19 7 15"></polyline>
+                                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <strong>Houve remanejamento</strong>
+                                        <span>Emprestar ou receber colaboradores</span>
+                                    </div>
+                                </div>
+                            </label>
                         </div>
 
-                        <div class="prog-grid-2-step2" style="margin-bottom: 12px;">
-                            <div class="prog-field">
-                                <label for="prog-rem-qtd">Quantidade *</label>
-                                <input type="number" id="prog-rem-qtd" class="prog-input-pill prog-control-h" min="1" step="1" value="1" oninput="atualizarPreviewRemanejamento()">
+                        <div id="box-config-remanejamento" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; border-radius:16px; padding:16px 18px;">
+                            <div style="font-size:0.84rem; font-weight:800; color:#0f172a; margin-bottom:10px;">
+                                Qual foi o tipo de remanejamento? *
                             </div>
 
-                            <div class="prog-field">
-                                <label id="lbl-prog-rem-unidade" for="prog-rem-unidade">Unidade de destino *</label>
-                                <select id="prog-rem-unidade" class="prog-input-pill prog-control-h" onchange="atualizarPreviewRemanejamento()"></select>
-                            </div>
-                        </div>
-
-                        <!-- JUSTIFICATIVA DO REMANEJAMENTO (RECEBER / EMPRESTAR) -->
-                        <div class="prog-field" style="margin-bottom: 12px;">
-                            <label id="lbl-prog-rem-justificativa">Justificativa do remanejamento *</label>
-                            <div id="prog-rem-just-lista" class="prog-just-radio-list"></div>
-
-                            <div id="prog-rem-just-outro-wrap" style="display:none; margin-top: 8px;">
-                                <textarea
-                                    id="prog-rem-just-outro-texto"
-                                    class="textarea-control"
-                                    style="min-height: 76px;"
-                                    placeholder="Descreva detalhadamente o motivo (mínimo 10 caracteres)..."
-                                ></textarea>
-                            </div>
-                        </div>
-
-                        <button type="button" id="btn-add-remanejamento" class="prog-btn-add-action btn-mode-out" style="width:100%;" onclick="adicionarRemanejamentoLista()">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            <span id="lbl-btn-add-rem">+ Adicionar movimentação</span>
-                        </button>
-
-                        <div class="prog-flow-bar flow-out" id="box-flow-center">
-                            <div class="prog-flow-unit">
-                                <small>ORIGEM</small>
-                                <strong id="lbl-flow-esq-nome">--</strong>
-                            </div>
-
-                            <div class="prog-flow-pill" id="lbl-flow-qtd">-1 colab. →</div>
-
-                            <div class="prog-flow-unit text-right">
-                                <small>DESTINO</small>
-                                <strong id="lbl-flow-dir-nome">--</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- PAINEL: REGISTRO DE HORA EXTRA -->
-                    <div id="prog-box-hora-extra" class="prog-remanejamento-box mode-he" style="display:none;">
-                        <div class="prog-rem-box-header">
-                            <span class="prog-mode-badge badge-he">
-                                🕒 REGISTRO DE HORA EXTRA
-                            </span>
-                            <span class="prog-rem-hint">Informe quem autorizou e a justificativa</span>
-                        </div>
-
-                        <div class="prog-field" style="margin-bottom: 12px;">
-                            <label>Quem autorizou a hora extra? *</label>
-                            <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:10px;">
-                                <label class="prog-rem-choice-card choice-he" style="margin:0;">
-                                    <input type="radio" name="prog_he_tipo_autorizador" value="PLANTAO_ADM" onchange="aoMudarTipoAutorizadorHE()">
-                                    <div class="prog-rem-choice-body" style="padding: 10px 14px; justify-content: center;">
-                                        <strong>Plantão Administrativo</strong>
+                            <div class="prog-grid-2-step2" style="margin-bottom: 14px;">
+                                <label class="prog-rem-choice-card choice-out">
+                                    <input type="radio" name="prog_tipo_rem_mov" value="EMPRESTIMO" onchange="aoMudarTipoMovRemanejamento()">
+                                    <div class="prog-rem-choice-body" style="padding:11px 14px;">
+                                        <span class="prog-rem-choice-icon icon-out">
+                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                                                <line x1="7" y1="17" x2="17" y2="7"></line>
+                                                <polyline points="7 7 17 7 17 17"></polyline>
+                                            </svg>
+                                        </span>
+                                        <div>
+                                            <strong>Emprestar</strong>
+                                            <span>Ceder colaborador para outro setor</span>
+                                        </div>
                                     </div>
                                 </label>
-                                <label class="prog-rem-choice-card choice-he" style="margin:0;">
-                                    <input type="radio" name="prog_he_tipo_autorizador" value="COORDENACAO" onchange="aoMudarTipoAutorizadorHE()">
-                                    <div class="prog-rem-choice-body" style="padding: 10px 14px; justify-content: center;">
-                                        <strong>Coordenação</strong>
+
+                                <label class="prog-rem-choice-card choice-in">
+                                    <input type="radio" name="prog_tipo_rem_mov" value="RECEBIMENTO" onchange="aoMudarTipoMovRemanejamento()">
+                                    <div class="prog-rem-choice-body" style="padding:11px 14px;">
+                                        <span class="prog-rem-choice-icon icon-in">
+                                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                                                <line x1="17" y1="7" x2="7" y2="17"></line>
+                                                <polyline points="17 17 7 17 7 7"></polyline>
+                                            </svg>
+                                        </span>
+                                        <div>
+                                            <strong>Receber</strong>
+                                            <span>Receber apoio de outro setor</span>
+                                        </div>
                                     </div>
                                 </label>
                             </div>
 
-                            <div id="prog-he-select-autorizador-wrap" style="display:none;">
+                            <div id="box-qtd-cards-remanejamento" style="display:none; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                                <div class="prog-grid-2-step2" style="align-items:center; margin-bottom: 12px;">
+                                    <div class="prog-field">
+                                        <label id="lbl-qtd-colab-rem" for="prog-qtd-colab-rem">Quantidade de colaboradores *</label>
+                                        <input
+                                            type="number"
+                                            id="prog-qtd-colab-rem"
+                                            class="prog-input-pill"
+                                            min="1"
+                                            max="15"
+                                            step="1"
+                                            value="1"
+                                            oninput="renderizarCardsColaboradoresRem()"
+                                        >
+                                    </div>
+
+                                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:10px 14px; font-size:0.79rem; font-weight:700; color:#1e40af;">
+                                        Preencha cada card e clique em <strong>Adicionar Colaborador</strong>.
+                                    </div>
+                                </div>
+
+                                <div id="container-cards-colaboradores-rem" style="display:flex; flex-direction:column; gap:10px;"></div>
+                            </div>
+
+                            <div id="prog-lista-remanejamentos-wrap" style="margin-top: 14px; display:none;">
+                                <div class="prog-lista-header">Colaboradores confirmados no remanejamento</div>
+                                <div id="prog-lista-remanejamentos" class="prog-rem-items"></div>
+                            </div>
+                        </div>
+
+                        <div class="prog-footer-actions prog-footer-between" style="margin-top: 18px;">
+                            <button type="button" class="btn btn-secondary" onclick="irParaStepProgramacao(2)">
+                                ← Voltar
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="avancarSubstep3ParaHoraExtra()">
+                                Próximo: Hora Extra →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SUB-ETAPA 3.2: HORA EXTRA AUTORIZADA -->
+                    <div id="prog-substep-3-2" style="display:none;">
+                        <div class="prog-grid-2-step2" style="margin-bottom: 14px;">
+                            <label class="prog-rem-choice-card choice-neutral">
+                                <input type="radio" name="prog_houve_he" value="NAO" checked onchange="aoMudarHouveHoraExtra()">
+                                <div class="prog-rem-choice-body">
+                                    <span class="prog-rem-choice-icon icon-neutral">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <strong>Sem hora extra</strong>
+                                        <span>Avançar direto para o Resumo</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="prog-rem-choice-card choice-he">
+                                <input type="radio" name="prog_houve_he" value="SIM" onchange="aoMudarHouveHoraExtra()">
+                                <div class="prog-rem-choice-body">
+                                    <span class="prog-rem-choice-icon icon-he">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <strong>Houve hora extra autorizada</strong>
+                                        <span>Registrar autorização e justificativas</span>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div id="prog-box-hora-extra" class="prog-remanejamento-box mode-he" style="display:none;">
+                            <div class="prog-rem-box-header">
+                                <span class="prog-mode-badge badge-he">
+                                    🕒 REGISTRO DE HORA EXTRA AUTORIZADA
+                                </span>
+                                <span class="prog-rem-hint">Informe quem autorizou, quantidade e justificativas</span>
+                            </div>
+
+                            <div class="prog-grid-2-step2" style="margin-bottom: 12px;">
+                                <div class="prog-field">
+                                    <label>Grupo autorizador *</label>
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                                        <label class="prog-rem-choice-card choice-he" style="margin:0;">
+                                            <input type="radio" name="prog_he_tipo_autorizador" value="PLANTAO_ADM" onchange="aoMudarTipoAutorizadorHE()">
+                                            <div class="prog-rem-choice-body" style="padding: 9px 10px; justify-content: center; font-size:0.82rem;">
+                                                <strong>Plantão Adm</strong>
+                                            </div>
+                                        </label>
+                                        <label class="prog-rem-choice-card choice-he" style="margin:0;">
+                                            <input type="radio" name="prog_he_tipo_autorizador" value="COORDENACAO" onchange="aoMudarTipoAutorizadorHE()">
+                                            <div class="prog-rem-choice-body" style="padding: 9px 10px; justify-content: center; font-size:0.82rem;">
+                                                <strong>Coordenação</strong>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="prog-field">
+                                    <label for="prog-qtd-horas-extras">Quantas horas extras autorizadas? *</label>
+                                    <input
+                                        type="number"
+                                        id="prog-qtd-horas-extras"
+                                        class="prog-input-pill prog-control-h"
+                                        min="1"
+                                        max="15"
+                                        step="1"
+                                        value="1"
+                                        oninput="renderizarCardsHorasExtras()"
+                                    >
+                                </div>
+                            </div>
+
+                            <div id="prog-he-select-autorizador-wrap" class="prog-field" style="display:none; margin-bottom: 12px;">
+                                <label for="prog-he-select-autorizador">Quem autorizou a hora extra? *</label>
                                 <select id="prog-he-select-autorizador" class="prog-input-pill prog-control-h">
                                     <option value="">Selecione o nome do responsável...</option>
                                 </select>
                             </div>
+
+                            <div id="container-cards-horas-extras" style="display:flex; flex-direction:column; gap:10px;"></div>
                         </div>
 
-                        <div class="prog-field">
-                            <label>Justificativa da hora extra *</label>
-                            <div id="prog-he-just-lista" class="prog-just-radio-list"></div>
+                        <div class="prog-footer-actions prog-footer-between" style="margin-top: 18px;">
+                            <button type="button" class="btn btn-secondary" onclick="voltarParaSubstep3Remanejamento()">
+                                ← Voltar para Remanejamento
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="avancarStepProgramacao(3)">
+                                Ver Resumo →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                            <div id="prog-he-just-outro-wrap" style="display:none; margin-top: 8px;">
-                                <textarea
-                                    id="prog-he-just-outro-texto"
-                                    class="textarea-control"
-                                    style="min-height: 82px;"
-                                    placeholder="Descreva detalhadamente o motivo da hora extra (mínimo 10 caracteres)..."
-                                ></textarea>
+            <!-- ============================================================== -->
+            <!-- STEP 4: RESUMO DO TURNO AGRUPADO POR BLOCOS LÓGICOS            -->
+            <!-- ============================================================== -->
+            <div id="prog-step-4" class="prog-step-pane" style="display:none;">
+                <div class="prog-section" style="display:flex; flex-direction:column; gap:18px;">
+                    <div class="prog-section-title" style="margin-bottom:0;">Resumo consolidado do turno</div>
+
+                    <!-- BLOCO 1: IDENTIFICAÇÃO DO TURNO -->
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:16px; padding:16px 18px;">
+                        <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#047857; margin-bottom:10px;">
+                            1. Identificação do Turno
+                        </div>
+                        <div class="prog-resumo-contexto" style="background:transparent; border:none; padding:0;">
+                            <div>
+                                <span class="prog-resumo-lbl">Unidade Assistencial</span>
+                                <strong id="resumo-unidade-nome">--</strong>
+                            </div>
+                            <div>
+                                <span class="prog-resumo-lbl">Data e Turno</span>
+                                <strong id="resumo-data-turno">--</strong>
+                            </div>
+                            <div>
+                                <span class="prog-resumo-lbl">Enfermeiro(a) Responsável</span>
+                                <strong id="resumo-enfermeiros-nomes">--</strong>
                             </div>
                         </div>
                     </div>
 
-                    <div id="prog-lista-remanejamentos-wrap" style="margin-top: 16px; display:none;">
-                        <div class="prog-lista-header">Movimentações adicionadas neste turno</div>
-                        <div id="prog-lista-remanejamentos" class="prog-rem-items"></div>
-                    </div>
-                </div>
+                    <!-- BLOCO 2: DIMENSIONAMENTO DA EQUIPE & HORA EXTRA -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:16px 18px;">
+                        <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#334155; margin-bottom:12px;">
+                            2. Dimensionamento da Equipe
+                        </div>
 
-                <div class="prog-footer-actions prog-footer-between">
-                    <button type="button" class="btn btn-secondary" onclick="irParaStepProgramacao(2)">
-                        ← Voltar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="avancarStepProgramacao(3)">
-                        Ver Resumo →
-                    </button>
-                </div>
-            </div>
+                        <!-- DESTAQUE AUTOEXPLICATIVO DOS PROGRAMADOS (12H / 6H MANHÃ / 6H TARDE) -->
+                        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:14px; padding:14px 16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                            <div>
+                                <span style="display:block; font-size:0.76rem; font-weight:700; color:#64748b;">Total de Aux/Téc. Programados na Escala</span>
+                                <div style="display:flex; align-items:baseline; gap:8px; margin-top:2px;">
+                                    <strong id="stat-prog-base" style="font-size:1.75rem; font-weight:800; color:#0f172a;">0</strong>
+                                    <span style="font-size:0.82rem; font-weight:600; color:#475569;">colaboradores</span>
+                                </div>
+                            </div>
 
-            <!-- STEP 4: RESUMO CONSOLIDADO E SALVAR -->
-            <div id="prog-step-4" class="prog-step-pane" style="display:none;">
-                <div class="prog-section">
-                    <div class="prog-section-title">Resumo do turno</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:7px 12px; text-align:center; min-width:98px;">
+                                    <span style="display:block; font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">Plantão 12h</span>
+                                    <strong id="stat-prog-12h-val" style="font-size:0.95rem; font-weight:800; color:#0f172a;">0 colab.</strong>
+                                </div>
+                                <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:7px 12px; text-align:center; min-width:98px;">
+                                    <span style="display:block; font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">6h Manhã</span>
+                                    <strong id="stat-prog-6hm-val" style="font-size:0.95rem; font-weight:800; color:#0f172a;">0 colab.</strong>
+                                </div>
+                                <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:7px 12px; text-align:center; min-width:98px;">
+                                    <span style="display:block; font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">6h Tarde</span>
+                                    <strong id="stat-prog-6ht-val" style="font-size:0.95rem; font-weight:800; color:#0f172a;">0 colab.</strong>
+                                </div>
+                            </div>
+                        </div>
 
-                    <!-- CONTEXTO: UNIDADE, DATA/TURNO E ENFERMEIRO(A) -->
-                    <div class="prog-resumo-contexto">
-                        <div>
-                            <span class="prog-resumo-lbl">Unidade</span>
-                            <strong id="resumo-unidade-nome">--</strong>
+                        <!-- CARDS DE SALDO DA EQUIPE + CARD HORA EXTRA AUTORIZADA -->
+                        <div class="prog-equipe-cards" style="margin-top:0;">
+                            <div class="prog-mini-stat" style="background:#ffffff;">
+                                <span class="prog-mini-lbl">Emprestados (Saída)</span>
+                                <strong class="prog-mini-val val-red" id="stat-prog-emp">-0</strong>
+                            </div>
+                            <div class="prog-mini-stat" style="background:#ffffff;">
+                                <span class="prog-mini-lbl">Recebidos (Entrada)</span>
+                                <strong class="prog-mini-val val-green" id="stat-prog-rec">+0</strong>
+                            </div>
+                            <div class="prog-mini-stat" style="background:#eff6ff; border-color:#bfdbfe;">
+                                <span class="prog-mini-lbl" style="color:#1e40af;">Hora Extra Autorizada</span>
+                                <strong class="prog-mini-val" style="color:#1d4ed8;" id="stat-prog-he">0</strong>
+                            </div>
+                            <div class="prog-mini-stat stat-highlight">
+                                <span class="prog-mini-lbl">Efetivos no Turno</span>
+                                <strong class="prog-mini-val val-blue" id="stat-prog-efetivos">0</strong>
+                            </div>
                         </div>
-                        <div>
-                            <span class="prog-resumo-lbl">Data / Turno</span>
-                            <strong id="resumo-data-turno">--</strong>
-                        </div>
-                        <div>
-                            <span class="prog-resumo-lbl">Enfermeiro(a)</span>
-                            <strong id="resumo-enfermeiros-nomes">--</strong>
-                        </div>
-                    </div>
 
-                    <!-- CARDS DE EQUIPE -->
-                    <div class="prog-equipe-cards">
-                        <div class="prog-mini-stat">
-                            <span class="prog-mini-lbl">Programados (12h / 6h)</span>
-                            <strong class="prog-mini-val" id="stat-prog-base">0</strong>
-                            <small id="stat-prog-composicao-detalhe" style="display:block; font-size:0.7rem; color:#64748b; margin-top:3px;">12h: 0 • 6h M: 0 • 6h T: 0</small>
-                        </div>
-                        <div class="prog-mini-stat">
-                            <span class="prog-mini-lbl">Emprestados</span>
-                            <strong class="prog-mini-val val-red" id="stat-prog-emp">-0</strong>
-                        </div>
-                        <div class="prog-mini-stat">
-                            <span class="prog-mini-lbl">Recebidos</span>
-                            <strong class="prog-mini-val val-green" id="stat-prog-rec">+0</strong>
-                        </div>
-                        <div class="prog-mini-stat stat-highlight">
-                            <span class="prog-mini-lbl">Efetivos no Turno</span>
-                            <strong class="prog-mini-val val-blue" id="stat-prog-efetivos">0</strong>
-                        </div>
-                    </div>
-
-                    <!-- BLOCO NOVAS INFORMAÇÕES: COLABORADORES NOVOS -->
-                    <div id="resumo-box-novos" style="display:none; margin-top: 12px; padding: 12px 15px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.83rem; color: #065f46; line-height: 1.45;">
-                        <strong id="resumo-novos-texto">--</strong>
-                    </div>
-
-                    <!-- BLOCO NOVAS INFORMAÇÕES: HORA EXTRA / REMANEJAMENTOS E JUSTIFICATIVAS -->
-                    <div id="resumo-box-cobertura-extra" style="display:none; margin-top: 10px; padding: 12px 15px; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 0.83rem; color: #1e40af; line-height: 1.45;">
-                        <div id="resumo-cobertura-extra-texto">--</div>
-                    </div>
-
-                    <!-- INDICADORES DE LEITOS E RAZÕES -->
-                    <div class="prog-kpi-grid" style="margin-top: 14px;">
-                        <div class="prog-kpi-box">
-                            <span class="prog-kpi-lbl">Leitos disponíveis</span>
-                            <strong class="prog-kpi-val" id="ind-leitos-fisicos">0</strong>
-                        </div>
-                        <div class="prog-kpi-box">
-                            <span class="prog-kpi-lbl">Internados (Censo MV)</span>
-                            <strong class="prog-kpi-val" id="ind-pacientes-internados">0</strong>
-                        </div>
-                        <div class="prog-kpi-box">
-                            <span class="prog-kpi-lbl">Leitos vagos</span>
-                            <strong class="prog-kpi-val" id="ind-leitos-vagos">0</strong>
-                        </div>
-                        <div class="prog-kpi-box">
-                            <span class="prog-kpi-lbl">Taxa de ocupação</span>
-                            <strong class="prog-kpi-val" id="ind-taxa-ocupacao">0,00%</strong>
-                        </div>
-                        <div class="prog-kpi-box">
-                            <span class="prog-kpi-lbl">Pacientes / colab.</span>
-                            <strong class="prog-kpi-val" id="ind-pac-por-colab">0,00</strong>
-                        </div>
-                        <div class="prog-kpi-box">
-                            <span class="prog-kpi-lbl">Leitos / colab.</span>
-                            <strong class="prog-kpi-val" id="ind-leitos-por-colab">0,00</strong>
+                        <!-- SUB-QUADRO DE COLABORADORES NOVOS (SE HOUVER) -->
+                        <div id="resumo-box-novos" style="display:none; margin-top: 12px; padding: 11px 14px; border-radius: 12px; background: #ffffff; border: 1px solid #a7f3d0; font-size: 0.83rem; color: #065f46; line-height: 1.45;">
+                            <strong id="resumo-novos-texto">--</strong>
                         </div>
                     </div>
 
-                    <div class="prog-ocupacao-bar-wrap">
-                        <div class="prog-ocupacao-top">
-                            <span>Ocupação hospitalar</span>
-                            <span id="lbl-ocupacao-detalhe">0 pacientes em 0 leitos operacionais</span>
+                    <!-- BLOCO 3: JUSTIFICATIVAS DE REMANEJAMENTO E HORA EXTRA (SE HOUVER) -->
+                    <div id="resumo-box-cobertura-extra" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:16px 18px;">
+                        <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#1e40af; margin-bottom:8px;">
+                            3. Movimentações e Autorizações Registradas
                         </div>
-                        <div class="prog-ocupacao-track">
-                            <div id="barra-ocupacao-fill" class="prog-ocupacao-fill" style="width: 0%;"></div>
+                        <div id="resumo-cobertura-extra-texto" style="font-size:0.84rem; color:#1e3a8a; line-height:1.55;">--</div>
+                    </div>
+
+                    <!-- BLOCO 4: LEITOS E INDICADORES ASSISTENCIAIS -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:16px 18px;">
+                        <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#334155; margin-bottom:12px;">
+                            Ocupação de Leitos e Indicadores Assistenciais
+                        </div>
+
+                        <div class="prog-kpi-grid">
+                            <div class="prog-kpi-box" style="background:#ffffff;">
+                                <span class="prog-kpi-lbl">Leitos disponíveis</span>
+                                <strong class="prog-kpi-val" id="ind-leitos-fisicos">0</strong>
+                            </div>
+                            <div class="prog-kpi-box" style="background:#ffffff;">
+                                <span class="prog-kpi-lbl">Internados (Censo MV)</span>
+                                <strong class="prog-kpi-val" id="ind-pacientes-internados">0</strong>
+                            </div>
+                            <div class="prog-kpi-box" style="background:#ffffff;">
+                                <span class="prog-kpi-lbl">Leitos vagos</span>
+                                <strong class="prog-kpi-val" id="ind-leitos-vagos">0</strong>
+                            </div>
+                            <div class="prog-kpi-box" style="background:#ffffff;">
+                                <span class="prog-kpi-lbl">Taxa de ocupação</span>
+                                <strong class="prog-kpi-val" id="ind-taxa-ocupacao">0,00%</strong>
+                            </div>
+                            <div class="prog-kpi-box" style="background:#ffffff;">
+                                <span class="prog-kpi-lbl">Pacientes / colab.</span>
+                                <strong class="prog-kpi-val" id="ind-pac-por-colab">0,00</strong>
+                            </div>
+                            <div class="prog-kpi-box" style="background:#ffffff;">
+                                <span class="prog-kpi-lbl">Leitos / colab.</span>
+                                <strong class="prog-kpi-val" id="ind-leitos-por-colab">0,00</strong>
+                            </div>
+                        </div>
+
+                        <div class="prog-ocupacao-bar-wrap">
+                            <div class="prog-ocupacao-top">
+                                <span>Ocupação hospitalar</span>
+                                <span id="lbl-ocupacao-detalhe">0 pacientes em 0 leitos operacionais</span>
+                            </div>
+                            <div class="prog-ocupacao-track">
+                                <div id="barra-ocupacao-fill" class="prog-ocupacao-fill" style="width: 0%;"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="prog-field" style="margin-top: 14px;">
-                        <label for="prog-observacao">Observações (opcional)</label>
+                    <!-- BLOCO 5: OBSERVAÇÕES -->
+                    <div class="prog-field">
+                        <label for="prog-observacao">Observações adicionais (opcional)</label>
                         <textarea id="prog-observacao" class="textarea-control" style="min-height: 60px;" placeholder="Intercorrências ou observações de escala..."></textarea>
                     </div>
                 </div>
@@ -656,7 +745,8 @@
 </div>
 
 <script>
-    const JUSTIFICATIVAS_ENTRADA_HE = [
+    const OPCOES_JUSTIFICATIVA_RECEBIMENTO_HE = [
+        "Selecionar justificativa",
         "Ausência de colaborador",
         "Licença médica de até 15 dias",
         "Licença médica superior a 15 dias",
@@ -665,7 +755,8 @@
         "Outro"
     ];
 
-    const JUSTIFICATIVAS_EMPRESTIMO = [
+    const OPCOES_JUSTIFICATIVA_EMPRESTIMO = [
+        "Selecionar justificativa",
         "Sobra de colaborador",
         "Redução de ocupação",
         "Outro"
@@ -691,6 +782,7 @@
     };
 
     let progStepAtual = 1;
+    let progSubstep3Atual = 1;
     let progTurnoAtual = "";
     let progTodasUnidadesCenso = [];
     let progPacientesInternadosAtual = 0;
@@ -703,7 +795,7 @@
     const PROG_STEPS_META = {
         1: { titulo: "Etapa 1 de 4 • Unidade e Turno", pct: 25 },
         2: { titulo: "Etapa 2 de 4 • Equipe e Leitos", pct: 50 },
-        3: { titulo: "Etapa 3 de 4 • Cobertura e Remanejamento", pct: 75 },
+        3: { titulo: "Etapa 3 de 4 • Cobertura e Hora Extra", pct: 75 },
         4: { titulo: "Etapa 4 de 4 • Resumo", pct: 100 },
     };
 
@@ -806,38 +898,238 @@
     }
 
     // =========================================================================
-    // JUSTIFICATIVAS E HORA EXTRA (STEP 3)
+    // SUB-ETAPA 3.1: REMANEJAMENTO (SELECT COMPACTO + TRAVA JUSTIFICATIVA)
     // =========================================================================
-    function renderizarRadiosJustificativa(containerId, radioName, opcoes, onChangeFnName) {
-        const el = document.getElementById(containerId);
-        if (!el) return;
-        el.innerHTML = opcoes.map((op, idx) => `
-            <label class="prog-just-radio-item">
-                <input type="radio" name="${radioName}" value="${op}" ${idx === 0 ? "checked" : ""} onchange="${onChangeFnName}()">
-                <span>${op}</span>
-            </label>
-        `).join("");
+    function irParaSubstep3(sub) {
+        progSubstep3Atual = sub;
+        const pane31 = document.getElementById("prog-substep-3-1");
+        const pane32 = document.getElementById("prog-substep-3-2");
+        if (pane31) pane31.style.display = sub === 1 ? "block" : "none";
+        if (pane32) pane32.style.display = sub === 2 ? "block" : "none";
+
+        if (sub === 1) {
+            _setTextSafe("lbl-step3-subtitulo", "Etapa 3.1 • Houve necessidade de remanejamento no turno?");
+            _setTextSafe("badge-step3-subetapa", "Passo 1 de 2 • Remanejamento");
+            _setTextSafe("lbl-prog-step-pct", "75% concluído");
+            const barraFill = document.getElementById("barra-prog-step-fill");
+            if (barraFill) barraFill.style.width = "75%";
+        } else {
+            _setTextSafe("lbl-step3-subtitulo", "Etapa 3.2 • Houve hora extra autorizada no turno?");
+            _setTextSafe("badge-step3-subetapa", "Passo 2 de 2 • Hora Extra");
+            _setTextSafe("lbl-prog-step-pct", "88% concluído");
+            const barraFill = document.getElementById("barra-prog-step-fill");
+            if (barraFill) barraFill.style.width = "88%";
+        }
     }
 
-    function aoMudarJustificativaRemanejamento() {
-        const sel = document.querySelector('input[name="prog_rem_just_radio"]:checked')?.value || "";
-        const wrapOutro = document.getElementById("prog-rem-just-outro-wrap");
+    function aoMudarHouveRemanejamento() {
+        const val = document.querySelector('input[name="prog_houve_remanejamento"]:checked')?.value || "NAO";
+        const boxConfig = document.getElementById("box-config-remanejamento");
+        if (val === "SIM") {
+            if (boxConfig) boxConfig.style.display = "block";
+        } else {
+            if (boxConfig) boxConfig.style.display = "none";
+            progRemanejamentosLista = [];
+            renderizarListaRemanejamentos();
+            recalcularIndicadoresProgramacao();
+        }
+    }
+
+    function aoMudarTipoMovRemanejamento() {
+        const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
+        const boxQtd = document.getElementById("box-qtd-cards-remanejamento");
+        if (!tipoMov) {
+            if (boxQtd) boxQtd.style.display = "none";
+            return;
+        }
+        if (boxQtd) boxQtd.style.display = "block";
+        _setTextSafe(
+            "lbl-qtd-colab-rem",
+            tipoMov === "EMPRESTIMO"
+                ? "Quantidade de colaboradores emprestados *"
+                : "Quantidade de colaboradores recebidos *"
+        );
+        renderizarCardsColaboradoresRem();
+    }
+
+    function renderizarCardsColaboradoresRem() {
+        const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
+        const container = document.getElementById("container-cards-colaboradores-rem");
+        if (!container || !tipoMov) return;
+
+        const qtd = Math.min(15, Math.max(1, parseInt(document.getElementById("prog-qtd-colab-rem")?.value || "1", 10)));
+        const isEmp = tipoMov === "EMPRESTIMO";
+        const atualUnidade = document.getElementById("prog-select-unidade")?.value || "";
+        const opcoesCC = progTodasUnidadesCenso
+            .filter(u => u.nome_unidade !== atualUnidade)
+            .map(u => `<option value="${u.nome_unidade}">${u.nome_unidade}</option>`)
+            .join("");
+
+        const opcoesJust = isEmp ? OPCOES_JUSTIFICATIVA_EMPRESTIMO : OPCOES_JUSTIFICATIVA_RECEBIMENTO_HE;
+        const tituloCard = isEmp ? "Empréstimo" : "Recebimento";
+        const labelCC = isEmp ? "Centro de Custo / Unidade de destino *" : "Centro de Custo / Unidade de origem *";
+        const labelJust = isEmp ? "Justificativa de empréstimo *" : "Justificativa de recebimento *";
+        const corBorda = isEmp ? "#fecaca" : "#a7f3d0";
+        const corBtn = isEmp ? "#dc2626" : "#059669";
+
+        container.innerHTML = Array.from({ length: qtd }, (_, i) => {
+            const num = String(i + 1).padStart(2, "0");
+            const optionsJustHtml = opcoesJust
+                .map((op, idx) => `<option value="${op}" ${idx === 0 ? "selected" : ""}>${op}</option>`)
+                .join("");
+
+            return `
+                <div id="card-rem-colab-${i}" style="background:#ffffff; border:1.5px solid ${corBorda}; border-radius:14px; padding:14px 16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                        <strong style="font-size:0.88rem; color:#0f172a;">Colaborador ${num} • ${tituloCard}</strong>
+                        <span id="status-card-rem-${i}" style="font-size:0.72rem; font-weight:700; color:#64748b;">Pendente</span>
+                    </div>
+
+                    <div class="prog-grid-2-step2" style="margin-bottom: 10px;">
+                        <div class="prog-field">
+                            <label for="sel-cc-rem-colab-${i}">${labelCC}</label>
+                            <select id="sel-cc-rem-colab-${i}" class="prog-input-pill prog-control-h">
+                                <option value="">Selecione a unidade...</option>
+                                ${opcoesCC}
+                            </select>
+                        </div>
+
+                        <div class="prog-field">
+                            <label for="sel-just-rem-colab-${i}">${labelJust}</label>
+                            <select id="sel-just-rem-colab-${i}" class="prog-input-pill prog-control-h" onchange="aoMudarSelectJustColabRem(${i})">
+                                ${optionsJustHtml}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="outro-wrap-rem-colab-${i}" style="display:none; margin-bottom: 10px;">
+                        <textarea
+                            id="outro-txt-rem-colab-${i}"
+                            class="textarea-control"
+                            style="min-height:66px;"
+                            placeholder="Descreva o motivo (mínimo 10 caracteres)..."
+                        ></textarea>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="btn-add-card-rem-${i}"
+                        class="btn btn-sm"
+                        style="width:100%; background:${corBtn}; color:#ffffff; border-radius:999px; font-weight:700; padding:9px 14px;"
+                        onclick="confirmarCardColaboradorRem(${i})"
+                    >
+                        + Adicionar Colaborador ${num}
+                    </button>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function aoMudarSelectJustColabRem(idx) {
+        const val = document.getElementById(`sel-just-rem-colab-${idx}`)?.value || "";
+        const wrapOutro = document.getElementById(`outro-wrap-rem-colab-${idx}`);
         if (wrapOutro) {
-            wrapOutro.style.display = sel === "Outro" ? "block" : "none";
+            wrapOutro.style.display = val === "Outro" ? "block" : "none";
         }
     }
 
-    function obterJustificativaRemanejamentoSelecionada() {
-        const radioVal = document.querySelector('input[name="prog_rem_just_radio"]:checked')?.value || "";
-        if (!radioVal) return { ok: false, mensagem: "Selecione a justificativa do remanejamento." };
-        if (radioVal === "Outro") {
-            const txt = (document.getElementById("prog-rem-just-outro-texto")?.value || "").trim();
-            if (txt.length <= 10) {
-                return { ok: false, mensagem: "Na opção 'Outro', descreva o motivo com mais de 10 caracteres." };
-            }
-            return { ok: true, texto: `Outro: ${txt}` };
+    function confirmarCardColaboradorRem(idx) {
+        const num = String(idx + 1).padStart(2, "0");
+        const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
+        if (!tipoMov) {
+            mostrarToast("Selecione o tipo de remanejamento (Emprestar ou Receber).", true);
+            return;
         }
-        return { ok: true, texto: radioVal };
+
+        const ccUnidade = (document.getElementById(`sel-cc-rem-colab-${idx}`)?.value || "").trim();
+        if (!ccUnidade) {
+            mostrarToast(`Colaborador ${num}: selecione o Centro de Custo / Unidade.`, true);
+            return;
+        }
+
+        const justSel = document.getElementById(`sel-just-rem-colab-${idx}`)?.value || "Selecionar justificativa";
+        if (!justSel || justSel === "Selecionar justificativa") {
+            mostrarToast(`Colaborador ${num}: escolha uma justificativa válida antes de adicionar.`, true);
+            return;
+        }
+
+        let justFinal = justSel;
+        if (justSel === "Outro") {
+            const txtOutro = (document.getElementById(`outro-txt-rem-colab-${idx}`)?.value || "").trim();
+            if (txtOutro.length <= 10) {
+                mostrarToast(`Colaborador ${num}: descreva a justificativa 'Outro' com mais de 10 caracteres.`, true);
+                return;
+            }
+            justFinal = `Outro: ${txtOutro}`;
+        }
+
+        progRemanejamentosLista = progRemanejamentosLista.filter(item => item.card_idx !== idx);
+        progRemanejamentosLista.push({
+            card_idx: idx,
+            colaborador_num: num,
+            tipo: tipoMov,
+            quantidade: 1,
+            unidade_contraparte: ccUnidade,
+            justificativa: justFinal,
+        });
+
+        const badgeSt = document.getElementById(`status-card-rem-${idx}`);
+        if (badgeSt) {
+            badgeSt.innerText = "✓ Adicionado";
+            badgeSt.style.color = "#059669";
+        }
+        const btnCard = document.getElementById(`btn-add-card-rem-${idx}`);
+        if (btnCard) {
+            btnCard.innerText = `✓ Colaborador ${num} Adicionado`;
+        }
+
+        renderizarListaRemanejamentos();
+        recalcularIndicadoresProgramacao();
+        mostrarToast(`Colaborador ${num} adicionado ao remanejamento!`);
+    }
+
+    function avancarSubstep3ParaHoraExtra() {
+        const houveRem = document.querySelector('input[name="prog_houve_remanejamento"]:checked')?.value || "NAO";
+        if (houveRem === "NAO") {
+            progRemanejamentosLista = [];
+            renderizarListaRemanejamentos();
+            recalcularIndicadoresProgramacao();
+            irParaSubstep3(2);
+            return;
+        }
+
+        const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
+        if (!tipoMov) {
+            mostrarToast("Selecione se o remanejamento foi Emprestar ou Receber.", true);
+            return;
+        }
+
+        const qtdEsperada = Math.min(15, Math.max(1, parseInt(document.getElementById("prog-qtd-colab-rem")?.value || "1", 10)));
+        if (progRemanejamentosLista.length < qtdEsperada) {
+            mostrarToast(`Adicione todos os ${qtdEsperada} colaborador(es) antes de avançar.`, true);
+            return;
+        }
+
+        irParaSubstep3(2);
+    }
+
+    function voltarParaSubstep3Remanejamento() {
+        irParaSubstep3(1);
+    }
+
+    // =========================================================================
+    // SUB-ETAPA 3.2: HORA EXTRA (SELECT COMPACTO + TRAVA JUSTIFICATIVA)
+    // =========================================================================
+    function aoMudarHouveHoraExtra() {
+        const val = document.querySelector('input[name="prog_houve_he"]:checked')?.value || "NAO";
+        const boxHE = document.getElementById("prog-box-hora-extra");
+        if (val === "SIM") {
+            if (boxHE) boxHE.style.display = "block";
+            renderizarCardsHorasExtras();
+        } else {
+            if (boxHE) boxHE.style.display = "none";
+        }
+        recalcularIndicadoresProgramacao();
     }
 
     function aoMudarTipoAutorizadorHE() {
@@ -854,46 +1146,89 @@
         if (wrap) wrap.style.display = "block";
     }
 
-    function aoMudarJustificativaHE() {
-        const sel = document.querySelector('input[name="prog_he_just_radio"]:checked')?.value || "";
-        const wrapOutro = document.getElementById("prog-he-just-outro-wrap");
+    function renderizarCardsHorasExtras() {
+        const container = document.getElementById("container-cards-horas-extras");
+        if (!container) return;
+
+        const qtd = Math.min(15, Math.max(1, parseInt(document.getElementById("prog-qtd-horas-extras")?.value || "1", 10)));
+        const optionsJustHtml = OPCOES_JUSTIFICATIVA_RECEBIMENTO_HE
+            .map((op, idx) => `<option value="${op}" ${idx === 0 ? "selected" : ""}>${op}</option>`)
+            .join("");
+
+        container.innerHTML = Array.from({ length: qtd }, (_, i) => {
+            const num = String(i + 1).padStart(2, "0");
+            return `
+                <div style="background:#ffffff; border:1px solid #bfdbfe; border-radius:12px; padding:12px 14px;">
+                    <div class="prog-field">
+                        <label for="sel-just-he-item-${i}" style="color:#1e3a8a; font-weight:800;">
+                            Justificativa Hora Extra ${num} *
+                        </label>
+                        <select id="sel-just-he-item-${i}" class="prog-input-pill prog-control-h" onchange="aoMudarSelectJustHEItem(${i})">
+                            ${optionsJustHtml}
+                        </select>
+                    </div>
+                    <div id="outro-wrap-he-item-${i}" style="display:none; margin-top:8px;">
+                        <textarea
+                            id="outro-txt-he-item-${i}"
+                            class="textarea-control"
+                            style="min-height:66px;"
+                            placeholder="Descreva o motivo da Hora Extra ${num} (mínimo 10 caracteres)..."
+                        ></textarea>
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+        recalcularIndicadoresProgramacao();
+    }
+
+    function aoMudarSelectJustHEItem(idx) {
+        const val = document.getElementById(`sel-just-he-item-${idx}`)?.value || "";
+        const wrapOutro = document.getElementById(`outro-wrap-he-item-${idx}`);
         if (wrapOutro) {
-            wrapOutro.style.display = sel === "Outro" ? "block" : "none";
+            wrapOutro.style.display = val === "Outro" ? "block" : "none";
         }
     }
 
     function obterDadosHoraExtraStep3() {
-        const modo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        if (modo !== "HORA_EXTRA") return { ativo: false };
+        const houveHE = document.querySelector('input[name="prog_houve_he"]:checked')?.value || "NAO";
+        if (houveHE !== "SIM") return { ativo: false, quantidade: 0, itens: [] };
 
         const tipoAut = document.querySelector('input[name="prog_he_tipo_autorizador"]:checked')?.value || "";
         if (!tipoAut) {
-            return { ativo: true, erro: "Selecione quem autorizou (Plantão Administrativo ou Coordenação)." };
+            return { ativo: true, erro: "Selecione quem autorizou a hora extra (Plantão Adm ou Coordenação)." };
         }
         const nomeAut = (document.getElementById("prog-he-select-autorizador")?.value || "").trim();
         if (!nomeAut) {
             return { ativo: true, erro: "Selecione o nome do responsável pela autorização da Hora Extra." };
         }
 
-        const radioJust = document.querySelector('input[name="prog_he_just_radio"]:checked')?.value || "";
-        if (!radioJust) {
-            return { ativo: true, erro: "Selecione a justificativa da Hora Extra." };
-        }
+        const qtd = Math.min(15, Math.max(1, parseInt(document.getElementById("prog-qtd-horas-extras")?.value || "1", 10)));
+        const itens = [];
 
-        let justFinal = radioJust;
-        if (radioJust === "Outro") {
-            const txtOutro = (document.getElementById("prog-he-just-outro-texto")?.value || "").trim();
-            if (txtOutro.length <= 10) {
-                return { ativo: true, erro: "Na justificativa 'Outro' da Hora Extra, escreva mais de 10 caracteres." };
+        for (let i = 0; i < qtd; i++) {
+            const num = String(i + 1).padStart(2, "0");
+            const justSel = document.getElementById(`sel-just-he-item-${i}`)?.value || "Selecionar justificativa";
+            if (!justSel || justSel === "Selecionar justificativa") {
+                return { ativo: true, erro: `Hora Extra ${num}: escolha uma justificativa válida antes de continuar.` };
             }
-            justFinal = `Outro: ${txtOutro}`;
+            let justFinal = justSel;
+            if (justSel === "Outro") {
+                const txtOutro = (document.getElementById(`outro-txt-he-item-${i}`)?.value || "").trim();
+                if (txtOutro.length <= 10) {
+                    return { ativo: true, erro: `Hora Extra ${num}: descreva o motivo 'Outro' com mais de 10 caracteres.` };
+                }
+                justFinal = `Outro: ${txtOutro}`;
+            }
+            itens.push({ numero: num, justificativa: justFinal });
         }
 
         return {
             ativo: true,
             tipo_autorizador: tipoAut,
             autorizador: nomeAut,
-            justificativa: justFinal,
+            quantidade: qtd,
+            itens,
         };
     }
 
@@ -938,16 +1273,21 @@
         if (inp6t) inp6t.value = "0";
         atualizarTotalAuxiliaresStep2();
 
-        const radioNao = document.querySelector('input[name="prog_tem_novos"][value="0"]');
-        if (radioNao) radioNao.checked = true;
+        const radioNaoNovos = document.querySelector('input[name="prog_tem_novos"][value="0"]');
+        if (radioNaoNovos) radioNaoNovos.checked = true;
         aoMudarTemColabNovos();
 
         progRemanejamentosLista = [];
         renderizarListaRemanejamentos();
-        const radioNenhum = document.querySelector('input[name="prog_tipo_remanejamento"][value="NENHUM"]');
-        if (radioNenhum) radioNenhum.checked = true;
-        aoMudarTipoRemanejamento();
+        const radioSemRem = document.querySelector('input[name="prog_houve_remanejamento"][value="NAO"]');
+        if (radioSemRem) radioSemRem.checked = true;
+        aoMudarHouveRemanejamento();
 
+        const radioSemHE = document.querySelector('input[name="prog_houve_he"][value="NAO"]');
+        if (radioSemHE) radioSemHE.checked = true;
+        aoMudarHouveHoraExtra();
+
+        irParaSubstep3(1);
         irParaStepProgramacao(1, true);
     }
 
@@ -1005,20 +1345,12 @@
         }
 
         if (step === 3) {
-            const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-            if (tipo === "HORA_EXTRA") {
-                const heData = obterDadosHoraExtraStep3();
-                if (heData.erro) {
-                    mostrarToast(heData.erro, true);
-                    return false;
-                }
-                return true;
-            }
-
-            if (tipo !== "NENHUM" && progRemanejamentosLista.length === 0) {
-                mostrarToast("Adicione a movimentação ou selecione 'Sem remanejamento'.", true);
+            const heData = obterDadosHoraExtraStep3();
+            if (heData.erro) {
+                mostrarToast(heData.erro, true);
                 return false;
             }
+
             const qtdProg = obterTotalAuxiliaresStep2();
             const emp = progRemanejamentosLista.filter(r => r.tipo === "EMPRESTIMO").reduce((a, b) => a + b.quantidade, 0);
             const rec = progRemanejamentosLista.filter(r => r.tipo === "RECEBIMENTO").reduce((a, b) => a + b.quantidade, 0);
@@ -1056,7 +1388,9 @@
         const barraFill = document.getElementById("barra-prog-step-fill");
         if (barraFill) barraFill.style.width = `${meta.pct}%`;
 
-        if (destino === 4) {
+        if (destino === 3) {
+            irParaSubstep3(1);
+        } else if (destino === 4) {
             atualizarResumoCabecalhoStep4();
             recalcularIndicadoresProgramacao();
         }
@@ -1075,7 +1409,7 @@
         _setTextSafe("resumo-data-turno", `${dataBr} • ${progTurnoAtual || "--"}`);
         _setTextSafe("resumo-enfermeiros-nomes", enfTexto);
 
-        // Colaboradores novos
+        // Colaboradores novos (dentro do Bloco 2)
         const boxNovos = document.getElementById("resumo-box-novos");
         const infoNovos = obterDetalheColabNovos();
         if (boxNovos) {
@@ -1093,24 +1427,34 @@
             }
         }
 
-        // Hora Extra ou Remanejamentos com justificativas
+        // Bloco 3: Remanejamentos + Hora Extra
         const boxExtra = document.getElementById("resumo-box-cobertura-extra");
         const extraEl = document.getElementById("resumo-cobertura-extra-texto");
         if (boxExtra && extraEl) {
+            const blocosHtml = [];
+
+            if (progRemanejamentosLista.length) {
+                blocosHtml.push(
+                    progRemanejamentosLista
+                        .map(r => {
+                            const tipoLbl = r.tipo === "EMPRESTIMO" ? "Empréstimo" : "Recebimento";
+                            return `<div><strong>${tipoLbl} (Colab. ${r.colaborador_num || "01"}):</strong> ${r.unidade_contraparte} — <em>${r.justificativa || ""}</em></div>`;
+                        })
+                        .join("")
+                );
+            }
+
             const heInfo = obterDadosHoraExtraStep3();
             if (heInfo.ativo && !heInfo.erro) {
                 const grupoLbl = heInfo.tipo_autorizador === "PLANTAO_ADM" ? "Plantão Administrativo" : "Coordenação";
-                extraEl.innerHTML =
-                    `<strong>Hora Extra solicitada:</strong> Autorizada por <strong>${heInfo.autorizador}</strong> (${grupoLbl})<br>` +
-                    `<strong>Justificativa:</strong> ${heInfo.justificativa}`;
-                boxExtra.style.display = "block";
-            } else if (progRemanejamentosLista.length) {
-                extraEl.innerHTML = progRemanejamentosLista
-                    .map(r => {
-                        const tipoLbl = r.tipo === "EMPRESTIMO" ? "Empréstimo (Saída)" : "Recebimento (Entrada)";
-                        return `<div><strong>${tipoLbl}:</strong> ${r.quantidade} colab. (${r.unidade_contraparte}) — <em>${r.justificativa || "Sem justificativa"}</em></div>`;
-                    })
-                    .join("");
+                const itensHeStr = heInfo.itens.map(it => `HE ${it.numero}: ${it.justificativa}`).join(" • ");
+                blocosHtml.push(
+                    `<div style="margin-top:${blocosHtml.length ? "6px" : "0"};"><strong>Hora Extra (${heInfo.quantidade}):</strong> Autorizada por <strong>${heInfo.autorizador}</strong> (${grupoLbl}) — <em>${itensHeStr}</em></div>`
+                );
+            }
+
+            if (blocosHtml.length) {
+                extraEl.innerHTML = blocosHtml.join("");
                 boxExtra.style.display = "block";
             } else {
                 boxExtra.style.display = "none";
@@ -1331,19 +1675,18 @@
                 document.getElementById("prog-leitos-fisicos").value = pe.leitos_fisicos;
                 document.getElementById("prog-leitos-bloqueados").value = pe.leitos_bloqueados;
                 document.getElementById("prog-observacao").value = pe.observacao || "";
-                progRemanejamentosLista = (pe.remanejamentos || []).map(r => ({
+                progRemanejamentosLista = (pe.remanejamentos || []).map((r, rIdx) => ({
+                    card_idx: rIdx,
+                    colaborador_num: String(rIdx + 1).padStart(2, "0"),
                     tipo: r.tipo,
                     quantidade: r.quantidade,
                     unidade_contraparte: r.unidade_contraparte,
                     justificativa: "",
                 }));
 
-                const radioAlvo = progRemanejamentosLista.length
-                    ? progRemanejamentosLista[0].tipo
-                    : "NENHUM";
-                const radioEl = document.querySelector(`input[name="prog_tipo_remanejamento"][value="${radioAlvo}"]`);
-                if (radioEl) radioEl.checked = true;
-                aoMudarTipoRemanejamento();
+                const radioRem = document.querySelector(`input[name="prog_houve_remanejamento"][value="${progRemanejamentosLista.length ? "SIM" : "NAO"}"]`);
+                if (radioRem) radioRem.checked = true;
+                aoMudarHouveRemanejamento();
 
                 if (bannerEdicao) bannerEdicao.style.display = "block";
                 _setTextSafe(
@@ -1354,13 +1697,12 @@
                 progRemanejamentosLista = [];
                 const obsEl = document.getElementById("prog-observacao");
                 if (obsEl) obsEl.value = "";
-                const radioNenhum = document.querySelector('input[name="prog_tipo_remanejamento"][value="NENHUM"]');
-                if (radioNenhum) radioNenhum.checked = true;
-                aoMudarTipoRemanejamento();
+                const radioRemNao = document.querySelector('input[name="prog_houve_remanejamento"][value="NAO"]');
+                if (radioRemNao) radioRemNao.checked = true;
+                aoMudarHouveRemanejamento();
                 if (bannerEdicao) bannerEdicao.style.display = "none";
             }
 
-            popularSelectUnidadesContraparte();
             renderizarListaRemanejamentos();
             recalcularIndicadoresProgramacao();
             if (progStepAtual === 4) atualizarResumoCabecalhoStep4();
@@ -1368,130 +1710,6 @@
             if (err.name === "AbortError") return;
             mostrarToast("Falha ao carregar Programação Assistencial.", true);
         }
-    }
-
-    function popularSelectUnidadesContraparte() {
-        const atualNome = document.getElementById("prog-select-unidade")?.value || "";
-        const selContra = document.getElementById("prog-rem-unidade");
-        if (!selContra) return;
-        selContra.innerHTML = progTodasUnidadesCenso
-            .filter(u => u.nome_unidade !== atualNome)
-            .map(u => `<option value="${u.nome_unidade}">${u.nome_unidade}</option>`)
-            .join("");
-        atualizarPreviewRemanejamento();
-    }
-
-    function aoMudarTipoRemanejamento() {
-        const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        const boxRem = document.getElementById("prog-box-remanejamento");
-        const boxHE = document.getElementById("prog-box-hora-extra");
-
-        if (tipo === "HORA_EXTRA") {
-            if (boxRem) boxRem.style.display = "none";
-            if (boxHE) boxHE.style.display = "block";
-            renderizarRadiosJustificativa("prog-he-just-lista", "prog_he_just_radio", JUSTIFICATIVAS_ENTRADA_HE, "aoMudarJustificativaHE");
-            aoMudarJustificativaHE();
-            recalcularIndicadoresProgramacao();
-            return;
-        }
-
-        if (boxHE) boxHE.style.display = "none";
-
-        if (tipo === "NENHUM") {
-            if (boxRem) boxRem.style.display = "none";
-            progRemanejamentosLista = [];
-            renderizarListaRemanejamentos();
-            recalcularIndicadoresProgramacao();
-            return;
-        }
-
-        const isEmp = tipo === "EMPRESTIMO";
-        if (boxRem) {
-            boxRem.style.display = "block";
-            boxRem.className = `prog-remanejamento-box ${isEmp ? "mode-out" : "mode-in"}`;
-        }
-
-        const badge = document.getElementById("badge-modo-remanejamento");
-        if (badge) {
-            badge.className = `prog-mode-badge ${isEmp ? "badge-out" : "badge-in"}`;
-            badge.innerText = isEmp
-                ? "↗ EMPRÉSTIMO DE COLABORADOR (SAÍDA)"
-                : "↙ RECEBIMENTO DE COLABORADOR (ENTRADA)";
-        }
-
-        const opcoesJust = isEmp ? JUSTIFICATIVAS_EMPRESTIMO : JUSTIFICATIVAS_ENTRADA_HE;
-        _setTextSafe("lbl-prog-rem-justificativa", isEmp ? "Justificativa do empréstimo *" : "Justificativa do recebimento *");
-        _setTextSafe("lbl-btn-add-rem", isEmp ? "Adicionar empréstimo" : "Adicionar recebimento");
-
-        renderizarRadiosJustificativa("prog-rem-just-lista", "prog_rem_just_radio", opcoesJust, "aoMudarJustificativaRemanejamento");
-        const txtOutro = document.getElementById("prog-rem-just-outro-texto");
-        if (txtOutro) txtOutro.value = "";
-        aoMudarJustificativaRemanejamento();
-
-        const btnAdd = document.getElementById("btn-add-remanejamento");
-        if (btnAdd) btnAdd.className = `prog-btn-add-action ${isEmp ? "btn-mode-out" : "btn-mode-in"}`;
-
-        popularSelectUnidadesContraparte();
-        atualizarPreviewRemanejamento();
-    }
-
-    function atualizarPreviewRemanejamento() {
-        const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        if (tipo !== "EMPRESTIMO" && tipo !== "RECEBIMENTO") return;
-
-        const selUnidade = document.getElementById("prog-select-unidade");
-        const selContra = document.getElementById("prog-rem-unidade");
-        const qtd = Math.max(1, parseInt(document.getElementById("prog-rem-qtd")?.value || "1", 10));
-
-        const nomeMinha = selUnidade?.value || "Minha Unidade";
-        const nomeContra = selContra?.value || "Outra Unidade";
-        const centerBox = document.getElementById("box-flow-center");
-
-        if (tipo === "EMPRESTIMO") {
-            _setTextSafe("lbl-prog-rem-unidade", "Unidade de destino *");
-            _setTextSafe("lbl-flow-esq-nome", nomeMinha);
-            _setTextSafe("lbl-flow-dir-nome", nomeContra);
-            if (centerBox) centerBox.className = "prog-flow-bar flow-out";
-            _setTextSafe("lbl-flow-qtd", `-${qtd} colab. →`);
-        } else {
-            _setTextSafe("lbl-prog-rem-unidade", "Unidade de origem *");
-            _setTextSafe("lbl-flow-esq-nome", nomeContra);
-            _setTextSafe("lbl-flow-dir-nome", nomeMinha);
-            if (centerBox) centerBox.className = "prog-flow-bar flow-in";
-            _setTextSafe("lbl-flow-qtd", `+${qtd} colab. →`);
-        }
-    }
-
-    function adicionarRemanejamentoLista() {
-        const tipo = document.querySelector('input[name="prog_tipo_remanejamento"]:checked')?.value || "NENHUM";
-        if (tipo !== "EMPRESTIMO" && tipo !== "RECEBIMENTO") return;
-
-        const qtd = parseInt(document.getElementById("prog-rem-qtd")?.value || "0", 10);
-        const contraNome = document.getElementById("prog-rem-unidade")?.value || "";
-
-        if (!qtd || qtd < 1 || !contraNome) {
-            mostrarToast("Informe a quantidade e a unidade.", true);
-            return;
-        }
-
-        const justRes = obterJustificativaRemanejamentoSelecionada();
-        if (!justRes.ok) {
-            mostrarToast(justRes.mensagem, true);
-            return;
-        }
-
-        progRemanejamentosLista.push({
-            tipo,
-            quantidade: qtd,
-            unidade_contraparte: contraNome,
-            justificativa: justRes.texto,
-        });
-
-        const txtOutro = document.getElementById("prog-rem-just-outro-texto");
-        if (txtOutro) txtOutro.value = "";
-
-        renderizarListaRemanejamentos();
-        recalcularIndicadoresProgramacao();
     }
 
     function removerRemanejamentoLista(idx) {
@@ -1521,7 +1739,7 @@
                             ${isEmp ? `↗ EMPRÉSTIMO (-${r.quantidade})` : `↙ RECEBIMENTO (+${r.quantidade})`}
                         </span>
                         <div class="prog-rem-dest">
-                            <strong>${isEmp ? "Destino" : "Origem"}:</strong> ${r.unidade_contraparte}
+                            <strong>Colab. ${r.colaborador_num || "01"} • ${isEmp ? "Destino" : "Origem"}:</strong> ${r.unidade_contraparte}
                             ${r.justificativa ? `<span style="display:block; font-size:0.75rem; color:#64748b;">Motivo: ${r.justificativa}</span>` : ""}
                         </div>
                     </div>
@@ -1552,6 +1770,11 @@
             .filter(r => r.tipo === "RECEBIMENTO")
             .reduce((acc, r) => acc + r.quantidade, 0);
 
+        const houveHE = document.querySelector('input[name="prog_houve_he"]:checked')?.value === "SIM";
+        const qtdHE = houveHE
+            ? Math.min(15, Math.max(1, parseInt(document.getElementById("prog-qtd-horas-extras")?.value || "1", 10)))
+            : 0;
+
         const efetivos = Math.max(0, qtdProg - emprestados + recebidos);
         const leitosOperacionais = Math.max(0, leitosFisicos - leitosBloq);
         const leitosVagos = Math.max(0, leitosOperacionais - progPacientesInternadosAtual);
@@ -1563,9 +1786,13 @@
         const leitosPorColab = efetivos > 0 ? (leitosOperacionais / efetivos) : 0;
 
         _setTextSafe("stat-prog-base", qtdProg);
-        _setTextSafe("stat-prog-composicao-detalhe", `12h: ${qtd12h} • 6h M: ${qtd6m} • 6h T: ${qtd6t}`);
+        _setTextSafe("stat-prog-12h-val", `${qtd12h} ${qtd12h === 1 ? "colab." : "colabs."}`);
+        _setTextSafe("stat-prog-6hm-val", `${qtd6m} ${qtd6m === 1 ? "colab." : "colabs."}`);
+        _setTextSafe("stat-prog-6ht-val", `${qtd6t} ${qtd6t === 1 ? "colab." : "colabs."}`);
+
         _setTextSafe("stat-prog-emp", `-${emprestados}`);
         _setTextSafe("stat-prog-rec", `+${recebidos}`);
+        _setTextSafe("stat-prog-he", qtdHE);
         _setTextSafe("stat-prog-efetivos", efetivos);
 
         _setTextSafe("ind-leitos-fisicos", leitosFisicos);
@@ -1621,13 +1848,21 @@
             ? `Novos (${infoNovos.lista.length}): ${infoNovos.total_pacientes} pac.`
             : "";
         const heResumo = heInfo.ativo
-            ? `Hora Extra autorizada por ${heInfo.autorizador} (${heInfo.tipo_autorizador === "PLANTAO_ADM" ? "Plantão Adm" : "Coordenação"}): ${heInfo.justificativa}`
+            ? `Hora Extra (${heInfo.quantidade}) autorizada por ${heInfo.autorizador} (${heInfo.tipo_autorizador === "PLANTAO_ADM" ? "Plantão Adm" : "Coordenação"}): ${heInfo.itens.map(x => `HE ${x.numero} - ${x.justificativa}`).join("; ")}`
             : "";
         const remResumo = progRemanejamentosLista.length
-            ? `Movimentações: ${progRemanejamentosLista.map(r => `${r.tipo === "EMPRESTIMO" ? "Empréstimo" : "Recebimento"} ${r.quantidade} (${r.unidade_contraparte}) - ${r.justificativa || ""}`).join("; ")}`
+            ? `Movimentações: ${progRemanejamentosLista.map(r => `${r.tipo === "EMPRESTIMO" ? "Empréstimo" : "Recebimento"} Colab ${r.colaborador_num || "01"} (${r.unidade_contraparte}) - ${r.justificativa || ""}`).join("; ")}`
             : "";
 
         const observacaoFinal = [enfResumo, compResumo, novosResumo, heResumo, remResumo, obsLivre].filter(Boolean).join(" | ");
+
+        const payloadHE = heInfo.ativo
+            ? {
+                ativo: true,
+                autorizador: heInfo.autorizador,
+                justificativa: heInfo.itens.map(x => `HE ${x.numero}: ${x.justificativa}`).join(" | "),
+            }
+            : { ativo: false };
 
         const btn = document.getElementById("btn-salvar-programacao");
         if (btn) {
@@ -1652,7 +1887,7 @@
                     leitos_fisicos: leitosFisicos,
                     leitos_bloqueados: leitosBloq,
                     remanejamentos: progRemanejamentosLista,
-                    hora_extra: heInfo,
+                    hora_extra: payloadHE,
                     enfermeiros: progEnfermeirosSelecionados,
                     observacao: observacaoFinal,
                 }),
@@ -1874,7 +2109,6 @@
         document.getElementById("modal-detalhe-relatorio-prog").style.display = "none";
     }
 
-    // Carrega automaticamente a lista de unidades assim que a página é carregada
     document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById("prog-select-unidade")) {
             carregarContextoProgramacao();
