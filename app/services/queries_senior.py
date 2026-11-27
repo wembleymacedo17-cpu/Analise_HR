@@ -95,9 +95,14 @@ LISTA_PLANTAO_ADM = {
 }
 
 LISTA_COORDENACAO = {
-    "Rafaela",
-    "Ana Paula",
-    "Bruna",
-    "Débora",
-    "Paula",
+    "Rafaela Marqui",
+    "Ana Paula Valverde",
+    "Bruna Barozzi",
+    "Débora Valverde",
+    "Paula Vasconcelos",
+    "Angelica Botozzo",
+    "Daniele Pontão",
+    "Gedalia Pettinelli",
+    "Samantha Melara",
+    "Cleber Candido"
 }
