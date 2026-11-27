@@ -302,10 +302,10 @@
                 <div class="prog-section">
                     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
                         <div class="prog-section-title" id="lbl-step3-subtitulo" style="margin-bottom:0;">
-                            Etapa 3.1 • Necessidade de Readequação da Equipe
+                            Etapa 3.1 • Houve necessidade de remanejamento no turno?
                         </div>
                         <span id="badge-step3-subetapa" style="font-size:0.74rem; font-weight:800; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; padding:4px 12px; border-radius:999px;">
-                            Passo 1 de 2 • Readequação
+                            Passo 1 de 2 • Remanejamento
                         </span>
                     </div>
 
@@ -886,9 +886,6 @@
         recalcularIndicadoresProgramacao();
     }
 
-    // =========================================================================
-    // PARSER LIMPO DA OBSERVAÇÃO ESTRUTURADA (EVITA DUPLICAÇÃO NA EDIÇÃO)
-    // =========================================================================
     function _parsearBlocosObservacaoSalva(obsRaw) {
         const partes = (obsRaw || "").split("|").map(s => s.trim()).filter(Boolean);
         const res = {
@@ -1016,7 +1013,7 @@
     }
 
     // =========================================================================
-    // SUB-ETAPA 3.1: READEQUAÇÃO / REMANEJAMENTO (OCULTA PERGUNTA 3.1 AO ESCOLHER TIPO)
+    // SUB-ETAPA 3.1: READEQUAÇÃO / REMANEJAMENTO
     // =========================================================================
     function irParaSubstep3(sub) {
         progSubstep3Atual = sub;
@@ -1079,7 +1076,6 @@
         const tipoMov = document.querySelector('input[name="prog_tipo_rem_mov"]:checked')?.value || "";
         if (!tipoMov) return;
 
-        // Garante exclusividade: limpa qualquer registro anterior e oculta a pergunta 3.1 para limpar a tela
         progRemanejamentosLista = [];
         renderizarListaRemanejamentos();
         recalcularIndicadoresProgramacao();
@@ -1295,7 +1291,7 @@
     }
 
     // =========================================================================
-    // SUB-ETAPA 3.2: HORA EXTRA (SELECT COMPACTO + TRAVA JUSTIFICATIVA)
+    // SUB-ETAPA 3.2: HORA EXTRA
     // =========================================================================
     function aoMudarHouveHoraExtra() {
         const val = document.querySelector('input[name="prog_houve_he"]:checked')?.value || "NAO";
@@ -1635,7 +1631,6 @@
         _setTextSafe("resumo-data-turno", `${dataBr} • ${progTurnoAtual || "--"}`);
         _setTextSafe("resumo-enfermeiros-nomes", enfTexto);
 
-        // Colaboradores novos (dentro do Bloco 2)
         const boxNovos = document.getElementById("resumo-box-novos");
         const cardsNovosEl = document.getElementById("resumo-novos-cards");
         const infoNovos = obterDetalheColabNovos();
@@ -1658,7 +1653,6 @@
             }
         }
 
-        // Bloco 3: Remanejamentos + Hora Extra
         const boxExtra = document.getElementById("resumo-box-cobertura-extra");
         const extraEl = document.getElementById("resumo-cobertura-extra-texto");
         if (boxExtra && extraEl) {
@@ -1889,22 +1883,24 @@
                     : `Censo MV: ${progPacientesInternadosAtual} internados`
             );
 
+            const leitosCadastrados = Number(
+                d.leitos_fisicos_cadastrados ?? d.leitos_fisicos_sugeridos ?? 0
+            );
+            const inpLeitosFisicos = document.getElementById("prog-leitos-fisicos");
+
             const bannerEdicao = document.getElementById("prog-banner-edicao");
             if (progTurnoAtual && d.programacao_existente) {
                 const pe = d.programacao_existente;
                 const parsedObs = _parsearBlocosObservacaoSalva(pe.observacao || "");
 
-                // 1. Enfermeiros (sem duplicar na caixa de texto livre)
                 progEnfermeirosSelecionados = parsedObs.enfermeirosLista || [];
                 renderizarEnfermeirosSelecionados();
 
-                // 2. Composição da equipe
                 document.getElementById("prog-aux-12h").value = pe.qtd_aux_12h ?? pe.qtd_colaboradores_programados;
                 document.getElementById("prog-aux-6h-manha").value = pe.qtd_aux_6h_manha ?? 0;
                 document.getElementById("prog-aux-6h-tarde").value = pe.qtd_aux_6h_tarde ?? 0;
                 atualizarTotalAuxiliaresStep2();
 
-                // 3. Colaboradores novos
                 const radioNovos = document.querySelector(`input[name="prog_tem_novos"][value="${pe.tem_colaboradores_novos ? "1" : "0"}"]`);
                 if (radioNovos) radioNovos.checked = true;
                 aoMudarTemColabNovos();
@@ -1913,13 +1909,11 @@
                     renderizarCamposColabNovos(pe.detalhe_colaboradores_novos.map(x => x.pacientes));
                 }
 
-                // 4. Leitos e Observação Livre (sobrescrita limpa)
-                document.getElementById("prog-leitos-fisicos").value = pe.leitos_fisicos;
+                if (inpLeitosFisicos) inpLeitosFisicos.value = pe.leitos_fisicos;
                 document.getElementById("prog-leitos-bloqueados").value = pe.leitos_bloqueados;
                 document.getElementById("prog-observacao").value = parsedObs.obsLivre.join("\n");
                 atualizarPreviewObservacaoResumo();
 
-                // 5. Readequações / Remanejamentos
                 progRemanejamentosLista = (pe.remanejamentos || []).map((r, rIdx) => ({
                     card_idx: rIdx,
                     colaborador_num: String(rIdx + 1).padStart(2, "0"),
@@ -1936,11 +1930,15 @@
                 if (bannerEdicao) bannerEdicao.style.display = "block";
                 _setTextSafe(
                     "lbl-prog-banner-edicao",
-                    `Relatório ${progTurnoAtual} já salvo (${pe.atualizado_em}). Salvar irá sobrescrever este turno.`
+                    `Relatório ${progTurnoAtual} já salvo (${pe.atualizado_em}). Salvar irá atualizar e sobrescrever este turno.`
                 );
             } else {
                 if (forcarLimpeza || progTurnoAtual) {
                     limparCamposFormularioProgramacao();
+                }
+                if (inpLeitosFisicos && leitosCadastrados > 0) {
+                    inpLeitosFisicos.value = leitosCadastrados;
+                    limparErroCampo(inpLeitosFisicos);
                 }
                 if (bannerEdicao) bannerEdicao.style.display = "none";
             }
@@ -2092,7 +2090,6 @@
             : "";
         const obsAdicional = obsLivre ? `Obs: ${obsLivre}` : "";
 
-        // Sobrescreve sempre a coluna observacao no banco
         const observacaoFinal = [enfResumo, heResumo, remResumo, obsAdicional].filter(Boolean).join(" | ");
         const infoNovos = obterDetalheColabNovos();
 
@@ -2239,7 +2236,6 @@
 
         const parsedObs = _parsearBlocosObservacaoSalva(r.observacao);
 
-        // Extrai quantidade de Hora Extra a partir da observação salva
         let qtdHoraExtraSalva = 0;
         const mHe = (parsedObs.horaExtra || "").match(/Hora Extra\s*\((\d+)\)/i);
         if (mHe) qtdHoraExtraSalva = parseInt(mHe[1], 10);
@@ -2293,13 +2289,11 @@
 
         document.getElementById("det-rel-conteudo").innerHTML = `
             <div style="display:flex; flex-direction:column; gap:16px;">
-                <!-- BLOCO 1: ENFERMEIRO(A) -->
                 <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:14px; padding:12px 16px;">
                     <span style="display:block; font-size:0.7rem; font-weight:800; text-transform:uppercase; color:#047857;">Enfermeiro(a) Responsável</span>
                     <strong style="display:block; font-size:0.9rem; color:#0f172a; margin-top:2px;">${parsedObs.enfermeiro || "--"}</strong>
                 </div>
 
-                <!-- BLOCO 2: DIMENSIONAMENTO DA EQUIPE -->
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px 16px;">
                     <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#334155; margin-bottom:10px;">
                         Dimensionamento da Equipe
@@ -2340,13 +2334,11 @@
 
                 ${blocoAutorizacoesHtml}
 
-                <!-- BLOCO 3: MOVIMENTAÇÕES -->
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px 16px;">
                     <div class="prog-lista-header">Movimentações de Equipe</div>
                     <div class="prog-rem-items">${remHtml}</div>
                 </div>
 
-                <!-- BLOCO 4: LEITOS E INDICADORES -->
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px 16px;">
                     <div style="font-size:0.74rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#334155; margin-bottom:10px;">
                         Ocupação de Leitos e Indicadores
@@ -2387,7 +2379,6 @@
                     </div>
                 </div>
 
-                <!-- BLOCO 5: OBSERVAÇÕES DO GESTOR (SEMPRE PRESENTE E CLARO) -->
                 <div style="padding: 13px 16px; border-radius: 14px; background: #fffbeb; border: 1px solid #fde68a; font-size: 0.84rem; color: #78350f; line-height: 1.5;">
                     <div style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#92400e; margin-bottom:4px;">
                         Observações do Gestor

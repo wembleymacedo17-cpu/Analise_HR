@@ -15,7 +15,8 @@ from app.models.models import (
     Colaborador, CentroCusto, Cargo, Usuario, UsuarioCentroCusto,
     ConviteAcesso, ConviteCentroCusto, OcorrenciaFalta, AnaliseFalta,
     LogEnvioEmail, HistoricoAnaliseDesfeita,
-    CensoInternacaoUnidade, ProgramacaoAssistencial, RemanejamentoAssistencial,
+    CensoInternacaoUnidade, ProgramacaoAssistencial, RemanejamentoAssistencial,LeitoFisicoUnidade,
+    CoordenadorSupervisor
 )
 #---------------------------------------------------------------------------------------------------------------------
 from app.services.etl_estrutura import ETLEstruturaSenior
@@ -2373,6 +2374,18 @@ def contexto_programacao_assistencial():
         ),
     }
 
+    leito_cad = (
+        db.query(LeitoFisicoUnidade)
+        .filter(
+            or_(
+                func.lower(LeitoFisicoUnidade.nome_setor) == unidade_sel.lower(),
+                LeitoFisicoUnidade.setor_normalizado == _normalizar_texto_setor(unidade_sel),
+            )
+        )
+        .first()
+    )
+    leitos_sugeridos = int(leito_cad.total_leitos or leito_cad.qtd_leitos or 0) if leito_cad else 0
+
     prog_payload = None
     if turno:
         prog_existente = (
@@ -2426,13 +2439,15 @@ def contexto_programacao_assistencial():
         'sucesso': True,
         'data_padrao': data_prog.isoformat(),
         'unidade_selecionada': unidade_sel,
+        'leitos_fisicos_sugeridos': leitos_sugeridos,
+        'leitos_fisicos_cadastrados': leitos_sugeridos,
         'unidades': [
             {'nome_unidade': u.nome_unidade, 'qtd_internacao': u.qtd_internacao}
             for u in unidades_censo
         ],
         'listas_autorizacao': {
             'PLANTAO_ADM': list(LISTA_PLANTAO_ADM),
-            'COORDENACAO': list(LISTA_COORDENACAO),
+            'COORDENACAO': _obter_lista_coordenacao_ativa(db),
         },
         'censo': censo_payload,
         'programacao_existente': prog_payload,
@@ -3041,4 +3056,292 @@ def root_mapa_assistencial():
         'turno': turno,
         'resumo': resumo_geral,
         'complexos': complexos_ordenados,
-    }), 200    
+    }), 200 
+
+
+def _normalizar_texto_setor(texto: str) -> str:
+    nfd = unicodedata.normalize('NFD', str(texto or '').replace('\xa0', ' ').upper().strip())
+    sem_acento = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn')
+    return re.sub(r'\s+', ' ', sem_acento).strip()
+
+
+def _obter_lista_coordenacao_ativa(db) -> list[str]:
+    rows = (
+        db.query(CoordenadorSupervisor.nome)
+        .filter(CoordenadorSupervisor.ativo.is_(True))
+        .order_by(CoordenadorSupervisor.nome.asc())
+        .all()
+    )
+    if rows:
+        return [r[0] for r in rows]
+    return list(LISTA_COORDENACAO)
+
+
+@api_bp.route('/root/configuracao-global/coordenadores', methods=['GET'])
+def listar_coordenadores_root():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    rows = (
+        db.query(CoordenadorSupervisor)
+        .filter(CoordenadorSupervisor.ativo.is_(True))
+        .order_by(CoordenadorSupervisor.nome.asc())
+        .all()
+    )
+
+    # Seed inicial automático caso a tabela ainda esteja vazia
+    if not rows:
+        agora = datetime.now(timezone.utc)
+        for nome_padrao in LISTA_COORDENACAO:
+            nome_limpo = _normalizar_nome_lista(nome_padrao)
+            if not nome_limpo:
+                continue
+            existe = db.query(CoordenadorSupervisor).filter(CoordenadorSupervisor.nome == nome_limpo).first()
+            if not existe:
+                db.add(CoordenadorSupervisor(
+                    nome=nome_limpo,
+                    cargo_funcao='GER/COORD/SUP',
+                    ativo=True,
+                    criado_em=agora,
+                    atualizado_em=agora,
+                ))
+        db.commit()
+        rows = (
+            db.query(CoordenadorSupervisor)
+            .filter(CoordenadorSupervisor.ativo.is_(True))
+            .order_by(CoordenadorSupervisor.nome.asc())
+            .all()
+        )
+
+    return jsonify({
+        'sucesso': True,
+        'coordenadores': [
+            {
+                'id': r.id,
+                'nome': r.nome,
+                'cargo_funcao': r.cargo_funcao,
+                'atualizado_em': (r.atualizado_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if r.atualizado_em else '--',
+            }
+            for r in rows
+        ],
+    }), 200
+
+
+@api_bp.route('/root/configuracao-global/coordenadores', methods=['POST'])
+def criar_coordenador_root():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    data = request.json or {}
+    nome = _normalizar_nome_lista(data.get('nome'))
+    cargo_funcao = str(data.get('cargo_funcao') or 'GER/COORD/SUP').strip()[:80] or 'GER/COORD/SUP'
+
+    if len(nome) < 2:
+        return jsonify({'sucesso': False, 'mensagem': 'Informe o nome completo do coordenador/supervisor.'}), 400
+
+    db = get_db()
+    try:
+        existente = (
+            db.query(CoordenadorSupervisor)
+            .filter(func.lower(CoordenadorSupervisor.nome) == nome.lower())
+            .first()
+        )
+        agora = datetime.now(timezone.utc)
+        if existente:
+            existente.nome = nome
+            existente.cargo_funcao = cargo_funcao
+            existente.ativo = True
+            existente.atualizado_em = agora
+            db.commit()
+            return jsonify({'sucesso': True, 'mensagem': 'Coordenador/Supervisor reativado e atualizado!'}), 200
+
+        novo = CoordenadorSupervisor(
+            nome=nome,
+            cargo_funcao=cargo_funcao,
+            ativo=True,
+            criado_em=agora,
+            atualizado_em=agora,
+        )
+        db.add(novo)
+        db.commit()
+        return jsonify({'sucesso': True, 'mensagem': 'Coordenador/Supervisor cadastrado com sucesso!'}), 201
+    except Exception as e:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao salvar: {str(e)}'}), 500
+
+
+@api_bp.route('/root/configuracao-global/coordenadores/<int:coord_id>', methods=['PUT', 'DELETE'])
+def gerenciar_coordenador_item_root(coord_id):
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    item = db.query(CoordenadorSupervisor).filter(CoordenadorSupervisor.id == coord_id).first()
+    if not item:
+        return jsonify({'sucesso': False, 'mensagem': 'Registro não encontrado.'}), 404
+
+    if request.method == 'DELETE':
+        try:
+            db.delete(item)
+            db.commit()
+            return jsonify({'sucesso': True, 'mensagem': 'Coordenador/Supervisor excluído com sucesso!'}), 200
+        except Exception as e:
+            db.rollback()
+            return jsonify({'sucesso': False, 'mensagem': f'Erro ao excluir: {str(e)}'}), 500
+
+    data = request.json or {}
+    novo_nome = _normalizar_nome_lista(data.get('nome'))
+    novo_cargo = str(data.get('cargo_funcao') or item.cargo_funcao or 'GER/COORD/SUP').strip()[:80]
+    if len(novo_nome) < 2:
+        return jsonify({'sucesso': False, 'mensagem': 'Informe um nome válido.'}), 400
+
+    try:
+        item.nome = novo_nome
+        item.cargo_funcao = novo_cargo
+        item.atualizado_em = datetime.now(timezone.utc)
+        db.commit()
+        return jsonify({'sucesso': True, 'mensagem': 'Coordenador/Supervisor atualizado com sucesso!'}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao atualizar: {str(e)}'}), 500
+
+
+@api_bp.route('/root/configuracao-global/leitos', methods=['GET'])
+def listar_leitos_fisicos_root():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    db = get_db()
+    rows = (
+        db.query(LeitoFisicoUnidade)
+        .order_by(LeitoFisicoUnidade.nome_setor.asc())
+        .all()
+    )
+    return jsonify({
+        'sucesso': True,
+        'leitos': [
+            {
+                'id': r.id,
+                'codigo_cc': r.codigo_cc or '--',
+                'nome_setor': r.nome_setor,
+                'qtd_leitos': r.qtd_leitos,
+                'qtd_leitos_pcp': r.qtd_leitos_pcp,
+                'total_leitos': r.total_leitos,
+                'atualizado_em': (r.atualizado_em - timedelta(hours=3)).strftime('%d/%m/%Y %H:%M') if r.atualizado_em else '--',
+            }
+            for r in rows
+        ],
+    }), 200
+
+
+@api_bp.route('/root/configuracao-global/leitos/upload', methods=['POST'])
+def upload_planilha_leitos_root():
+    if session.get('usuario_perfil') != 'ROOT':
+        return jsonify({'sucesso': False, 'mensagem': 'Acesso negado.'}), 403
+
+    arquivo = request.files.get('arquivo')
+    if not arquivo or not arquivo.filename:
+        return jsonify({'sucesso': False, 'mensagem': 'Selecione uma planilha (.xlsx, .xls ou .csv).'}), 400
+
+    nome_arq = arquivo.filename.lower()
+    try:
+        import pandas as pd
+        if nome_arq.endswith('.csv'):
+            df = pd.read_csv(arquivo, sep=None, engine='python')
+        elif nome_arq.endswith(('.xlsx', '.xls')):
+            xls = pd.ExcelFile(arquivo)
+            aba_alvo = 'Leitos por setor' if 'Leitos por setor' in xls.sheet_names else xls.sheet_names[0]
+            df = pd.read_excel(xls, sheet_name=aba_alvo)
+        else:
+            return jsonify({'sucesso': False, 'mensagem': 'Formato não suportado. Use .xlsx, .xls ou .csv.'}), 400
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Falha ao ler planilha: {str(e)}'}), 400
+
+    if df is None or df.empty:
+        return jsonify({'sucesso': False, 'mensagem': 'A planilha enviada está vazia.'}), 400
+
+    col_map = {_normalizar_texto_setor(c): c for c in df.columns}
+    col_cc = col_map.get('CENTRO DE CUSTO') or col_map.get('COD CC') or col_map.get('CODIGO CC')
+    col_setor = col_map.get('SETOR') or col_map.get('UNIDADE') or col_map.get('NOME UNIDADE')
+    col_leitos = col_map.get('N° DE LEITOS') or col_map.get('Nº DE LEITOS') or col_map.get('NO DE LEITOS') or col_map.get('LEITOS')
+    col_pcp = col_map.get('N° DE LEITOS PCP') or col_map.get('Nº DE LEITOS PCP') or col_map.get('LEITOS PCP')
+    col_total = col_map.get('TOTAL DE LEITOS') or col_map.get('TOTAL LEITOS')
+
+    if not col_setor or (not col_total and not col_leitos):
+        return jsonify({
+            'sucesso': False,
+            'mensagem': 'Colunas obrigatórias não encontradas. Esperado: Setor e Total de leitos (ou Nº de leitos).'
+        }), 400
+
+    db = get_db()
+    agora = datetime.now(timezone.utc)
+    processados = 0
+
+    try:
+        for _, row in df.iterrows():
+            setor_raw = str(row.get(col_setor) or '').replace('\xa0', ' ').strip()
+            if not setor_raw or setor_raw.lower() == 'nan':
+                continue
+
+            cc_val = str(row.get(col_cc) or '').replace('.0', '').strip() if col_cc else ''
+            if cc_val.lower() == 'nan':
+                cc_val = ''
+
+            def _to_int(v):
+                if v is None or pd.isna(v):
+                    return 0
+                try:
+                    return max(0, int(float(str(v).replace(',', '.').strip())))
+                except Exception:
+                    return 0
+
+            qtd_l = _to_int(row.get(col_leitos)) if col_leitos else 0
+            qtd_pcp = _to_int(row.get(col_pcp)) if col_pcp else 0
+            tot_l = _to_int(row.get(col_total)) if col_total else (qtd_l + qtd_pcp)
+            if not col_leitos and tot_l > 0:
+                qtd_l = tot_l
+
+            setor_norm = _normalizar_texto_setor(setor_raw)
+            registro = (
+                db.query(LeitoFisicoUnidade)
+                .filter(
+                    or_(
+                        func.lower(LeitoFisicoUnidade.nome_setor) == setor_raw.lower(),
+                        LeitoFisicoUnidade.setor_normalizado == setor_norm,
+                    )
+                )
+                .first()
+            )
+
+            if not registro:
+                registro = LeitoFisicoUnidade(
+                    codigo_cc=cc_val or None,
+                    nome_setor=setor_raw,
+                    setor_normalizado=setor_norm,
+                    qtd_leitos=qtd_l,
+                    qtd_leitos_pcp=qtd_pcp,
+                    total_leitos=tot_l,
+                    atualizado_em=agora,
+                )
+                db.add(registro)
+            else:
+                if cc_val:
+                    registro.codigo_cc = cc_val
+                registro.setor_normalizado = setor_norm
+                registro.qtd_leitos = qtd_l
+                registro.qtd_leitos_pcp = qtd_pcp
+                registro.total_leitos = tot_l
+                registro.atualizado_em = agora
+
+            processados += 1
+
+        db.commit()
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Planilha importada com sucesso! {processados} unidade(s) atualizada(s).',
+            'total_processados': processados,
+        }), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao importar planilha: {str(e)}'}), 500

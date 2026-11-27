@@ -1,0 +1,279 @@
+<section id="aba-configuracao-global" class="tab-content">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">Configuração Global</h2>
+                <p class="modal-info">Gerencie coordenadores/supervisores e importe a planilha de leitos físicos por unidade</p>
+            </div>
+            <div class="filters-row">
+                <button type="button" id="btn-tab-cg-coord" class="btn btn-primary btn-sm" onclick="alternarSubabaConfigGlobal('COORDENADORES')">
+                    Coordenadores / Supervisores
+                </button>
+                <button type="button" id="btn-tab-cg-leitos" class="btn btn-outline btn-sm" onclick="alternarSubabaConfigGlobal('LEITOS')">
+                    Planilha de Leitos Físicos
+                </button>
+            </div>
+        </div>
+
+        <!-- SUB-ABA A: COORDENADORES / SUPERVISORES -->
+        <div id="cg-painel-coordenadores">
+            <form id="form-cg-coordenador" onsubmit="salvarCoordenadorGlobal(event)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:18px;">
+                <input type="hidden" id="cg-coord-id">
+                <div class="form-grid" style="align-items:end;">
+                    <div class="field-group" style="grid-column: span 2;">
+                        <label for="cg-coord-nome">Nome Completo do Coordenador / Supervisor *</label>
+                        <input type="text" id="cg-coord-nome" class="input-control" placeholder="Ex: Paula Vasconcelos" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="cg-coord-cargo">Grupo / Função</label>
+                        <input type="text" id="cg-coord-cargo" class="input-control" value="GER/COORD/SUP">
+                    </div>
+                    <div class="acoes-row">
+                        <button type="submit" id="btn-cg-salvar-coord" class="btn btn-success">Adicionar</button>
+                        <button type="button" id="btn-cg-cancelar-edicao" class="btn btn-secondary" style="display:none;" onclick="cancelarEdicaoCoordenador()">Cancelar</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th style="width:170px;">Grupo</th>
+                            <th style="width:150px;">Atualizado em</th>
+                            <th style="width:170px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cg-coordenadores">
+                        <tr><td colspan="4" style="text-align:center; color:#64748b;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SUB-ABA B: PLANILHA DE LEITOS FÍSICOS -->
+        <div id="cg-painel-leitos" style="display:none;">
+            <form id="form-cg-upload-leitos" onsubmit="enviarPlanilhaLeitosGlobal(event)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:18px;">
+                <div class="form-grid" style="align-items:end;">
+                    <div class="field-group" style="grid-column: span 2;">
+                        <label for="cg-arquivo-leitos">Planilha de Leitos por Setor (.xlsx, .xls ou .csv) *</label>
+                        <input type="file" id="cg-arquivo-leitos" class="input-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                    <div class="acoes-row">
+                        <button type="submit" id="btn-cg-enviar-leitos" class="btn btn-primary">Atualizar Leitos no Banco</button>
+                    </div>
+                </div>
+                <div style="margin-top:8px; font-size:0.78rem; color:#64748b;">
+                    Colunas esperadas: <strong>Centro de custo</strong>, <strong>Setor</strong>, <strong>Nº de leitos</strong>, <strong>Nº de leitos PCP</strong> e <strong>Total de leitos</strong>.
+                </div>
+            </form>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:120px;">Código CC</th>
+                            <th>Setor / Unidade</th>
+                            <th style="width:110px;">Leitos</th>
+                            <th style="width:115px;">Leitos PCP</th>
+                            <th style="width:120px;">Total Leitos</th>
+                            <th style="width:150px;">Atualizado em</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cg-leitos">
+                        <tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    let cgCoordenadoresCache = [];
+
+    function alternarSubabaConfigGlobal(aba) {
+        const isCoord = aba === "COORDENADORES";
+        document.getElementById("cg-painel-coordenadores").style.display = isCoord ? "block" : "none";
+        document.getElementById("cg-painel-leitos").style.display = isCoord ? "none" : "block";
+        document.getElementById("btn-tab-cg-coord").className = isCoord ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm";
+        document.getElementById("btn-tab-cg-leitos").className = !isCoord ? "btn btn-primary btn-sm" : "btn btn-outline btn-sm";
+        if (isCoord) carregarCoordenadoresGlobal();
+        else carregarLeitosGlobal();
+    }
+
+    async function inicializarConfiguracaoGlobal() {
+        alternarSubabaConfigGlobal("COORDENADORES");
+    }
+
+    async function carregarCoordenadoresGlobal() {
+        const tbody = document.getElementById("tbody-cg-coordenadores");
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">Carregando coordenadores...</td></tr>';
+        try {
+            const res = await fetch("/api/root/configuracao-global/coordenadores", { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626;">${d.mensagem}</td></tr>`;
+                return;
+            }
+            cgCoordenadoresCache = d.coordenadores || [];
+            if (!cgCoordenadoresCache.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">Nenhum coordenador cadastrado.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = cgCoordenadoresCache.map(c => `
+                <tr>
+                    <td><strong>${c.nome}</strong></td>
+                    <td><span class="status-pill pill-utilizado">${c.cargo_funcao}</span></td>
+                    <td>${c.atualizado_em}</td>
+                    <td>
+                        <div class="acoes-row">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="prepararEdicaoCoordenador(${c.id})">Editar</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="excluirCoordenadorGlobal(${c.id}, '${c.nome.replace(/'/g, "\\'")}')">Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join("");
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#dc2626;">Erro ao carregar lista.</td></tr>';
+        }
+    }
+
+    function prepararEdicaoCoordenador(id) {
+        const item = cgCoordenadoresCache.find(x => x.id === id);
+        if (!item) return;
+        document.getElementById("cg-coord-id").value = item.id;
+        document.getElementById("cg-coord-nome").value = item.nome;
+        document.getElementById("cg-coord-cargo").value = item.cargo_funcao || "GER/COORD/SUP";
+        document.getElementById("btn-cg-salvar-coord").innerText = "Salvar Alteração";
+        document.getElementById("btn-cg-cancelar-edicao").style.display = "inline-flex";
+        document.getElementById("cg-coord-nome").focus();
+    }
+
+    function cancelarEdicaoCoordenador() {
+        document.getElementById("cg-coord-id").value = "";
+        document.getElementById("cg-coord-nome").value = "";
+        document.getElementById("cg-coord-cargo").value = "GER/COORD/SUP";
+        document.getElementById("btn-cg-salvar-coord").innerText = "Adicionar";
+        document.getElementById("btn-cg-cancelar-edicao").style.display = "none";
+    }
+
+    async function salvarCoordenadorGlobal(e) {
+        e.preventDefault();
+        const idEdit = document.getElementById("cg-coord-id").value.trim();
+        const nome = document.getElementById("cg-coord-nome").value.trim();
+        const cargoFuncao = document.getElementById("cg-coord-cargo").value.trim() || "GER/COORD/SUP";
+        if (nome.length < 2) {
+            mostrarToast("Informe um nome válido.", true);
+            return;
+        }
+
+        const btn = document.getElementById("btn-cg-salvar-coord");
+        btn.disabled = true;
+
+        try {
+            const url = idEdit
+                ? `/api/root/configuracao-global/coordenadores/${idEdit}`
+                : "/api/root/configuracao-global/coordenadores";
+            const method = idEdit ? "PUT" : "POST";
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome, cargo_funcao: cargoFuncao }),
+            });
+            const d = await res.json();
+            mostrarToast(d.mensagem, !d.sucesso);
+            if (d.sucesso) {
+                cancelarEdicaoCoordenador();
+                await carregarCoordenadoresGlobal();
+            }
+        } catch (err) {
+            mostrarToast("Erro ao salvar coordenador/supervisor.", true);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function excluirCoordenadorGlobal(id, nome) {
+        abrirModalConfirmacao({
+            titulo: "Excluir Coordenador / Supervisor",
+            mensagem: `Deseja excluir <strong>${nome}</strong> da lista?`,
+            textoBotao: "Excluir",
+            onConfirm: async () => {
+                const res = await fetch(`/api/root/configuracao-global/coordenadores/${id}`, { method: "DELETE" });
+                const d = await res.json();
+                mostrarToast(d.mensagem, !d.sucesso);
+                if (d.sucesso) {
+                    if (document.getElementById("cg-coord-id").value === String(id)) {
+                        cancelarEdicaoCoordenador();
+                    }
+                    await carregarCoordenadoresGlobal();
+                }
+            }
+        });
+    }
+
+    async function carregarLeitosGlobal() {
+        const tbody = document.getElementById("tbody-cg-leitos");
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Carregando leitos físicos...</td></tr>';
+        try {
+            const res = await fetch("/api/root/configuracao-global/leitos", { cache: "no-store" });
+            const d = await res.json();
+            if (!d.sucesso) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#dc2626;">${d.mensagem}</td></tr>`;
+                return;
+            }
+            const lista = d.leitos || [];
+            if (!lista.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Nenhuma planilha importada ainda.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = lista.map(l => `
+                <tr>
+                    <td>${l.codigo_cc}</td>
+                    <td><strong>${l.nome_setor}</strong></td>
+                    <td>${l.qtd_leitos}</td>
+                    <td>${l.qtd_leitos_pcp}</td>
+                    <td><span class="status-pill pill-analisada">${l.total_leitos}</span></td>
+                    <td>${l.atualizado_em}</td>
+                </tr>
+            `).join("");
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc2626;">Erro ao carregar leitos.</td></tr>';
+        }
+    }
+
+    async function enviarPlanilhaLeitosGlobal(e) {
+        e.preventDefault();
+        const inp = document.getElementById("cg-arquivo-leitos");
+        if (!inp.files || !inp.files[0]) {
+            mostrarToast("Selecione um arquivo.", true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append("arquivo", inp.files[0]);
+
+        const btn = document.getElementById("btn-cg-enviar-leitos");
+        btn.disabled = true;
+        btn.innerText = "Importando...";
+
+        try {
+            const res = await fetch("/api/root/configuracao-global/leitos/upload", {
+                method: "POST",
+                body: formData,
+            });
+            const d = await res.json();
+            mostrarToast(d.mensagem, !d.sucesso);
+            if (d.sucesso) {
+                inp.value = "";
+                await carregarLeitosGlobal();
+            }
+        } catch (err) {
+            mostrarToast("Erro ao enviar planilha.", true);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Atualizar Leitos no Banco";
+        }
+    }
+</script>

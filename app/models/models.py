@@ -313,4 +313,42 @@ class RemanejamentoAssistencial(Base):
     quantidade = Column(Integer, nullable=False)
     unidade_contraparte = Column(String(180), nullable=False)
 
-    programacao = relationship("ProgramacaoAssistencial", back_populates="remanejamentos")    
+    programacao = relationship("ProgramacaoAssistencial", back_populates="remanejamentos") 
+
+class CoordenadorSupervisor(Base):
+    """
+    Cadastro gerenciável pelo ROOT de coordenadores / supervisores / gerentes
+    utilizados nas seleções de autorização de hora extra e programação assistencial.
+    """
+    __tablename__ = "coordenadores_supervisores"
+    __table_args__ = (
+        Index("ix_coord_sup_ativo_nome", "ativo", "nome"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    nome = Column(String(150), unique=True, nullable=False)
+    cargo_funcao = Column(String(80), default="GER/COORD/SUP", nullable=False)
+    ativo = Column(Boolean, default=True, nullable=False)
+    criado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    atualizado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class LeitoFisicoUnidade(Base):
+    """
+    Quantidade de leitos físicos por unidade/setor importada via planilha (ex.: Leitos HB.xlsx).
+    Ao reenviar a planilha, atualiza os valores no banco para preenchimento automático na Programação Assistencial.
+    """
+    __tablename__ = "leitos_fisicos_unidades"
+    __table_args__ = (
+        Index("ix_leitos_fisicos_codigo_cc", "codigo_cc"),
+        Index("ix_leitos_fisicos_setor_norm", "setor_normalizado"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    codigo_cc = Column(String(30), nullable=True)
+    nome_setor = Column(String(180), unique=True, nullable=False)
+    setor_normalizado = Column(String(180), nullable=False)
+    qtd_leitos = Column(Integer, default=0, nullable=False)
+    qtd_leitos_pcp = Column(Integer, default=0, nullable=False)
+    total_leitos = Column(Integer, default=0, nullable=False)
+    atualizado_em = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)    
